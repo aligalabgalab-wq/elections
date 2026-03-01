@@ -1,0 +1,322 @@
+<!-- templates/layouts/header.html -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top shadow">
+    <div class="container">
+        <!-- Logo / Brand -->
+        <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
+            <i class="bi bi-shield-check me-2 fs-4 text-primary"></i>
+            <span class="fw-bold">{{ config.get('APP_NAME', 'Élection Nationale') }}</span>
+        </a>
+        
+        <!-- Bouton menu mobile -->
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mainNavbar"
+                aria-controls="mainNavbar" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <!-- Menu principal -->
+        <div class="collapse navbar-collapse" id="mainNavbar">
+            <ul class="navbar-nav me-auto">
+                <!-- Accueil -->
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" 
+                       href="{{ url_for('index') }}">
+                        <i class="bi bi-house-door me-1"></i> Accueil
+                    </a>
+                </li>
+                
+                <!-- Candidats -->
+                <li class="nav-item">
+                    <a class="nav-link {% if request.endpoint == 'candidates_list' %}active{% endif %}" 
+                       href="{{ url_for('candidates_list') }}">
+                        <i class="bi bi-people me-1"></i> Candidats
+                    </a>
+                </li>
+                
+                <!-- Menu selon le rôle de l'utilisateur -->
+                {% if current_user.is_authenticated %}
+                    {% if current_user.role == 'voter' %}
+                        <!-- Menu Électeur -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'voter_dashboard' in request.endpoint %}active{% endif %}" 
+                               href="{{ url_for('voter_dashboard') }}">
+                                <i class="bi bi-speedometer2 me-1"></i> Tableau de bord
+                            </a>
+                        </li>
+                        
+                        {% if election and election.is_voting_open %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'voter_vote' %}active{% endif %}" 
+                               href="{{ url_for('voter_vote') }}">
+                                <i class="bi bi-check-square me-1"></i> Voter
+                            </a>
+                        </li>
+                        {% endif %}
+                        
+                    {% elif current_user.role == 'candidate' %}
+                        <!-- Menu Candidat -->
+                        <li class="nav-item">
+                            <a class="nav-link {% if 'candidate_dashboard' in request.endpoint %}active{% endif %}" 
+                               href="{{ url_for('candidate_dashboard') }}">
+                                <i class="bi bi-speedometer2 me-1"></i> Tableau de bord
+                            </a>
+                        </li>
+                        
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'candidate_campaign' %}active{% endif %}" 
+                               href="{{ url_for('candidate_campaign') }}">
+                                <i class="bi bi-megaphone me-1"></i> Campagne
+                            </a>
+                        </li>
+                        
+                    {% elif current_user.role == 'admin' %}
+                        <!-- Menu Administrateur -->
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle {% if 'admin' in request.endpoint %}active{% endif %}" 
+                               href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="bi bi-speedometer2 me-1"></i> Administration
+                            </a>
+                            <ul class="dropdown-menu">
+                                <li>
+                                    <a class="dropdown-item {% if request.endpoint == 'admin_dashboard' %}active{% endif %}" 
+                                       href="{{ url_for('admin_dashboard') }}">
+                                        <i class="bi bi-house-gear me-2"></i> Tableau de bord
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item {% if request.endpoint == 'admin_users' %}active{% endif %}" 
+                                       href="{{ url_for('admin_users') }}">
+                                        <i class="bi bi-people me-2"></i> Utilisateurs
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item {% if request.endpoint == 'admin_candidates' %}active{% endif %}" 
+                                       href="{{ url_for('admin_candidates') }}">
+                                        <i class="bi bi-person-badge me-2"></i> Candidats
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item {% if request.endpoint == 'admin_results' %}active{% endif %}" 
+                                       href="{{ url_for('admin_results') }}">
+                                        <i class="bi bi-bar-chart me-2"></i> Résultats
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item {% if request.endpoint == 'admin_election' %}active{% endif %}" 
+                                       href="{{ url_for('admin_election') }}">
+                                        <i class="bi bi-gear me-2"></i> Paramètres
+                                    </a>
+                                </li>
+                            </ul>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                
+                <!-- À propos (toujours visible) -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('about') }}">
+                        <i class="bi bi-info-circle me-1"></i> À propos
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('contact') }}">
+                        <i class="bi bi-envelope me-1"></i> Contact
+                    </a>
+                </li>
+
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ url_for('faq') }}">
+                        <i class="bi bi-question-circle me-1"></i> Aide
+                    </a>
+                </li>
+            </ul>
+            
+            <!-- Indicateur d'élection -->
+            {% if election %}
+                <div class="me-3 d-none d-lg-block">
+                    {% if election.is_voting_open %}
+                        <span class="badge bg-success">
+                            <i class="bi bi-check-circle me-1"></i> Vote ouvert
+                        </span>
+                    {% elif election.is_registration_open %}
+                        <span class="badge bg-warning text-dark">
+                            <i class="bi bi-pencil me-1"></i> Inscriptions ouvertes
+                        </span>
+                    {% else %}
+                        <span class="badge bg-secondary">
+                            <i class="bi bi-clock me-1"></i> Élection terminée
+                        </span>
+                    {% endif %}
+                </div>
+            {% endif %}
+            
+            <!-- Section utilisateur -->
+            <ul class="navbar-nav">
+                {% if current_user.is_authenticated %}
+                    <!-- Menu utilisateur connecté -->
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle d-flex align-items-center" 
+                           href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <div class="d-flex align-items-center">
+                                <!-- Avatar utilisateur -->
+                                <div class="position-relative">
+                                    {% if current_user.role == 'voter' and voter %}
+                                        <i class="bi bi-person-circle fs-5 me-2 text-light"></i>
+                                    {% elif current_user.role == 'candidate' and candidate %}
+                                        <i class="bi bi-award fs-5 me-2 text-warning"></i>
+                                    {% elif current_user.role == 'admin' %}
+                                        <i class="bi bi-shield-fill-check fs-5 me-2 text-danger"></i>
+                                    {% else %}
+                                        <i class="bi bi-person-circle fs-5 me-2 text-light"></i>
+                                    {% endif %}
+                                </div>
+                                
+                                <!-- Nom utilisateur -->
+                                <div class="d-flex flex-column">
+                                    <small class="text-light fw-bold">
+                                        {% if current_user.role == 'voter' and voter %}
+                                            {{ voter.full_name|truncate(20) }}
+                                        {% elif current_user.role == 'candidate' and candidate %}
+                                            {{ candidate.full_name|truncate(20) }}
+                                        {% elif current_user.role == 'admin' %}
+                                            Administrateur
+                                        {% else %}
+                                            {{ current_user.email|truncate(20) }}
+                                        {% endif %}
+                                    </small>
+                                    <small class="text-light opacity-75">
+                                        {% if current_user.role == 'voter' %}
+                                            Électeur
+                                        {% elif current_user.role == 'candidate' %}
+                                            Candidat
+                                        {% elif current_user.role == 'admin' %}
+                                            Administrateur
+                                        {% endif %}
+                                    </small>
+                                </div>
+                            </div>
+                        </a>
+                        
+                        <!-- Menu déroulant utilisateur -->
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                            <!-- Profil -->
+                            <li>
+                                <a class="dropdown-item" 
+                                   href="{% if current_user.role == 'voter' %}{{ url_for('voter_profile') }}
+                                         {% elif current_user.role == 'candidate' %}{{ url_for('candidate_profile') }}
+                                         {% elif current_user.role == 'admin' %}{{ url_for('admin_dashboard') }}
+                                         {% else %}#{% endif %}">
+                                    <i class="bi bi-person me-2"></i> Mon profil
+                                </a>
+                            </li>
+                            
+                            <!-- Résultats (pour électeurs) -->
+                            {% if current_user.role == 'voter' %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('voter_results') }}">
+                                        <i class="bi bi-bar-chart me-2"></i> Résultats
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            <!-- Statistiques (pour candidats) -->
+                            {% if current_user.role == 'candidate' %}
+                                <li>
+                                    <a class="dropdown-item" href="{{ url_for('candidate_statistics') }}">
+                                        <i class="bi bi-graph-up me-2"></i> Mes statistiques
+                                    </a>
+                                </li>
+                            {% endif %}
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <!-- Paramètres -->
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('about') }}">
+                                    <i class="bi bi-info-circle me-2"></i> À propos
+                                </a>
+                            </li>
+                            
+                            <!-- Aide -->
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('faq') }}">
+                                    <i class="bi bi-question-circle me-2"></i> FAQ
+                                </a>
+                            </li>
+                            
+                            <li><hr class="dropdown-divider"></li>
+                            
+                            <!-- Déconnexion -->
+                            <li>
+                                <a class="dropdown-item text-danger" href="{{ url_for('logout') }}">
+                                    <i class="bi bi-box-arrow-right me-2"></i> Déconnexion
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                    
+                {% else %}
+                    <!-- Menu visiteur non connecté -->
+                    <li class="nav-item">
+                        <a class="nav-link btn btn-outline-light btn-sm mx-1" 
+                           href="{{ url_for('login') }}">
+                            <i class="bi bi-box-arrow-in-right me-1"></i> Connexion
+                        </a>
+                    </li>
+                    
+                    <li class="nav-item dropdown">
+                        <a class="nav-link btn btn-primary btn-sm mx-1 dropdown-toggle" 
+                           href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                            <i class="bi bi-person-plus me-1"></i> S'inscrire
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('register_voter') }}">
+                                    <i class="bi bi-person-check me-2"></i> Électeur
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{{ url_for('register_candidate') }}">
+                                    <i class="bi bi-award me-2"></i> Candidat
+                                </a>
+                            </li>
+                        </ul>
+                    </li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<script>
+// Gestion de la barre de navigation
+document.addEventListener('DOMContentLoaded', function() {
+    // Marquer l'élément actif dans la navigation
+    const currentPath = window.location.pathname;
+    const navLinks = document.querySelectorAll('.navbar-nav .nav-link');
+    
+    navLinks.forEach(link => {
+        if (link.getAttribute('href') === currentPath) {
+            link.classList.add('active');
+            link.setAttribute('aria-current', 'page');
+        }
+    });
+    
+    // Fermer le menu mobile après clic
+    const navbarCollapse = document.getElementById('mainNavbar');
+    const navbarToggler = document.querySelector('.navbar-toggler');
+    
+    if (navbarCollapse && navbarToggler) {
+        const navLinks = navbarCollapse.querySelectorAll('.nav-link');
+        navLinks.forEach(link => {
+            link.addEventListener('click', () => {
+                if (navbarCollapse.classList.contains('show')) {
+                    navbarToggler.click();
+                }
+            });
+        });
+    }
+});
+</script>

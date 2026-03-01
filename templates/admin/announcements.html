@@ -1,0 +1,1199 @@
+<!-- templates/admin/announcements.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Gestion des annonces - Administration{% endblock %}
+
+{% block styles %}
+<style>
+    .announcements-header {
+        background: linear-gradient(135deg, var(--danger) 0%, #a50c28 100%);
+        color: white;
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .announcement-card {
+        transition: all 0.3s ease;
+        border-left: 4px solid transparent;
+        height: 100%;
+    }
+    
+    .announcement-card.urgent {
+        border-left-color: var(--danger);
+        background-color: rgba(210, 16, 52, 0.05);
+    }
+    
+    .announcement-card.active {
+        border-left-color: var(--success);
+    }
+    
+    .announcement-card.expired {
+        border-left-color: var(--secondary);
+        opacity: 0.7;
+    }
+    
+    .announcement-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .editor-container {
+        border: 1px solid #dee2e6;
+        border-radius: var(--border-radius-md);
+        min-height: 200px;
+        padding: var(--spacing-md);
+        background-color: white;
+    }
+    
+    .schedule-badge {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+        border-radius: var(--border-radius-sm);
+    }
+    
+    .audience-badge {
+        font-size: 0.75rem;
+        padding: 2px 8px;
+        border-radius: var(--border-radius-sm);
+        background-color: rgba(0, 102, 179, 0.1);
+        color: var(--primary);
+    }
+    
+    .preview-modal {
+        max-width: 800px;
+    }
+    
+    .stats-card {
+        text-align: center;
+        padding: var(--spacing-lg);
+        border-radius: var(--border-radius-md);
+        background-color: white;
+        box-shadow: var(--shadow-sm);
+        transition: transform 0.3s ease;
+        height: 100%;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .editor-tools {
+        border-bottom: 1px solid #dee2e6;
+        padding: 8px;
+        background-color: #f8f9fa;
+        border-radius: var(--border-radius-md) var(--border-radius-md) 0 0;
+    }
+    
+    .editor-tools button {
+        padding: 4px 8px;
+        font-size: 0.875rem;
+    }
+    
+    .announcement-content {
+        line-height: 1.6;
+    }
+    
+    .announcement-content ul,
+    .announcement-content ol {
+        padding-left: 20px;
+        margin-bottom: 1rem;
+    }
+    
+    .announcement-content p {
+        margin-bottom: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="announcements-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-6 fw-bold mb-3">
+                    <i class="ri-megaphone-line me-2"></i>
+                    Gestion des annonces
+                </h1>
+                <p class="lead mb-0 opacity-90">
+                    Créez et gérez les annonces officielles de la simulation électorale
+                </p>
+            </div>
+            <div class="col-md-4 text-center text-md-end">
+                <button class="btn btn-light btn-lg" data-bs-toggle="modal" data-bs-target="#createAnnouncementModal">
+                    <i class="ri-add-line me-2"></i>
+                    Nouvelle annonce
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistiques -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card">
+                <div class="bg-danger bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                     style="width: 70px; height: 70px;">
+                    <i class="ri-megaphone-line text-danger fs-2"></i>
+                </div>
+                <h3 class="fw-bold mb-2">{{ announcements|length }}</h3>
+                <p class="text-muted mb-0">Annonces totales</p>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card">
+                <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                     style="width: 70px; height: 70px;">
+                    <i class="ri-check-line text-success fs-2"></i>
+                </div>
+                <h3 class="fw-bold mb-2">{{ announcements|selectattr('is_active')|list|length }}</h3>
+                <p class="text-muted mb-0">Annonces actives</p>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card">
+                <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                     style="width: 70px; height: 70px;">
+                    <i class="ri-alarm-warning-line text-warning fs-2"></i>
+                </div>
+                <h3 class="fw-bold mb-2">{{ announcements|selectattr('is_urgent')|list|length }}</h3>
+                <p class="text-muted mb-0">Annonces urgentes</p>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="stats-card">
+                <div class="bg-info bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                     style="width: 70px; height: 70px;">
+                    <i class="ri-eye-line text-info fs-2"></i>
+                </div>
+                <h3 class="fw-bold mb-2">-</h3>
+                <p class="text-muted mb-0">Vues aujourd'hui</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Filtres et recherche -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <div class="input-group">
+                        <span class="input-group-text">
+                            <i class="ri-search-line"></i>
+                        </span>
+                        <input type="text" class="form-control" 
+                               id="announcementSearch" 
+                               placeholder="Rechercher une annonce...">
+                    </div>
+                </div>
+                
+                <div class="col-md-3">
+                    <select class="form-select" id="statusFilter">
+                        <option value="">Tous les statuts</option>
+                        <option value="active">Actives</option>
+                        <option value="inactive">Inactives</option>
+                        <option value="expired">Expirées</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-3">
+                    <select class="form-select" id="audienceFilter">
+                        <option value="">Tous les publics</option>
+                        <option value="all">Tous les utilisateurs</option>
+                        <option value="voters">Électeurs seulement</option>
+                        <option value="candidates">Candidats seulement</option>
+                        <option value="admin">Administrateurs seulement</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-2">
+                    <button class="btn btn-outline-primary w-100" id="resetFilters">
+                        <i class="ri-refresh-line me-1"></i>
+                        Réinitialiser
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Liste des annonces -->
+    <div class="row" id="announcementsGrid">
+        {% if announcements %}
+            {% for announcement in announcements %}
+            <div class="col-md-6 col-lg-4 mb-4 announcement-item"
+                 data-announcement-id="{{ announcement.id }}"
+                 data-status="{{ 'active' if announcement.is_active else 'inactive' }}"
+                 data-audience="{{ announcement.audience }}"
+                 data-urgent="{{ 'true' if announcement.is_urgent else 'false' }}"
+                 data-title="{{ announcement.title|lower }}"
+                 data-content="{{ announcement.content|striptags|lower }}"
+                 data-created="{{ announcement.created_at.strftime('%Y-%m-%d') }}">
+                <div class="card border-0 shadow-sm announcement-card 
+                    {{ 'urgent' if announcement.is_urgent else '' }} 
+                    {{ 'active' if announcement.is_active else '' }} 
+                    {{ 'expired' if announcement.expires_at and announcement.expires_at < now else '' }}">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                {% if announcement.is_urgent %}
+                                <span class="badge bg-danger me-2">URGENT</span>
+                                {% endif %}
+                                <span class="badge bg-{{ 'success' if announcement.is_active else 'secondary' }}">
+                                    {{ 'Active' if announcement.is_active else 'Inactive' }}
+                                </span>
+                            </div>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                        data-bs-toggle="dropdown">
+                                    <i class="ri-more-fill"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li>
+                                        <button class="dropdown-item" 
+                                                onclick="previewAnnouncement(this)">
+                                            <i class="ri-eye-line me-2"></i>Prévisualiser
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item" 
+                                                onclick="editAnnouncement(this)">
+                                            <i class="ri-edit-line me-2"></i>Modifier
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button class="dropdown-item" 
+                                                onclick="toggleAnnouncementStatus(this)">
+                                            <i class="ri-toggle-{{ 'off' if announcement.is_active else 'on' }}-line me-2"></i>
+                                            {{ 'Désactiver' if announcement.is_active else 'Activer' }}
+                                        </button>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <button class="dropdown-item text-danger" 
+                                                onclick="deleteAnnouncement(this)">
+                                            <i class="ri-delete-bin-line me-2"></i>Supprimer
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        
+                        <h5 class="card-title fw-bold mb-2">{{ announcement.title }}</h5>
+                        
+                        <p class="card-text text-muted small mb-3">
+                            {{ announcement.content|striptags|truncate(100) }}
+                        </p>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <span class="audience-badge">
+                                <i class="ri-group-line me-1"></i>
+                                {% if announcement.audience == 'all' %}
+                                    Tous les utilisateurs
+                                {% elif announcement.audience == 'voters' %}
+                                    Électeurs seulement
+                                {% elif announcement.audience == 'candidates' %}
+                                    Candidats seulement
+                                {% else %}
+                                    Administrateurs
+                                {% endif %}
+                            </span>
+                            
+                            <span class="schedule-badge bg-{{ 'info' if announcement.expires_at else 'secondary' }}">
+                                {% if announcement.expires_at %}
+                                    Expire le {{ announcement.expires_at.strftime('%d/%m/%Y') }}
+                                {% else %}
+                                    Sans expiration
+                                {% endif %}
+                            </span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between text-muted small">
+                            <div>
+                                <i class="ri-user-line me-1"></i>
+                                {{ announcement.author.email if announcement.author else 'Système' }}
+                            </div>
+                            <div>
+                                <i class="ri-time-line me-1"></i>
+                                {{ announcement.created_at.strftime('%d/%m/%Y') }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="col-12">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body text-center py-5">
+                        <i class="ri-megaphone-line display-1 text-muted mb-3"></i>
+                        <h4 class="text-muted mb-3">Aucune annonce</h4>
+                        <p class="text-muted mb-4">
+                            Commencez par créer votre première annonce officielle.
+                        </p>
+                        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAnnouncementModal">
+                            <i class="ri-add-line me-2"></i>
+                            Créer une annonce
+                        </button>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+    </div>
+    
+    <!-- Pagination -->
+    {% if announcements|length > 6 %}
+    <div class="mt-4">
+        <nav aria-label="Pagination des annonces">
+            <ul class="pagination justify-content-center">
+                <li class="page-item disabled">
+                    <a class="page-link" href="#" tabindex="-1">
+                        <i class="ri-arrow-left-line"></i>
+                    </a>
+                </li>
+                <li class="page-item active"><a class="page-link" href="#">1</a></li>
+                <li class="page-item"><a class="page-link" href="#">2</a></li>
+                <li class="page-item"><a class="page-link" href="#">3</a></li>
+                <li class="page-item">
+                    <a class="page-link" href="#">
+                        <i class="ri-arrow-right-line"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Modal de création d'annonce -->
+<div class="modal fade" id="createAnnouncementModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-add-line me-2"></i>
+                    Nouvelle annonce
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createAnnouncementForm">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8 mb-3">
+                            <label class="form-label fw-semibold">Titre de l'annonce *</label>
+                            <input type="text" class="form-control" 
+                                   id="announcementTitle" 
+                                   placeholder="Titre de l'annonce..."
+                                   required>
+                        </div>
+                        
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label fw-semibold">Priorité</label>
+                            <select class="form-select" id="announcementPriority">
+                                <option value="0">Normale</option>
+                                <option value="1">Moyenne</option>
+                                <option value="2">Haute</option>
+                                <option value="3">Urgente</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Contenu de l'annonce *</label>
+                        <div class="editor-tools">
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="bold" title="Gras">
+                                <i class="ri-bold"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="italic" title="Italique">
+                                <i class="ri-italic"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="underline" title="Souligné">
+                                <i class="ri-underline"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="insertUnorderedList" title="Liste à puces">
+                                <i class="ri-list-unordered"></i>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-command="insertOrderedList" title="Liste numérotée">
+                                <i class="ri-list-ordered"></i>
+                            </button>
+                        </div>
+                        <div class="editor-container" id="announcementEditor" contenteditable="true">
+                            <p>Saisissez le contenu de votre annonce ici...</p>
+                        </div>
+                        <small class="text-muted">Vous pouvez utiliser du texte enrichi (gras, italique, listes)</small>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Public cible *</label>
+                            <select class="form-select" id="announcementAudience" required>
+                                <option value="all">Tous les utilisateurs</option>
+                                <option value="voters">Électeurs seulement</option>
+                                <option value="candidates">Candidats seulement</option>
+                                <option value="admin">Administrateurs seulement</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Date d'expiration</label>
+                            <input type="date" class="form-control" 
+                                   id="announcementExpires">
+                            <small class="text-muted">Laisser vide pour aucune expiration</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       id="announcementUrgent">
+                                <label class="form-check-label fw-semibold">
+                                    Marquer comme urgente
+                                </label>
+                            </div>
+                            <small class="text-muted">
+                                Les annonces urgentes sont affichées en priorité avec un badge rouge.
+                            </small>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" 
+                                       id="announcementActive" checked>
+                                <label class="form-check-label fw-semibold">
+                                    Activer immédiatement
+                                </label>
+                            </div>
+                            <small class="text-muted">
+                                L'annonce sera visible par les utilisateurs immédiatement après création.
+                            </small>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="ri-information-line me-2"></i>
+                        <small>
+                            <strong>Conseil :</strong> Les annonces doivent être claires, concises et informatives.
+                            Évitez les informations superflues et privilégiez les messages importants.
+                        </small>
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Annuler
+                    </button>
+                    <button type="button" class="btn btn-primary" id="previewAnnouncementBtn">
+                        <i class="ri-eye-line me-2"></i>
+                        Prévisualiser
+                    </button>
+                    <button type="submit" class="btn btn-success">
+                        <i class="ri-save-line me-2"></i>
+                        Publier l'annonce
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de prévisualisation -->
+<div class="modal fade preview-modal" id="previewAnnouncementModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 bg-primary text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-eye-line me-2"></i>
+                    Prévisualisation de l'annonce
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="announcementPreviewContent">
+                    <!-- Rempli par JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Fermer
+                </button>
+                <button type="button" class="btn btn-primary" id="confirmPublishAnnouncement">
+                    <i class="ri-check-line me-2"></i>
+                    Confirmer la publication
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'édition -->
+<div class="modal fade" id="editAnnouncementModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-edit-line me-2"></i>
+                    Modifier l'annonce
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editAnnouncementForm">
+                <input type="hidden" id="editAnnouncementId">
+                <div class="modal-body" id="editAnnouncementContent">
+                    <!-- Rempli par JavaScript -->
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Annuler
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ri-save-line me-2"></i>
+                        Enregistrer les modifications
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation -->
+<div class="modal fade" id="confirmationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title fw-bold" id="confirmationModalTitle"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirmationModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmActionBtn">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filtrage des annonces
+    const announcementSearch = document.getElementById('announcementSearch');
+    const statusFilter = document.getElementById('statusFilter');
+    const audienceFilter = document.getElementById('audienceFilter');
+    const resetFiltersBtn = document.getElementById('resetFilters');
+    const announcementItems = document.querySelectorAll('.announcement-item');
+    
+    function filterAnnouncements() {
+        const searchTerm = announcementSearch.value.toLowerCase();
+        const statusValue = statusFilter.value;
+        const audienceValue = audienceFilter.value;
+        
+        announcementItems.forEach(item => {
+            const title = item.dataset.title;
+            const content = item.dataset.content;
+            const status = item.dataset.status;
+            const audience = item.dataset.audience;
+            const urgent = item.dataset.urgent;
+            
+            let matches = true;
+            
+            // Filtre de recherche
+            if (searchTerm && !title.includes(searchTerm) && !content.includes(searchTerm)) {
+                matches = false;
+            }
+            
+            // Filtre par statut
+            if (statusValue && status !== statusValue) {
+                matches = false;
+            }
+            
+            // Filtre par public
+            if (audienceValue && audience !== audienceValue) {
+                matches = false;
+            }
+            
+            // Afficher ou cacher l'élément
+            if (matches) {
+                item.style.display = '';
+                item.classList.add('animate__animated', 'animate__fadeIn');
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+    
+    // Écouter les changements des filtres
+    announcementSearch.addEventListener('input', filterAnnouncements);
+    statusFilter.addEventListener('change', filterAnnouncements);
+    audienceFilter.addEventListener('change', filterAnnouncements);
+    
+    // Réinitialiser les filtres
+    if (resetFiltersBtn) {
+        resetFiltersBtn.addEventListener('click', function() {
+            announcementSearch.value = '';
+            statusFilter.value = '';
+            audienceFilter.value = '';
+            filterAnnouncements();
+        });
+    }
+    
+    // Éditeur de texte enrichi
+    const announcementEditor = document.getElementById('announcementEditor');
+    if (announcementEditor) {
+        // Gérer les commandes d'édition
+        document.querySelectorAll('.editor-tools button').forEach(button => {
+            button.addEventListener('click', function() {
+                const command = this.dataset.command;
+                document.execCommand(command, false, null);
+                announcementEditor.focus();
+            });
+        });
+        
+        // Sauvegarder le contenu périodiquement
+        let saveInterval;
+        announcementEditor.addEventListener('input', function() {
+            clearTimeout(saveInterval);
+            saveInterval = setTimeout(() => {
+                localStorage.setItem('announcement_draft', this.innerHTML);
+            }, 1000);
+        });
+        
+        // Restaurer le brouillon
+        const draft = localStorage.getItem('announcement_draft');
+        if (draft && draft !== '<p>Saisissez le contenu de votre annonce ici...</p>') {
+            announcementEditor.innerHTML = draft;
+        }
+    }
+    
+    // Création d'annonce
+    const createAnnouncementForm = document.getElementById('createAnnouncementForm');
+    const previewAnnouncementBtn = document.getElementById('previewAnnouncementBtn');
+    const confirmPublishAnnouncementBtn = document.getElementById('confirmPublishAnnouncement');
+    
+    if (createAnnouncementForm) {
+        createAnnouncementForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            createAnnouncement();
+        });
+    }
+    
+    if (previewAnnouncementBtn) {
+        previewAnnouncementBtn.addEventListener('click', function() {
+            previewAnnouncement();
+        });
+    }
+    
+    if (confirmPublishAnnouncementBtn) {
+        confirmPublishAnnouncementBtn.addEventListener('click', function() {
+            createAnnouncement();
+        });
+    }
+    
+    function createAnnouncement() {
+        const title = document.getElementById('announcementTitle').value;
+        const content = document.getElementById('announcementEditor').innerHTML;
+        const audience = document.getElementById('announcementAudience').value;
+        const priority = document.getElementById('announcementPriority').value;
+        const isUrgent = document.getElementById('announcementUrgent').checked;
+        const isActive = document.getElementById('announcementActive').checked;
+        const expiresAt = document.getElementById('announcementExpires').value;
+        
+        // Validation
+        if (!title.trim()) {
+            showToast('Le titre est obligatoire', 'error');
+            return;
+        }
+        
+        if (!content.trim() || content === '<p>Saisissez le contenu de votre annonce ici...</p>') {
+            showToast('Le contenu est obligatoire', 'error');
+            return;
+        }
+        
+        // Afficher l'indicateur de chargement
+        const submitBtn = document.querySelector('#createAnnouncementForm button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Publication...
+            `;
+        }
+        
+        // Simuler l'envoi
+        setTimeout(() => {
+            showToast('Annonce créée avec succès', 'success');
+            
+            // Fermer les modals
+            const createModal = bootstrap.Modal.getInstance(document.getElementById('createAnnouncementModal'));
+            const previewModal = bootstrap.Modal.getInstance(document.getElementById('previewAnnouncementModal'));
+            
+            if (createModal) createModal.hide();
+            if (previewModal) previewModal.hide();
+            
+            // Réinitialiser le formulaire
+            createAnnouncementForm.reset();
+            document.getElementById('announcementEditor').innerHTML = '<p>Saisissez le contenu de votre annonce ici...</p>';
+            
+            // Recharger la page après 1 seconde
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }, 2000);
+    }
+    
+    function previewAnnouncement() {
+        const title = document.getElementById('announcementTitle').value;
+        const content = document.getElementById('announcementEditor').innerHTML;
+        const audience = document.getElementById('announcementAudience').value;
+        const isUrgent = document.getElementById('announcementUrgent').checked;
+        
+        if (!title.trim() || !content.trim()) {
+            showToast('Veuillez remplir le titre et le contenu', 'warning');
+            return;
+        }
+        
+        const audienceText = {
+            'all': 'Tous les utilisateurs',
+            'voters': 'Électeurs seulement',
+            'candidates': 'Candidats seulement',
+            'admin': 'Administrateurs seulement'
+        }[audience];
+        
+        const previewContent = `
+            <div class="announcement-preview">
+                <div class="d-flex justify-content-between align-items-start mb-4">
+                    <div>
+                        ${isUrgent ? '<span class="badge bg-danger me-2">URGENT</span>' : ''}
+                        <span class="badge bg-success">Active</span>
+                    </div>
+                    <div class="text-muted small">
+                        <i class="ri-time-line me-1"></i>
+                        Publiée à l'instant
+                    </div>
+                </div>
+                
+                <h3 class="fw-bold mb-3">${title}</h3>
+                
+                <div class="announcement-content mb-4">
+                    ${content}
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center border-top pt-3">
+                    <span class="badge bg-primary">
+                        <i class="ri-group-line me-1"></i>
+                        ${audienceText}
+                    </span>
+                    <div class="text-muted small">
+                        <i class="ri-user-line me-1"></i>
+                        Par l'administration
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('announcementPreviewContent').innerHTML = previewContent;
+        
+        const previewModal = new bootstrap.Modal(document.getElementById('previewAnnouncementModal'));
+        previewModal.show();
+    }
+    
+    // Fonctions pour la gestion des annonces
+    window.previewAnnouncement = function(announcementRef) {
+        // announcementRef peut etre un id ou un element declencheur
+        let announcementItem = null;
+        let announcementId = null;
+
+        if (announcementRef && announcementRef.closest) {
+            announcementItem = announcementRef.closest('.announcement-item');
+            announcementId = announcementItem?.dataset.announcementId || null;
+        } else {
+            announcementId = announcementRef;
+            announcementItem = document.querySelector(`[data-announcement-id="${announcementId}"]`);
+        }
+
+        if (!announcementItem) return;
+        
+        const title = announcementItem.dataset.title;
+        const content = announcementItem.dataset.fullContent || 'Contenu de l\'annonce...';
+        const isUrgent = announcementItem.dataset.urgent === 'true';
+        const audience = announcementItem.dataset.audience;
+        const createdAt = announcementItem.dataset.created;
+        
+        const audienceText = {
+            'all': 'Tous les utilisateurs',
+            'voters': 'Électeurs seulement',
+            'candidates': 'Candidats seulement',
+            'admin': 'Administrateurs seulement'
+        }[audience];
+        
+        const previewContent = `
+            <div class="announcement-preview">
+                <div class="d-flex justify-content-between align-items-start mb-4">
+                    <div>
+                        ${isUrgent ? '<span class="badge bg-danger me-2">URGENT</span>' : ''}
+                        <span class="badge bg-success">Active</span>
+                    </div>
+                    <div class="text-muted small">
+                        <i class="ri-time-line me-1"></i>
+                        ${createdAt}
+                    </div>
+                </div>
+                
+                <h3 class="fw-bold mb-3">${title}</h3>
+                
+                <div class="announcement-content mb-4">
+                    ${content}
+                </div>
+                
+                <div class="d-flex justify-content-between align-items-center border-top pt-3">
+                    <span class="badge bg-primary">
+                        <i class="ri-group-line me-1"></i>
+                        ${audienceText}
+                    </span>
+                    <div class="text-muted small">
+                        <i class="ri-user-line me-1"></i>
+                        Par l'administration
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('announcementPreviewContent').innerHTML = previewContent;
+        
+        const previewModal = new bootstrap.Modal(document.getElementById('previewAnnouncementModal'));
+        previewModal.show();
+    };
+    
+    window.editAnnouncement = function(announcementRef) {
+        // Trouver l'annonce dans la liste
+        let announcementItem = null;
+        let announcementId = null;
+
+        if (announcementRef && announcementRef.closest) {
+            announcementItem = announcementRef.closest('.announcement-item');
+            announcementId = announcementItem?.dataset.announcementId || null;
+        } else {
+            announcementId = announcementRef;
+            announcementItem = document.querySelector(`.announcement-item[data-announcement-id="${announcementId}"]`);
+        }
+
+        if (!announcementItem) return;
+        
+        // Données simulées (dans une vraie app, on ferait une requête AJAX)
+        const announcement = {
+            id: announcementId,
+            title: announcementItem.querySelector('.card-title').textContent,
+            content: '<p>Contenu de l\'annonce à modifier...</p>',
+            audience: announcementItem.dataset.audience || 'all',
+            priority: '2',
+            is_urgent: announcementItem.dataset.urgent === 'true',
+            is_active: announcementItem.dataset.status === 'active',
+            expires_at: ''
+        };
+        
+        const editContent = `
+            <div class="row">
+                <div class="col-md-8 mb-3">
+                    <label class="form-label fw-semibold">Titre de l'annonce *</label>
+                    <input type="text" class="form-control" 
+                           id="editAnnouncementTitle" 
+                           value="${announcement.title}"
+                           required>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <label class="form-label fw-semibold">Priorité</label>
+                    <select class="form-select" id="editAnnouncementPriority">
+                        <option value="0" ${announcement.priority === '0' ? 'selected' : ''}>Normale</option>
+                        <option value="1" ${announcement.priority === '1' ? 'selected' : ''}>Moyenne</option>
+                        <option value="2" ${announcement.priority === '2' ? 'selected' : ''}>Haute</option>
+                        <option value="3" ${announcement.priority === '3' ? 'selected' : ''}>Urgente</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <label class="form-label fw-semibold">Contenu de l'annonce *</label>
+                <div class="editor-tools">
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="bold">
+                        <i class="ri-bold"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="italic">
+                        <i class="ri-italic"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="underline">
+                        <i class="ri-underline"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="insertUnorderedList">
+                        <i class="ri-list-unordered"></i>
+                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-command="insertOrderedList">
+                        <i class="ri-list-ordered"></i>
+                    </button>
+                </div>
+                <div class="editor-container" id="editAnnouncementEditor" contenteditable="true">
+                    ${announcement.content}
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">Public cible *</label>
+                    <select class="form-select" id="editAnnouncementAudience" required>
+                        <option value="all" ${announcement.audience === 'all' ? 'selected' : ''}>Tous les utilisateurs</option>
+                        <option value="voters" ${announcement.audience === 'voters' ? 'selected' : ''}>Électeurs seulement</option>
+                        <option value="candidates" ${announcement.audience === 'candidates' ? 'selected' : ''}>Candidats seulement</option>
+                        <option value="admin" ${announcement.audience === 'admin' ? 'selected' : ''}>Administrateurs seulement</option>
+                    </select>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <label class="form-label fw-semibold">Date d'expiration</label>
+                    <input type="date" class="form-control" 
+                           id="editAnnouncementExpires"
+                           value="${announcement.expires_at || ''}">
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           id="editAnnouncementUrgent" ${announcement.is_urgent ? 'checked' : ''}>
+                    <label class="form-check-label fw-semibold">
+                        Marquer comme urgente
+                    </label>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" 
+                           id="editAnnouncementActive" ${announcement.is_active ? 'checked' : ''}>
+                    <label class="form-check-label fw-semibold">
+                        Annonce active
+                    </label>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('editAnnouncementId').value = announcementId;
+        document.getElementById('editAnnouncementContent').innerHTML = editContent;
+        
+        // Initialiser l'éditeur
+        const editEditor = document.getElementById('editAnnouncementEditor');
+        if (editEditor) {
+            editEditor.querySelectorAll('.editor-tools button').forEach(button => {
+                button.addEventListener('click', function() {
+                    const command = this.dataset.command;
+                    document.execCommand(command, false, null);
+                    editEditor.focus();
+                });
+            });
+        }
+        
+        const editModal = new bootstrap.Modal(document.getElementById('editAnnouncementModal'));
+        editModal.show();
+        
+        // Gérer la soumission du formulaire d'édition
+        const editForm = document.getElementById('editAnnouncementForm');
+        editForm.onsubmit = function(e) {
+            e.preventDefault();
+            
+            const title = document.getElementById('editAnnouncementTitle').value;
+            const content = document.getElementById('editAnnouncementEditor').innerHTML;
+            
+            if (!title.trim() || !content.trim()) {
+                showToast('Veuillez remplir tous les champs', 'error');
+                return;
+            }
+            
+            // Simuler la sauvegarde
+            showToast('Annonce mise à jour avec succès', 'success');
+            editModal.hide();
+            
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        };
+    };
+    
+    window.toggleAnnouncementStatus = function(announcementRef, isActive) {
+        let announcementId = null;
+        let currentActive = isActive;
+
+        if (announcementRef && announcementRef.closest) {
+            const announcementItem = announcementRef.closest('.announcement-item');
+            announcementId = announcementItem?.dataset.announcementId || null;
+            currentActive = announcementItem?.dataset.status === 'active';
+        } else {
+            announcementId = announcementRef;
+        }
+
+        const action = currentActive ? 'désactiver' : 'activer';
+        
+        showConfirmation(
+            `${action.charAt(0).toUpperCase() + action.slice(1)} l'annonce`,
+            `Voulez-vous ${action} cette annonce ?`,
+            'toggleStatus',
+            { announcementId, isActive: currentActive }
+        );
+    };
+    
+    window.deleteAnnouncement = function(announcementRef) {
+        let announcementId = null;
+        if (announcementRef && announcementRef.closest) {
+            const announcementItem = announcementRef.closest('.announcement-item');
+            announcementId = announcementItem?.dataset.announcementId || null;
+        } else {
+            announcementId = announcementRef;
+        }
+
+        showConfirmation(
+            "Supprimer l'annonce",
+            'Êtes-vous sûr de vouloir supprimer cette annonce ? Cette action est irréversible.',
+            'delete',
+            { announcementId }
+        );
+    };
+    
+    // Système de confirmation
+    function showConfirmation(title, message, action, data = {}) {
+        const modalTitle = document.getElementById('confirmationModalTitle');
+        const modalBody = document.getElementById('confirmationModalBody');
+        const confirmBtn = document.getElementById('confirmActionBtn');
+        
+        if (modalTitle && modalBody && confirmBtn) {
+            modalTitle.textContent = title;
+            modalBody.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="ri-alert-line me-2"></i>
+                    ${message}
+                </div>
+                <div class="text-center">
+                    <i class="ri-question-line display-1 text-warning mb-3"></i>
+                    <p class="fw-bold">Confirmez-vous cette action ?</p>
+                </div>
+            `;
+            
+            // Configurer le bouton de confirmation
+            confirmBtn.onclick = function() {
+                executeAction(action, data);
+                const modal = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
+                modal.hide();
+            };
+            
+            const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+            modal.show();
+        }
+    }
+    
+    function executeAction(action, data) {
+        let message = '';
+        let icon = 'success';
+        
+        switch(action) {
+            case 'toggleStatus':
+                const status = data.isActive ? 'désactivée' : 'activée';
+                message = `Annonce ${status} avec succès`;
+                break;
+            case 'delete':
+                message = 'Annonce supprimée avec succès';
+                icon = 'info';
+                break;
+            case 'scheduleAnnouncement':
+                message = 'Annonce planifiée avec succès';
+                break;
+        }
+        
+        showToast(message, icon);
+        
+        // Recharger la page après 1 seconde
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+    }
+    
+    // Fonction utilitaire pour afficher des notifications
+    function showToast(message, type = 'info', duration = 3000) {
+        // Créer le toast
+        const toastId = 'toast-' + Date.now();
+        const toastHTML = `
+            <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="ri-information-line me-2"></i>
+                        ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        `;
+        
+        // Ajouter le toast au conteneur
+        let toastContainer = document.querySelector('.toast-container');
+        if (!toastContainer) {
+            toastContainer = document.createElement('div');
+            toastContainer.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            document.body.appendChild(toastContainer);
+        }
+        
+        toastContainer.insertAdjacentHTML('beforeend', toastHTML);
+        
+        // Afficher le toast
+        const toastElement = document.getElementById(toastId);
+        const toast = new bootstrap.Toast(toastElement, {
+            autohide: true,
+            delay: duration
+        });
+        toast.show();
+        
+        // Supprimer le toast après fermeture
+        toastElement.addEventListener('hidden.bs.toast', function() {
+            this.remove();
+        });
+    }
+    
+    // Animation des cartes
+    document.querySelectorAll('.announcement-card').forEach((card, index) => {
+        setTimeout(() => {
+            card.classList.add('animate__animated', 'animate__fadeIn');
+        }, index * 100);
+    });
+    
+    // Mise à jour périodique des annonces
+    function checkForNewAnnouncements() {
+        // Simuler une vérification de nouvelles annonces
+        console.log('Vérification des nouvelles annonces...');
+        
+        // Dans une application réelle, on ferait une requête AJAX ici
+        // fetch('/api/announcements/check-new').then(...)
+    }
+    
+    // Vérifier toutes les 30 secondes
+    setInterval(checkForNewAnnouncements, 30000);
+    
+    // Initialiser les tooltips Bootstrap
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Initialiser les animations
+    setTimeout(() => {
+        document.querySelectorAll('.announcement-card').forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            
+            setTimeout(() => {
+                card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    }, 100);
+});
+</script>
+{% endblock %}

@@ -1,0 +1,876 @@
+<!-- templates/candidate/profile_candidate.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Mon profil candidat - Candidat{% endblock %}
+
+{% block styles %}
+<style>
+    .profile-header {
+        background: linear-gradient(135deg, var(--success) 0%, #0d8c1f 100%);
+        color: white;
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .profile-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('/static/images/ui/pattern.svg');
+        opacity: 0.1;
+    }
+    
+    .profile-avatar {
+        width: 150px;
+        height: 150px;
+        border-radius: var(--border-radius-circle);
+        border: 4px solid white;
+        object-fit: cover;
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .profile-badge {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+    }
+    
+    .profile-section {
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .info-card {
+        border-left: 4px solid var(--success);
+        background-color: rgba(18, 173, 43, 0.05);
+        transition: all 0.3s ease;
+    }
+    
+    .info-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .edit-btn {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+    
+    .info-card:hover .edit-btn {
+        opacity: 1;
+    }
+    
+    .status-indicator {
+        width: 10px;
+        height: 10px;
+        border-radius: var(--border-radius-circle);
+        display: inline-block;
+        margin-right: 5px;
+    }
+    
+    .status-active {
+        background-color: var(--success);
+        box-shadow: 0 0 0 2px rgba(18, 173, 43, 0.3);
+    }
+    
+    .status-pending {
+        background-color: var(--warning);
+        box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.3);
+    }
+    
+    .verification-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- En-tête du profil -->
+    <div class="profile-header">
+        <div class="row align-items-center">
+            <div class="col-md-3 text-center">
+                <div class="position-relative d-inline-block">
+                    {% set photo_url = candidate_photo_url(candidate) %}
+                    {% if photo_url %}
+                        <img src="{{ photo_url }}"
+                             alt="{{ candidate.full_name }}"
+                             class="profile-avatar"
+                             loading="lazy"
+                             onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-avatar.svg') }}';">
+                    {% else %}
+                        <div class="profile-avatar bg-white d-flex align-items-center justify-content-center">
+                            <i class="ri-user-star-line text-success display-1"></i>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="mt-3">
+                        <button class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#changePhotoModal">
+                            <i class="ri-camera-line me-1"></i>
+                            Changer la photo
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <h1 class="display-6 fw-bold mb-2">{{ candidate.full_name }}</h1>
+                <p class="lead mb-3">
+                    {{ candidate.party_name }}
+                    {% if candidate.party_acronym %}
+                        ({{ candidate.party_acronym }})
+                    {% endif %}
+                </p>
+                
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge bg-white text-success">
+                        <i class="ri-map-pin-line me-1"></i>
+                        {{ candidate.place_of_birth }}
+                    </span>
+                    <span class="badge bg-white text-success">
+                        <i class="ri-cake-line me-1"></i>
+                        {{ candidate.age }} ans
+                    </span>
+                    <span class="badge bg-white text-success">
+                        <i class="bi bi-check2-square me-1"></i>
+                        {{ candidate.vote_count }} votes
+                    </span>
+                    <span class="badge bg-{{ 'success' if candidate.is_approved else 'warning' }}">
+                        <i class="ri-{{ 'check-double-line' if candidate.is_approved else 'time-line' }} me-1"></i>
+                        {{ 'Approuvé' if candidate.is_approved else 'En attente' }}
+                    </span>
+                </div>
+                
+                {% if candidate.campaign_slogan %}
+                <div class="fst-italic text-white-75">
+                    <i class="ri-double-quotes-l me-1"></i>
+                    "{{ candidate.campaign_slogan }}"
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="col-md-3 text-center text-md-end">
+                <div class="profile-badge">
+                    <div class="bg-white text-success rounded-3 p-3">
+                        <div class="fw-bold mb-1">Classement</div>
+                        <div class="display-4 fw-bold">
+                            {% if ranking %}
+                                {{ ranking }}<sup>{{ 'er' if ranking == 1 else 'ème' }}</sup>
+                            {% else %}
+                                -
+                            {% endif %}
+                        </div>
+                        <small class="text-muted">sur {{ total_candidates }} candidats</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Informations personnelles -->
+    <div class="profile-section">
+        <div class="card border-0 shadow-sm info-card">
+            <div class="card-header bg-white position-relative">
+                <h4 class="mb-0 fw-bold">
+                    <i class="ri-user-line me-2 text-success"></i>
+                    Informations personnelles
+                </h4>
+                <button class="btn btn-sm btn-outline-primary edit-btn" data-bs-toggle="modal" data-bs-target="#editPersonalInfoModal">
+                    <i class="ri-edit-line"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted small">Nom complet</h6>
+                        <p class="fw-semibold">{{ candidate.full_name }}</p>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted small">Date de naissance</h6>
+                        <p class="fw-semibold">{{ candidate.date_of_birth|date_format }}</p>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted small">Lieu de naissance</h6>
+                        <p class="fw-semibold">{{ candidate.place_of_birth }}</p>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted small">Numéro CNI</h6>
+                        <p class="fw-semibold">{{ candidate.cni_masked }}</p>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted small">Âge</h6>
+                        <p class="fw-semibold">{{ candidate.age }} ans</p>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <h6 class="text-muted small">Date d'inscription</h6>
+                        <p class="fw-semibold">{{ candidate.created_at|datetime_format }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Informations de campagne -->
+    <div class="profile-section">
+        <div class="card border-0 shadow-sm info-card">
+            <div class="card-header bg-white position-relative">
+                <h4 class="mb-0 fw-bold">
+                    <i class="ri-megaphone-line me-2 text-primary"></i>
+                    Informations de campagne
+                </h4>
+                <a href="{{ url_for('candidate_campaign') }}" class="btn btn-sm btn-outline-primary edit-btn">
+                    <i class="ri-edit-line"></i>
+                </a>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <h6 class="text-muted small">Parti politique</h6>
+                        <p class="fw-semibold">
+                            {{ candidate.party_name }}
+                            {% if candidate.party_acronym %}
+                                <span class="badge bg-primary ms-2">{{ candidate.party_acronym }}</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <h6 class="text-muted small">Slogan de campagne</h6>
+                        <p class="fw-semibold fst-italic">
+                            {% if candidate.campaign_slogan %}
+                                "{{ candidate.campaign_slogan }}"
+                            {% else %}
+                                <span class="text-muted">Aucun slogan défini</span>
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    <div class="col-12 mb-4">
+                        <h6 class="text-muted small">Programme politique</h6>
+                        {% if candidate.political_program %}
+                            <div class="bg-light p-3 rounded" style="max-height: 200px; overflow-y: auto;">
+                                {{ candidate.political_program|safe|truncate(500) }}
+                            </div>
+                            <a href="{{ url_for('candidate_campaign') }}" class="btn btn-sm btn-outline-primary mt-2">
+                                Voir le programme complet
+                            </a>
+                        {% else %}
+                            <p class="text-muted">Aucun programme politique défini</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statut et vérification -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-shield-check-line me-2 text-success"></i>
+                        Statut et vérification
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Statut de la candidature</span>
+                            <span class="d-flex align-items-center">
+                                <span class="status-indicator status-{{ 'active' if candidate.is_approved else 'pending' }}"></span>
+                                <span class="fw-semibold">
+                                    {{ 'Approuvée' if candidate.is_approved else 'En attente' }}
+                                </span>
+                            </span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Vérification d'éligibilité</span>
+                            <span class="verification-badge bg-{{ 'success' if candidate.is_eligible else 'warning' }}">
+                                <i class="ri-{{ 'check-line' if candidate.is_eligible else 'time-line' }} me-1"></i>
+                                {{ 'Validée' if candidate.is_eligible else 'En cours' }}
+                            </span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span>Campagne active</span>
+                            <span class="verification-badge bg-{{ 'success' if election and election.is_voting_open else 'secondary' }}">
+                                {{ 'Oui' if election and election.is_voting_open else 'Non' }}
+                            </span>
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span>Dernière mise à jour</span>
+                            <span class="text-muted small">{{ candidate.updated_at|time_ago }}</span>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <div class="text-center">
+                        <h6 class="fw-bold mb-2">Profil complété à</h6>
+                        <div class="display-4 fw-bold text-success mb-2">
+                            {% set completion_rate = namespace(value=0) %}
+                            {% if candidate.party_name %}{% set completion_rate.value = completion_rate.value + 20 %}{% endif %}
+                            {% if candidate.political_program %}{% set completion_rate.value = completion_rate.value + 30 %}{% endif %}
+                            {% if candidate.profile_image and candidate.profile_image != 'default-candidate.jpg' %}{% set completion_rate.value = completion_rate.value + 20 %}{% endif %}
+                            {% if candidate.biography %}{% set completion_rate.value = completion_rate.value + 15 %}{% endif %}
+                            {% if candidate.website_url or candidate.facebook_url or candidate.twitter_url %}{% set completion_rate.value = completion_rate.value + 15 %}{% endif %}
+                            {{ completion_rate.value }}%
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" style="width: {{ completion_rate.value }}%"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-links-line me-2 text-primary"></i>
+                        Liens et contacts
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h6 class="fw-bold mb-3">Liens de campagne</h6>
+                        <div class="d-flex flex-column gap-2">
+                            {% if candidate.website_url %}
+                            <a href="{{ candidate.website_url }}" target="_blank" 
+                               class="btn btn-outline-primary text-start">
+                                <i class="ri-global-line me-2"></i>
+                                Site web officiel
+                            </a>
+                            {% endif %}
+                            
+                            {% if candidate.facebook_url %}
+                            <a href="{{ candidate.facebook_url }}" target="_blank" 
+                               class="btn btn-outline-primary text-start">
+                                <i class="ri-facebook-fill me-2"></i>
+                                Page Facebook
+                            </a>
+                            {% endif %}
+                            
+                            {% if candidate.twitter_url %}
+                            <a href="{{ candidate.twitter_url }}" target="_blank" 
+                               class="btn btn-outline-primary text-start">
+                                <i class="ri-twitter-fill me-2"></i>
+                                Compte Twitter/X
+                            </a>
+                            {% endif %}
+                            
+                            {% if candidate.campaign_video_url %}
+                            <a href="{{ candidate.campaign_video_url }}" target="_blank" 
+                               class="btn btn-outline-primary text-start">
+                                <i class="ri-youtube-fill me-2"></i>
+                                Vidéo de campagne
+                            </a>
+                            {% endif %}
+                            
+                            {% if not candidate.website_url and not candidate.facebook_url and not candidate.twitter_url and not candidate.campaign_video_url %}
+                            <div class="text-center py-3">
+                                <i class="ri-link-unlink-line display-4 text-muted mb-3"></i>
+                                <p class="text-muted mb-0">Aucun lien ajouté</p>
+                                <a href="{{ url_for('candidate_campaign') }}" class="btn btn-sm btn-primary mt-2">
+                                    Ajouter des liens
+                                </a>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <div>
+                        <h6 class="fw-bold mb-3">Contact administratif</h6>
+                        <div class="mb-2">
+                            <span class="text-muted small">Email</span>
+                            <p class="fw-semibold mb-0">{{ current_user.email }}</p>
+                        </div>
+                        <div>
+                            <span class="text-muted small">Dernière connexion</span>
+                            <p class="fw-semibold mb-0">
+                                {{ current_user.last_login|datetime_format if current_user.last_login else 'Jamais' }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Actions du profil -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-body">
+            <h5 class="fw-bold mb-4">
+                <i class="ri-settings-3-line me-2 text-primary"></i>
+                Gestion du profil
+            </h5>
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <a href="{{ url_for('candidate_campaign') }}" 
+                       class="btn btn-outline-primary w-100">
+                        <i class="ri-megaphone-line me-2"></i>
+                        Modifier ma campagne
+                    </a>
+                </div>
+                
+                <div class="col-md-4">
+                    <button class="btn btn-outline-success w-100" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                        <i class="ri-lock-password-line me-2"></i>
+                        Changer le mot de passe
+                    </button>
+                </div>
+                
+                <div class="col-md-4">
+                    <button class="btn btn-outline-danger w-100" data-bs-toggle="modal" data-bs-target="#deleteAccountModal">
+                        <i class="ri-delete-bin-line me-2"></i>
+                        Supprimer le compte
+                    </button>
+                </div>
+                
+                <div class="col-md-4">
+                    <a class="btn btn-outline-info w-100" href="{{ url_for('candidate_export_profile') }}">
+                        <i class="ri-download-line me-2"></i>
+                        Exporter mon profil
+                    </a>
+                </div>
+                
+                <div class="col-md-4">
+                    <a href="{{ url_for('candidate_statistics') }}" 
+                       class="btn btn-outline-warning w-100">
+                        <i class="ri-bar-chart-line me-2"></i>
+                        Voir les statistiques
+                    </a>
+                </div>
+                
+                <div class="col-md-4">
+                    <a href="{{ url_for('candidates_list') }}" 
+                       class="btn btn-outline-secondary w-100">
+                        <i class="ri-user-search-line me-2"></i>
+                        Voir les autres candidats
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de changement de photo -->
+<div class="modal fade" id="changePhotoModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-camera-line me-2"></i>
+                    Changer la photo de profil
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST"
+                  action="{{ url_for('candidate_update_photo') }}"
+                  enctype="multipart/form-data"
+                  id="changePhotoForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="modal-body">
+                <div class="text-center mb-4">
+                    <div id="photoPreview" class="rounded-circle bg-light d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width: 150px; height: 150px;">
+                        {% set photo_url = candidate_photo_url(candidate) %}
+                        {% if photo_url %}
+                            <img src="{{ photo_url }}"
+                                 alt="Photo actuelle"
+                                 class="rounded-circle"
+                                 style="width: 150px; height: 150px; object-fit: cover;"
+                                 loading="lazy"
+                                 onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-avatar.svg') }}';">
+                        {% else %}
+                            <i class="ri-user-line text-muted display-1"></i>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <input type="file" class="form-control" id="newProfilePhoto" name="profile_image" accept="image/*" required>
+                    <small class="text-muted">Format JPG, PNG ou WEBP, maximum 2MB</small>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="ri-information-line me-2"></i>
+                    <small>
+                        Votre photo doit être professionnelle et respecter les règles de la campagne électorale.
+                    </small>
+                </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-primary" id="saveProfilePhoto">
+                        <i class="ri-save-line me-2"></i>
+                        Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de changement de mot de passe -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-lock-password-line me-2"></i>
+                    Changer le mot de passe
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="changePasswordForm" method="POST" action="{{ url_for('candidate_change_password') }}">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <div class="mb-3">
+                        <label class="form-label">Mot de passe actuel</label>
+                        <input type="password" class="form-control" 
+                               id="currentPassword" name="current_password" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nouveau mot de passe</label>
+                        <input type="password" class="form-control" 
+                               id="newPassword" 
+                               name="new_password"
+                               minlength="8" required>
+                        <small class="text-muted">Minimum 8 caractères</small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Confirmer le nouveau mot de passe</label>
+                        <input type="password" class="form-control" 
+                               id="confirmPassword" name="confirm_password" required>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="ri-alert-line me-2"></i>
+                        <small>
+                            Après le changement, vous serez déconnecté et devrez vous reconnecter avec votre nouveau mot de passe.
+                        </small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-primary" id="saveNewPassword">
+                    <i class="ri-check-line me-2"></i>
+                    Changer le mot de passe
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de suppression de compte -->
+<div class="modal fade" id="deleteAccountModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0 bg-danger text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-delete-bin-line me-2"></i>
+                    Supprimer le compte
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('candidate_delete_account') }}" id="deleteAccountForm">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                <div class="modal-body">
+                <div class="text-center mb-4">
+                    <i class="ri-error-warning-line display-1 text-danger mb-3"></i>
+                    <h4 class="fw-bold text-danger mb-3">Attention !</h4>
+                    <p class="mb-0">
+                        Cette action désactivera définitivement votre compte candidat et coupera votre accès.
+                        Cette action est irréversible.
+                    </p>
+                </div>
+                
+                <div class="alert alert-danger">
+                    <i class="ri-alert-line me-2"></i>
+                    <strong>Conséquences :</strong>
+                    <ul class="mb-0 mt-2">
+                        <li>Votre profil ne sera plus accessible</li>
+                        <li>Votre campagne sera stoppée</li>
+                        <li>Cette action ne peut être annulée</li>
+                    </ul>
+                </div>
+                
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">
+                        Tapez "SUPPRIMER" pour confirmer
+                    </label>
+                    <input type="text" class="form-control" 
+                           id="confirmDelete"
+                           name="confirm_text"
+                           placeholder="SUPPRIMER">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Mot de passe actuel</label>
+                    <input type="password" class="form-control" name="current_password" required>
+                </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        Annuler
+                    </button>
+                    <button type="button" class="btn btn-danger" id="confirmDeleteAccount" disabled>
+                        <i class="ri-delete-bin-line me-2"></i>
+                        Désactiver le compte
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Changement de photo de profil
+    const newProfilePhotoInput = document.getElementById('newProfilePhoto');
+    const photoPreview = document.getElementById('photoPreview');
+    const saveProfilePhotoBtn = document.getElementById('saveProfilePhoto');
+    
+    if (newProfilePhotoInput) {
+        newProfilePhotoInput.addEventListener('change', function() {
+            if (this.files.length) {
+                const file = this.files[0];
+                
+                // Vérifier la taille
+                if (file.size > 2 * 1024 * 1024) {
+                    showToast('L\'image ne doit pas dépasser 2MB', 'error');
+                    this.value = '';
+                    return;
+                }
+                
+                // Vérifier le type
+                if (!file.type.startsWith('image/')) {
+                    showToast('Veuillez sélectionner une image', 'error');
+                    this.value = '';
+                    return;
+                }
+                
+                // Afficher la prévisualisation
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    photoPreview.innerHTML = `
+                        <img src="${e.target.result}" 
+                             alt="Nouvelle photo"
+                             class="rounded-circle"
+                             style="width: 150px; height: 150px; object-fit: cover;">
+                    `;
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+    
+    if (saveProfilePhotoBtn) {
+        saveProfilePhotoBtn.addEventListener('click', function() {
+            if (!newProfilePhotoInput.files.length) {
+                showToast('Veuillez sélectionner une nouvelle photo', 'warning');
+                return;
+            }
+            
+            this.disabled = true;
+            this.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Enregistrement...
+            `;
+
+            const form = document.getElementById('changePhotoForm');
+            if (form) form.submit();
+        });
+    }
+    
+    // Changement de mot de passe
+    const saveNewPasswordBtn = document.getElementById('saveNewPassword');
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    
+    if (saveNewPasswordBtn) {
+        saveNewPasswordBtn.addEventListener('click', function() {
+            const currentPassword = document.getElementById('currentPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            // Validation
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                showToast('Veuillez remplir tous les champs', 'error');
+                return;
+            }
+            
+            if (newPassword.length < 8) {
+                showToast('Le nouveau mot de passe doit contenir au moins 8 caractères', 'error');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showToast('Les nouveaux mots de passe ne correspondent pas', 'error');
+                return;
+            }
+            
+            this.disabled = true;
+            this.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Changement en cours...
+            `;
+
+            if (changePasswordForm) changePasswordForm.submit();
+        });
+    }
+    
+    // Suppression de compte
+    const confirmDeleteInput = document.getElementById('confirmDelete');
+    const confirmDeleteAccountBtn = document.getElementById('confirmDeleteAccount');
+    
+    if (confirmDeleteInput) {
+        confirmDeleteInput.addEventListener('input', function() {
+            confirmDeleteAccountBtn.disabled = this.value !== 'SUPPRIMER';
+        });
+    }
+    
+    if (confirmDeleteAccountBtn) {
+        confirmDeleteAccountBtn.addEventListener('click', function() {
+            if (!confirmDeleteInput || confirmDeleteInput.value !== 'SUPPRIMER') {
+                showToast('Veuillez taper "SUPPRIMER" pour confirmer', 'error');
+                return;
+            }
+            
+            if (!confirm('Êtes-vous ABSOLUMENT SÛR de vouloir supprimer votre compte ? Cette action est définitive et irréversible.')) {
+                return;
+            }
+            
+            this.disabled = true;
+            this.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Suppression en cours...
+            `;
+
+            const form = document.getElementById('deleteAccountForm');
+            if (form) form.submit();
+        });
+    }
+    
+    // Export du profil
+    const exportProfileBtn = document.getElementById('exportProfileBtn');
+    if (exportProfileBtn) {
+        exportProfileBtn.addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Génération...
+            `;
+            
+            // Simuler la génération
+            setTimeout(() => {
+                showToast('Profil exporté avec succès', 'success');
+                this.disabled = false;
+                this.innerHTML = `
+                    <i class="ri-download-line me-2"></i>
+                    Exporter mon profil
+                `;
+                
+                // Téléchargement simulé
+                const link = document.createElement('a');
+                link.href = '#';
+                link.download = 'profil-candidat.pdf';
+                link.click();
+            }, 2000);
+        });
+    }
+    
+    // Animation des cartes d'information
+    document.querySelectorAll('.info-card').forEach((card, index) => {
+        setTimeout(() => {
+            card.classList.add('animate__animated', 'animate__fadeInUp');
+        }, index * 100);
+    });
+    
+    // Mise à jour en temps réel du taux de complétion
+    const completionRateElement = document.querySelector('.display-4.fw-bold.text-success.mb-2');
+    if (completionRateElement) {
+        const currentRate = parseInt(completionRateElement.textContent);
+        const targetRate = 100;
+        
+        if (currentRate < targetRate) {
+            setTimeout(() => {
+                animateCounter(completionRateElement, currentRate, targetRate, '%');
+                
+                // Animer la barre de progression
+                const progressBar = document.querySelector('.progress-bar');
+                if (progressBar) {
+                    progressBar.style.width = '100%';
+                }
+            }, 1000);
+        }
+    }
+    
+    // Fonction pour animer les compteurs
+    function animateCounter(element, start, end, suffix = '') {
+        const duration = 2000;
+        const steps = 60;
+        const step = (end - start) / steps;
+        let current = start;
+        
+        const timer = setInterval(() => {
+            current += step;
+            if ((step > 0 && current >= end) || (step < 0 && current <= end)) {
+                current = end;
+                clearInterval(timer);
+            }
+            element.textContent = Math.round(current) + suffix;
+        }, duration / steps);
+    }
+    
+    // Vérification périodique du statut
+    function checkCandidateStatus() {
+        fetch('/api/candidate/status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status_changed) {
+                    showToast('Votre statut a été mis à jour', 'info');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+            })
+            .catch(error => console.error('Erreur:', error));
+    }
+    
+    // Vérifier toutes les 2 minutes
+    setInterval(checkCandidateStatus, 120000);
+});
+</script>
+{% endblock %}

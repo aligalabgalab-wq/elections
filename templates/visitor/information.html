@@ -1,0 +1,1284 @@
+<!-- templates/visitor/information.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}
+    {% if page == 'about' %}
+        À propos
+    {% elif page == 'faq' %}
+        FAQ
+    {% elif page == 'institutions' %}
+        Institutions
+    {% elif page == 'reglement' %}
+        Règlement électoral
+    {% elif page == 'contact' %}
+        Contact
+    {% elif page == 'institutions' %}
+    <!-- Page Institutions -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="text-center mb-5">
+                <i class="ri-building-4-line display-1 text-primary mb-3"></i>
+                <h1 class="display-5 fw-bold mb-3">Institutions & organes (simulation)</h1>
+                <p class="lead text-muted">
+                    Une structure institutionnelle pédagogique, inspirée des pratiques administratives,
+                    pour comprendre le pilotage d’un scrutin national.
+                </p>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-body p-5">
+                    <h3 class="fw-bold mb-3">
+                        <i class="ri-shield-keyhole-line me-2 text-primary"></i>
+                        Commission électorale (simulée)
+                    </h3>
+                    <p class="mb-3">
+                        La commission électorale simulée centralise l’organisation et le suivi du processus :
+                        inscriptions, validation des candidatures, calendrier de vote et publication des résultats.
+                    </p>
+                    <ul class="mb-0">
+                        <li><strong>Validation :</strong> contrôle de cohérence des dossiers (CNI simulée, âge, unicité).</li>
+                        <li><strong>Supervision :</strong> ouverture/clôture de la période de vote (simulation).</li>
+                        <li><strong>Transparence :</strong> annonces officielles et traçabilité des opérations.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-2">
+                                <i class="ri-scales-3-line me-2 text-primary"></i>
+                                Conseil constitutionnel (simulé)
+                            </h5>
+                            <p class="text-muted mb-0">
+                                Organe simulé chargé de la proclamation finale, du règlement des contentieux
+                                et de la conformité du processus au règlement pédagogique.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body p-4">
+                            <h5 class="fw-bold mb-2">
+                                <i class="ri-eye-2-line me-2 text-primary"></i>
+                                Observateurs (simulés)
+                            </h5>
+                            <p class="text-muted mb-0">
+                                Rôle de contrôle citoyen : bonnes pratiques, transparence, et respect du vote secret.
+                                Dans cette application, cela se traduit par des indicateurs et des journaux de vote.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-5">
+                    <h4 class="fw-bold mb-3">
+                        <i class="ri-file-search-line me-2 text-primary"></i>
+                        Traçabilité & intégrité (simulation)
+                    </h4>
+                    <p class="text-muted mb-0">
+                        Chaque vote est limité à un seul par électeur. Les journaux de vote utilisent un identifiant
+                        de traçabilité (hash) pour vérifier l’unicité des opérations sans exposer le choix de vote.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% elif page == 'reglement' %}
+    <!-- Page Règlement -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="text-center mb-5">
+                <i class="ri-file-list-3-line display-1 text-primary mb-3"></i>
+                <h1 class="display-5 fw-bold mb-3">Règlement électoral (simulation)</h1>
+                <p class="lead text-muted">
+                    Texte pédagogique et institutionnel. Cette simulation n’a aucun effet sur une élection réelle.
+                </p>
+            </div>
+
+            <div class="alert alert-info shadow-sm">
+                <div class="d-flex gap-3">
+                    <i class="ri-information-line fs-3"></i>
+                    <div>
+                        <div class="fw-bold">Important</div>
+                        <div class="small">
+                            Ce règlement est une <strong>construction éducative</strong> destinée à simuler un processus.
+                            Il ne remplace pas les textes officiels et ne constitue pas un avis juridique.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h3 class="mb-0 fw-bold">
+                        <i class="ri-flag-2-line me-2 text-primary"></i>
+                        Principes généraux
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <ul class="mb-0">
+                        <li><strong>Suffrage universel direct :</strong> les électeurs choisissent un candidat (simulation).</li>
+                        <li><strong>Vote secret :</strong> le choix de vote n’est jamais affiché publiquement.</li>
+                        <li><strong>Scrutin majoritaire :</strong> le candidat avec le plus de voix l’emporte (simulation).</li>
+                        <li><strong>Intégrité :</strong> un électeur = un compte = un vote.</li>
+                        <li><strong>Transparence :</strong> résultats publiés et indicateurs consultables.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div class="row g-4 mb-4">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white">
+                            <h4 class="mb-0 fw-bold">
+                                <i class="ri-user-3-line me-2 text-primary"></i>
+                                Conditions électeur (simulation)
+                            </h4>
+                        </div>
+                        <div class="card-body p-4">
+                            <ul class="mb-0">
+                                <li><strong>Nationalité :</strong> djiboutienne (déclarative, simulée).</li>
+                                <li><strong>Âge minimum :</strong> {{ config.get('MIN_VOTER_AGE', 18) }} ans révolus.</li>
+                                <li><strong>Identité :</strong> CNI unique (simulée) et informations cohérentes.</li>
+                                <li><strong>Unicité :</strong> inscription unique et un seul vote.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white">
+                            <h4 class="mb-0 fw-bold">
+                                <i class="ri-award-line me-2 text-primary"></i>
+                                Conditions candidat (simulation)
+                            </h4>
+                        </div>
+                        <div class="card-body p-4">
+                            <ul class="mb-0">
+                                <li><strong>Âge minimum :</strong> {{ config.get('MIN_CANDIDATE_AGE', 40) }} ans révolus.</li>
+                                <li><strong>Nationalité :</strong> djiboutien d’origine (déclarative, simulée).</li>
+                                <li><strong>Droits civiques :</strong> valides (déclaratif, simulé).</li>
+                                <li><strong>Dossier :</strong> parti, slogan, programme et déclaration de patrimoine (simulés).</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h3 class="mb-0 fw-bold">
+                        <i class="ri-alert-line me-2 text-primary"></i>
+                        Sanctions simulées
+                    </h3>
+                </div>
+                <div class="card-body p-4">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-4 bg-light">
+                                <span class="badge bg-danger mb-2">Double vote</span>
+                                <div class="fw-semibold">Blocage automatique</div>
+                                <div class="text-muted small">Toute tentative de second vote est refusée.</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-4 bg-light">
+                                <span class="badge bg-warning text-dark mb-2">Fausse déclaration</span>
+                                <div class="fw-semibold">Suspension du compte</div>
+                                <div class="text-muted small">Le compte peut être désactivé (simulation).</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-4 bg-light">
+                                <span class="badge bg-secondary mb-2">Non‑respect des règles</span>
+                                <div class="fw-semibold">Disqualification</div>
+                                <div class="text-muted small">Candidature rejetée ou retirée (simulation).</div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="p-3 border rounded-4 bg-light">
+                                <span class="badge bg-info text-dark mb-2">Audit</span>
+                                <div class="fw-semibold">Traçabilité</div>
+                                <div class="text-muted small">Journaux de vote et indicateurs consultables.</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card border-0 shadow-sm">
+                <div class="card-body p-5">
+                    <h4 class="fw-bold mb-3">
+                        <i class="ri-lock-2-line me-2 text-primary"></i>
+                        Confidentialité & vote secret
+                    </h4>
+                    <p class="mb-0 text-muted">
+                        Les résultats affichent des totaux et des pourcentages. Le choix individuel d’un électeur n’est
+                        pas publié. La plateforme applique des contrôles d’unicité (un compte, un vote) et des journaux
+                        de traçabilité (hash) à des fins pédagogiques.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% elif page == 'contact' %}
+    <!-- Page Contact -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <div class="text-center mb-5">
+                <i class="ri-mail-send-line display-1 text-primary mb-3"></i>
+                <h1 class="display-5 fw-bold mb-3">Contact</h1>
+                <p class="lead text-muted">
+                    Une question sur la simulation ? Écrivez-nous. Réponse simulée via notification.
+                </p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-lg-5">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body p-4">
+                            <h4 class="fw-bold mb-3">
+                                <i class="ri-customer-service-2-line me-2 text-primary"></i>
+                                Assistance
+                            </h4>
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <i class="ri-mail-line fs-4 text-primary"></i>
+                                <div>
+                                    <div class="fw-semibold">Email</div>
+                                    <div class="text-muted small">support@election2025.dj</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3 mb-3">
+                                <i class="ri-phone-line fs-4 text-primary"></i>
+                                <div>
+                                    <div class="fw-semibold">Téléphone</div>
+                                    <div class="text-muted small">+253 XX XX XX XX</div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-3">
+                                <i class="ri-time-line fs-4 text-primary"></i>
+                                <div>
+                                    <div class="fw-semibold">Horaires</div>
+                                    <div class="text-muted small">Lun – Ven : 08:00 – 18:00</div>
+                                </div>
+                            </div>
+
+                            <hr class="my-4">
+
+                            <div class="text-muted small">
+                                Pour un usage académique, vous pouvez aussi décrire votre besoin (fonctionnalité,
+                                bug, amélioration UI) : nous traiterons la demande dans l’ordre de priorité.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-7">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body p-4">
+                            <h4 class="fw-bold mb-3">
+                                <i class="ri-edit-2-line me-2 text-primary"></i>
+                                Formulaire (simulation)
+                            </h4>
+
+                            <form method="post" action="{{ url_for('contact') }}">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="form-label">Nom complet</label>
+                                        <input class="form-control" name="full_name" placeholder="Votre nom" required>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">Email</label>
+                                        <input class="form-control" name="email" type="email" placeholder="vous@exemple.dj" required>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Objet</label>
+                                        <input class="form-control" name="subject" placeholder="Sujet de votre message" required>
+                                    </div>
+                                    <div class="col-12">
+                                        <label class="form-label">Message</label>
+                                        <textarea class="form-control" name="message" rows="6" placeholder="Décrivez votre demande..." required></textarea>
+                                    </div>
+                                    <div class="col-12 d-flex gap-2">
+                                        <button class="btn btn-primary" type="submit">
+                                            <i class="ri-send-plane-2-line me-2"></i>
+                                            Envoyer
+                                        </button>
+                                        <a class="btn btn-outline-primary" href="{{ url_for('index') }}">
+                                            <i class="ri-home-5-line me-2"></i>
+                                            Accueil
+                                        </a>
+                                    </div>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% else %}
+        Informations
+    {% endif %}
+    - Simulation Électorale
+{% endblock %}
+
+{% block styles %}
+<style>
+    .info-section {
+        padding: var(--spacing-xl) 0;
+    }
+    
+    .accordion-button {
+        font-weight: 600;
+        padding: var(--spacing-lg);
+    }
+    
+    .accordion-button:not(.collapsed) {
+        background-color: rgba(0, 102, 179, 0.1);
+        color: var(--primary);
+    }
+    
+    .accordion-button:focus {
+        box-shadow: 0 0 0 0.25rem rgba(0, 102, 179, 0.25);
+    }
+    
+    .timeline-step {
+        position: relative;
+        padding-left: var(--spacing-xl);
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .timeline-step::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 20px;
+        height: 20px;
+        border-radius: var(--border-radius-circle);
+        background-color: var(--primary);
+        border: 4px solid white;
+        box-shadow: var(--shadow-sm);
+    }
+    
+    .timeline-step::after {
+        content: '';
+        position: absolute;
+        left: 9px;
+        top: 20px;
+        bottom: -20px;
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    
+    .timeline-step:last-child::after {
+        display: none;
+    }
+    
+    .eligibility-card {
+        border-left: 4px solid var(--primary);
+        background-color: rgba(0, 102, 179, 0.05);
+    }
+    
+    .glossary-term {
+        border-bottom: 2px dotted var(--primary);
+        cursor: help;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    {% if page == 'about' %}
+    <!-- Page À propos -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <i class="ri-information-line display-1 text-primary mb-3"></i>
+                <h1 class="display-5 fw-bold mb-3">À propos de la Simulation Électorale</h1>
+                <p class="lead text-muted">
+                    Une plateforme pédagogique pour comprendre le processus démocratique djiboutien
+                </p>
+            </div>
+            
+            <!-- Introduction -->
+            <div class="card border-0 shadow-sm mb-5">
+                <div class="card-body p-5">
+                    <h3 class="fw-bold mb-4">
+                        <i class="ri-government-line me-2 text-primary"></i>
+                        Notre mission
+                    </h3>
+                    <p class="mb-4">
+                        La <strong>Simulation Électorale Djiboutienne</strong> est une plateforme éducative 
+                        conçue pour promouvoir la culture démocratique et civique auprès des citoyens. 
+                        Notre objectif est de permettre à chaque participant de comprendre le processus 
+                        électoral de manière interactive et réaliste.
+                    </p>
+                    <p class="mb-0">
+                        Cette simulation reproduit fidèlement les étapes d'un processus électoral, 
+                        depuis l'inscription des électeurs jusqu'à l'annonce des résultats, en passant 
+                        par la campagne des candidats et le vote électronique sécurisé.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Objectifs -->
+            <div class="row mb-5">
+                <div class="col-md-4 mb-4">
+                    <div class="card border-0 shadow-sm h-100 text-center">
+                        <div class="card-body p-4">
+                            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                                 style="width: 70px; height: 70px;">
+                                <i class="ri-graduation-cap-line text-primary fs-2"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3">Éducation civique</h4>
+                            <p class="text-muted">
+                                Sensibiliser les citoyens aux principes démocratiques 
+                                et au processus électoral.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="card border-0 shadow-sm h-100 text-center">
+                        <div class="card-body p-4">
+                            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                                 style="width: 70px; height: 70px;">
+                                <i class="ri-user-add-line text-success fs-2"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3">Participation citoyenne</h4>
+                            <p class="text-muted">
+                                Encourager l'engagement civique et la participation 
+                                à la vie démocratique.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4 mb-4">
+                    <div class="card border-0 shadow-sm h-100 text-center">
+                        <div class="card-body p-4">
+                            <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
+                                 style="width: 70px; height: 70px;">
+                                <i class="ri-shield-check-line text-warning fs-2"></i>
+                            </div>
+                            <h4 class="fw-bold mb-3">Transparence</h4>
+                            <p class="text-muted">
+                                Démystifier le processus électoral et promouvoir 
+                                la transparence démocratique.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Processus électoral -->
+            <div class="card border-0 shadow-sm mb-5">
+                <div class="card-header bg-white">
+                    <h3 class="mb-0 fw-bold">
+                        <i class="ri-road-map-line me-2 text-primary"></i>
+                        Processus électoral simulé
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="timeline">
+                        <div class="timeline-step">
+                            <h5 class="fw-bold">1. Inscription des électeurs</h5>
+                            <p class="text-muted">
+                                Les citoyens djiboutiens peuvent s'inscrire comme électeurs 
+                                en fournissant leurs informations personnelles et leur numéro CNI.
+                                L'éligibilité est vérifiée automatiquement (âge ≥ 18 ans).
+                            </p>
+                        </div>
+                        
+                        <div class="timeline-step">
+                            <h5 class="fw-bold">2. Inscription des candidats</h5>
+                            <p class="text-muted">
+                                Les citoyens éligibles (âge ≥ 40 ans) peuvent déposer leur 
+                                candidature avec un programme politique. La commission 
+                                électorale vérifie leur éligibilité avant approbation.
+                            </p>
+                        </div>
+                        
+                        <div class="timeline-step">
+                            <h5 class="fw-bold">3. Campagne électorale</h5>
+                            <p class="text-muted">
+                                Les candidats approuvés peuvent mener campagne, présenter 
+                                leur programme et interagir avec les électeurs via la plateforme.
+                            </p>
+                        </div>
+                        
+                        <div class="timeline-step">
+                            <h5 class="fw-bold">4. Vote électronique</h5>
+                            <p class="text-muted">
+                                Pendant la période de vote, les électeurs peuvent voter 
+                                de manière sécurisée et anonyme pour leur candidat préféré.
+                            </p>
+                        </div>
+                        
+                        <div class="timeline-step">
+                            <h5 class="fw-bold">5. Dépouillement et résultats</h5>
+                            <p class="text-muted">
+                                Les votes sont comptabilisés automatiquement et les résultats 
+                                sont publiés en temps réel avec des statistiques détaillées.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Conditions d'éligibilité -->
+            <div class="row mb-5">
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white">
+                            <h4 class="mb-0 fw-bold">
+                                <i class="ri-user-line me-2 text-primary"></i>
+                                Électeurs
+                            </h4>
+                        </div>
+                        <div class="card-body eligibility-card">
+                            <ul class="list-unstyled">
+                                <li class="mb-3 d-flex align-items-start">
+                                    <i class="ri-check-line text-success me-2 mt-1"></i>
+                                    <span>Être citoyen djiboutien</span>
+                                </li>
+                                <li class="mb-3 d-flex align-items-start">
+                                    <i class="ri-check-line text-success me-2 mt-1"></i>
+                                    <span>Avoir au moins 18 ans</span>
+                                </li>
+                                <li class="mb-3 d-flex align-items-start">
+                                    <i class="ri-check-line text-success me-2 mt-1"></i>
+                                    <span>Posséder une CNI valide</span>
+                                </li>
+                                <li class="d-flex align-items-start">
+                                    <i class="ri-check-line text-success me-2 mt-1"></i>
+                                    <span>Un seul compte par personne</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card border-0 shadow-sm h-100">
+                        <div class="card-header bg-white">
+                            <h4 class="mb-0 fw-bold">
+                                <i class="ri-user-star-line me-2 text-success"></i>
+                                Candidats
+                            </h4>
+                        </div>
+                        <div class="card-body eligibility-card" style="border-left-color: var(--success);">
+                            <ul class="list-unstyled">
+                                <li class="mb-3 d-flex align-items-start">
+                                    <i class="ri-check-line text-success me-2 mt-1"></i>
+                                    <span>Être citoyen djiboutien</span>
+                                </li>
+                                <li class="mb-3 d-flex align-items-start">
+                                    <i class="ri-check-line text-success me-2 mt-1"></i>
+                                    <span>Avoir au moins 40 ans</span>
+                                </li>
+                                <li class="mb-3 d-flex align-items-start">
+                                    <i class="ri-check-line text-success me-2 mt-1"></i>
+                                    <span>Jouir des droits civiques</span>
+                                </li>
+                                <li class="d-flex align-items-start">
+                                    <i class="ri-check-line text-success me-2 mt-1"></i>
+                                    <span>Présenter un programme politique</span>
+                                </li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Sécurité et confidentialité -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h3 class="mb-0 fw-bold">
+                        <i class="ri-shield-check-line me-2 text-success"></i>
+                        Sécurité et confidentialité
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <div class="d-flex">
+                                <i class="ri-lock-line text-primary fs-3 me-3"></i>
+                                <div>
+                                    <h5 class="fw-bold mb-2">Vote anonyme</h5>
+                                    <p class="text-muted mb-0">
+                                        Votre vote est totalement anonyme. Aucune information 
+                                        ne peut relier votre identité à votre choix.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <div class="d-flex">
+                                <i class="ri-shield-keyhole-line text-primary fs-3 me-3"></i>
+                                <div>
+                                    <h5 class="fw-bold mb-2">Chiffrement des données</h5>
+                                    <p class="text-muted mb-0">
+                                        Toutes les données sont chiffrées avec des protocoles 
+                                        de sécurité avancés (SSL/TLS).
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <div class="d-flex">
+                                <i class="ri-fingerprint-line text-primary fs-3 me-3"></i>
+                                <div>
+                                    <h5 class="fw-bold mb-2">Protection des données</h5>
+                                    <p class="text-muted mb-0">
+                                        Vos informations personnelles sont protégées selon 
+                                        les lois sur la protection des données.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <div class="d-flex">
+                                <i class="ri-eye-off-line text-primary fs-3 me-3"></i>
+                                <div>
+                                    <h5 class="fw-bold mb-2">Transparence totale</h5>
+                                    <p class="text-muted mb-0">
+                                        Le code source est accessible pour garantir 
+                                        la transparence du processus.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% elif page == 'faq' %}
+    <!-- Page FAQ -->
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
+            <!-- Header -->
+            <div class="text-center mb-5">
+                <i class="ri-question-line display-1 text-primary mb-3"></i>
+                <h1 class="display-5 fw-bold mb-3">Foire aux Questions</h1>
+                <p class="lead text-muted">
+                    Questions fréquemment posées sur la simulation électorale
+                </p>
+            </div>
+            
+            <!-- Recherche FAQ -->
+            <div class="card border-0 shadow-sm mb-5">
+                <div class="card-body p-4">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-primary text-white">
+                            <i class="ri-search-line"></i>
+                        </span>
+                        <input type="text" class="form-control" 
+                               id="faqSearch" 
+                               placeholder="Rechercher une question...">
+                        <button class="btn btn-outline-primary" type="button">
+                            Rechercher
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- FAQ Accordéon -->
+            <div class="accordion" id="faqAccordion">
+                <!-- Section Générale -->
+                <div class="accordion-item border-0 shadow-sm mb-3">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" 
+                                data-bs-toggle="collapse" data-bs-target="#general">
+                            <i class="ri-information-line me-2 text-primary"></i>
+                            Questions générales
+                        </button>
+                    </h2>
+                    <div id="general" class="accordion-collapse collapse" 
+                         data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            <div class="accordion" id="generalFaq">
+                                <div class="accordion-item border-0">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#faq1">
+                                            Qu'est-ce que la simulation électorale ?
+                                        </button>
+                                    </h3>
+                                    <div id="faq1" class="accordion-collapse collapse" 
+                                         data-bs-parent="#generalFaq">
+                                        <div class="accordion-body">
+                                            <p>
+                                                La simulation électorale est une plateforme pédagogique 
+                                                qui reproduit le processus d'une élection nationale 
+                                                djiboutienne. Elle permet aux citoyens de comprendre 
+                                                le fonctionnement démocratique de manière interactive.
+                                            </p>
+                                            <p class="mb-0">
+                                                Cette simulation est entièrement éducative et n'a pas 
+                                                d'impact sur les élections réelles.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="accordion-item border-0">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#faq2">
+                                            Qui peut participer à la simulation ?
+                                        </button>
+                                    </h3>
+                                    <div id="faq2" class="accordion-collapse collapse" 
+                                         data-bs-parent="#generalFaq">
+                                        <div class="accordion-body">
+                                            <p>
+                                                Toute personne intéressée par le processus démocratique 
+                                                peut participer en tant que :
+                                            </p>
+                                            <ul>
+                                                <li><strong>Visiteur :</strong> Consulter les informations sans voter</li>
+                                                <li><strong>Électeur :</strong> Voter pour un candidat</li>
+                                                <li><strong>Candidat :</strong> Se présenter à l'élection</li>
+                                            </ul>
+                                            <p class="mb-0">
+                                                Les conditions d'éligibilité réelles sont simulées 
+                                                (âge, nationalité, etc.) pour plus de réalisme.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="accordion-item border-0">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#faq3">
+                                            La simulation est-elle gratuite ?
+                                        </button>
+                                    </h3>
+                                    <div id="faq3" class="accordion-collapse collapse" 
+                                         data-bs-parent="#generalFaq">
+                                        <div class="accordion-body">
+                                            <p>
+                                                <strong>Oui, la simulation est entièrement gratuite.</strong>
+                                            </p>
+                                            <p class="mb-0">
+                                                Cette plateforme est financée à des fins éducatives 
+                                                et ne nécessite aucun paiement pour l'inscription 
+                                                ou la participation.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Section Inscription -->
+                <div class="accordion-item border-0 shadow-sm mb-3">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" 
+                                data-bs-toggle="collapse" data-bs-target="#inscription">
+                            <i class="ri-user-add-line me-2 text-primary"></i>
+                            Inscription et compte
+                        </button>
+                    </h2>
+                    <div id="inscription" class="accordion-collapse collapse" 
+                         data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            <div class="accordion" id="inscriptionFaq">
+                                <div class="accordion-item border-0">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#faq4">
+                                            Comment s'inscrire comme électeur ?
+                                        </button>
+                                    </h3>
+                                    <div id="faq4" class="accordion-collapse collapse" 
+                                         data-bs-parent="#inscriptionFaq">
+                                        <div class="accordion-body">
+                                            <p>Pour s'inscrire comme électeur :</p>
+                                            <ol>
+                                                <li>Cliquez sur "S'inscrire" dans le menu</li>
+                                                <li>Choisissez "Comme électeur"</li>
+                                                <li>Remplissez le formulaire avec vos informations</li>
+                                                <li>Acceptez les conditions d'utilisation</li>
+                                                <li>Cliquez sur "S'inscrire"</li>
+                                            </ol>
+                                            <p class="mb-0">
+                                                Votre éligibilité sera vérifiée automatiquement. 
+                                                Vous recevrez une confirmation par email.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="accordion-item border-0">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#faq5">
+                                            Quelles informations sont nécessaires ?
+                                        </button>
+                                    </h3>
+                                    <div id="faq5" class="accordion-collapse collapse" 
+                                         data-bs-parent="#inscriptionFaq">
+                                        <div class="accordion-body">
+                                            <p>Pour l'inscription, vous devez fournir :</p>
+                                            <ul>
+                                                <li><strong>Électeur :</strong> Nom, prénom, date de naissance, CNI, lieu de naissance, email</li>
+                                                <li><strong>Candidat :</strong> Les mêmes informations plus le nom du parti, le slogan et le programme</li>
+                                            </ul>
+                                            <p class="mb-0">
+                                                <strong>Note :</strong> Ces informations sont utilisées uniquement 
+                                                pour la simulation et sont protégées par nos politiques de confidentialité.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="accordion-item border-0">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#faq6">
+                                            Puis-je modifier mes informations après inscription ?
+                                        </button>
+                                    </h3>
+                                    <div id="faq6" class="accordion-collapse collapse" 
+                                         data-bs-parent="#inscriptionFaq">
+                                        <div class="accordion-body">
+                                            <p>
+                                                <strong>Oui</strong>, vous pouvez modifier certaines informations 
+                                                depuis votre tableau de bord :
+                                            </p>
+                                            <ul>
+                                                <li>Informations de contact</li>
+                                                <li>Photo de profil</li>
+                                                <li>Préférences de notification</li>
+                                            </ul>
+                                            <p class="mb-0">
+                                                Certaines informations (CNI, date de naissance) ne peuvent 
+                                                pas être modifiées après validation pour des raisons de sécurité.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Section Vote -->
+                <div class="accordion-item border-0 shadow-sm mb-3">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" 
+                                data-bs-toggle="collapse" data-bs-target="#vote">
+                            <i class="bi bi-check2-square me-2 text-primary"></i>
+                            Vote et élection
+                        </button>
+                    </h2>
+                    <div id="vote" class="accordion-collapse collapse" 
+                         data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            <div class="accordion" id="voteFaq">
+                                <div class="accordion-item border-0">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#faq7">
+                                            Comment fonctionne le vote électronique ?
+                                        </button>
+                                    </h3>
+                                    <div id="faq7" class="accordion-collapse collapse" 
+                                         data-bs-parent="#voteFaq">
+                                        <div class="accordion-body">
+                                            <p>Le vote électronique se déroule en plusieurs étapes :</p>
+                                            <ol>
+                                                <li>Connectez-vous à votre compte électeur</li>
+                                                <li>Accédez à la page de vote pendant la période de vote</li>
+                                                <li>Consultez les profils des candidats</li>
+                                                <li>Sélectionnez votre candidat préféré</li>
+                                                <li>Confirmez votre choix (action irréversible)</li>
+                                                <li>Recevez la confirmation de votre vote</li>
+                                            </ol>
+                                            <p class="mb-0">
+                                                Le système garantit l'anonymat et la sécurité de votre vote.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="accordion-item border-0">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#faq8">
+                                            Puis-je changer mon vote après confirmation ?
+                                        </button>
+                                    </h3>
+                                    <div id="faq8" class="accordion-collapse collapse" 
+                                         data-bs-parent="#voteFaq">
+                                        <div class="accordion-body">
+                                            <p>
+                                                <strong>Non</strong>, une fois votre vote confirmé, 
+                                                il ne peut pas être modifié.
+                                            </p>
+                                            <p>
+                                                Cette règle reproduit le principe de l'élection réelle 
+                                                où le vote est définitif. C'est pourquoi nous vous 
+                                                demandons de bien réfléchir avant de confirmer.
+                                            </p>
+                                            <p class="mb-0">
+                                                Vous avez la possibilité d'annuler la sélection 
+                                                avant la confirmation finale.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="accordion-item border-0">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#faq9">
+                                            Comment sont calculés les résultats ?
+                                        </button>
+                                    </h3>
+                                    <div id="faq9" class="accordion-collapse collapse" 
+                                         data-bs-parent="#voteFaq">
+                                        <div class="accordion-body">
+                                            <p>Les résultats sont calculés en temps réel :</p>
+                                            <ul>
+                                                <li>Chaque vote est enregistré de manière sécurisée</li>
+                                                <li>Les votes sont comptabilisés par candidat</li>
+                                                <li>Les pourcentages sont calculés automatiquement</li>
+                                                <li>Les statistiques sont mises à jour en continu</li>
+                                            </ul>
+                                            <p class="mb-0">
+                                                Les résultats sont accessibles à tous après la fin 
+                                                de la période de vote.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Section Sécurité -->
+                <div class="accordion-item border-0 shadow-sm mb-3">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" 
+                                data-bs-toggle="collapse" data-bs-target="#securite">
+                            <i class="ri-shield-check-line me-2 text-primary"></i>
+                            Sécurité et confidentialité
+                        </button>
+                    </h2>
+                    <div id="securite" class="accordion-collapse collapse" 
+                         data-bs-parent="#faqAccordion">
+                        <div class="accordion-body">
+                            <div class="accordion" id="securiteFaq">
+                                <div class="accordion-item border-0">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#faq10">
+                                            Mes données personnelles sont-elles protégées ?
+                                        </button>
+                                    </h3>
+                                    <div id="faq10" class="accordion-collapse collapse" 
+                                         data-bs-parent="#securiteFaq">
+                                        <div class="accordion-body">
+                                            <p>
+                                                <strong>Oui</strong>, vos données personnelles sont 
+                                                protégées selon les standards les plus élevés :
+                                            </p>
+                                            <ul>
+                                                <li>Chiffrement SSL/TLS pour toutes les communications</li>
+                                                <li>Stockage sécurisé des données</li>
+                                                <li>Accès restreint aux administrateurs</li>
+                                                <li>Politique de confidentialité stricte</li>
+                                            </ul>
+                                            <p class="mb-0">
+                                                Nous ne partageons jamais vos informations personnelles 
+                                                avec des tiers sans votre consentement.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="accordion-item border-0">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#faq11">
+                                            Comment garantissez-vous l'anonymat du vote ?
+                                        </button>
+                                    </h3>
+                                    <div id="faq11" class="accordion-collapse collapse" 
+                                         data-bs-parent="#securiteFaq">
+                                        <div class="accordion-body">
+                                            <p>L'anonymat du vote est garanti par :</p>
+                                            <ul>
+                                                <li>Séparation des données d'identité et de vote</li>
+                                                <li>Chiffrement du choix de vote</li>
+                                                <li>Auditabilité sans compromettre l'anonymat</li>
+                                                <li>Vérification par des experts indépendants</li>
+                                            </ul>
+                                            <p class="mb-0">
+                                                Même les administrateurs ne peuvent pas savoir 
+                                                comment une personne spécifique a voté.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="accordion-item border-0">
+                                    <h3 class="accordion-header">
+                                        <button class="accordion-button collapsed" type="button" 
+                                                data-bs-toggle="collapse" data-bs-target="#faq12">
+                                            Puis-je supprimer mon compte ?
+                                        </button>
+                                    </h3>
+                                    <div id="faq12" class="accordion-collapse collapse" 
+                                         data-bs-parent="#securiteFaq">
+                                        <div class="accordion-body">
+                                            <p>
+                                                <strong>Oui</strong>, vous pouvez demander la suppression 
+                                                de votre compte à tout moment :
+                                            </p>
+                                            <ol>
+                                                <li>Connectez-vous à votre compte</li>
+                                                <li>Allez dans les paramètres du profil</li>
+                                                <li>Cliquez sur "Supprimer mon compte"</li>
+                                                <li>Confirmez votre choix</li>
+                                            </ol>
+                                            <p class="mb-0">
+                                                <strong>Attention :</strong> La suppression est définitive 
+                                                et supprime toutes vos données de la plateforme.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Glossaire -->
+            <div class="card border-0 shadow-sm mt-5">
+                <div class="card-header bg-white">
+                    <h3 class="mb-0 fw-bold">
+                        <i class="ri-book-line me-2 text-primary"></i>
+                        Glossaire des termes électoraux
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h5 class="fw-bold">
+                                <span class="glossary-term" title="Définition complète">Bulletin de vote</span>
+                            </h5>
+                            <p class="text-muted small mb-0">
+                                Document officiel sur lequel l'électeur exprime son choix.
+                            </p>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <h5 class="fw-bold">
+                                <span class="glossary-term" title="Définition complète">CNI</span>
+                            </h5>
+                            <p class="text-muted small mb-0">
+                                Carte Nationale d'Identité, document requis pour voter.
+                            </p>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <h5 class="fw-bold">
+                                <span class="glossary-term" title="Définition complète">Commission électorale</span>
+                            </h5>
+                            <p class="text-muted small mb-0">
+                                Organe chargé d'organiser et de superviser les élections.
+                            </p>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <h5 class="fw-bold">
+                                <span class="glossary-term" title="Définition complète">Dépouillement</span>
+                            </h5>
+                            <p class="text-muted small mb-0">
+                                Comptage des votes après la clôture du scrutin.
+                            </p>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <h5 class="fw-bold">
+                                <span class="glossary-term" title="Définition complète">Éligibilité</span>
+                            </h5>
+                            <p class="text-muted small mb-0">
+                                Conditions requises pour voter ou être candidat.
+                            </p>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <h5 class="fw-bold">
+                                <span class="glossary-term" title="Définition complète">Scrutin</span>
+                            </h5>
+                            <p class="text-muted small mb-0">
+                                Ensemble des opérations de vote et de dépouillement.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Contact -->
+            <div class="card border-0 shadow-sm mt-5">
+                <div class="card-body text-center p-5">
+                    <i class="ri-customer-service-line display-1 text-primary mb-3"></i>
+                    <h3 class="fw-bold mb-3">Vous avez d'autres questions ?</h3>
+                    <p class="text-muted mb-4">
+                        Notre équipe est là pour vous aider. Contactez-nous pour 
+                        toute question supplémentaire.
+                    </p>
+                    <div class="d-flex justify-content-center gap-3">
+                        <a href="mailto:contact@simulation-electorale.dj" 
+                           class="btn btn-primary">
+                            <i class="ri-mail-line me-2"></i>
+                            Nous écrire
+                        </a>
+                        <a href="{{ url_for('index') }}" 
+                           class="btn btn-outline-primary">
+                            <i class="ri-home-line me-2"></i>
+                            Retour à l'accueil
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% else %}
+    <!-- Page d'information par défaut -->
+    <div class="text-center py-5">
+        <i class="ri-error-warning-line display-1 text-muted mb-3"></i>
+        <h1 class="display-5 fw-bold mb-3">Page d'information</h1>
+        <p class="lead text-muted mb-4">
+            Sélectionnez une page d'information dans le menu.
+        </p>
+        <a href="{{ url_for('index') }}" class="btn btn-primary">
+            <i class="ri-home-line me-2"></i>
+            Retour à l'accueil
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Recherche dans la FAQ
+    const faqSearch = document.getElementById('faqSearch');
+    if (faqSearch) {
+        faqSearch.addEventListener('input', function() {
+            const searchTerm = this.value.toLowerCase();
+            const accordionItems = document.querySelectorAll('.accordion-item');
+            
+            accordionItems.forEach(item => {
+                const text = item.textContent.toLowerCase();
+                if (text.includes(searchTerm)) {
+                    item.style.display = '';
+                    
+                    // Ouvrir l'accordéon si c'est une question
+                    const button = item.querySelector('.accordion-button');
+                    if (button && button.getAttribute('data-bs-target').startsWith('#faq')) {
+                        const collapse = new bootstrap.Collapse(
+                            document.querySelector(button.getAttribute('data-bs-target'))
+                        );
+                        collapse.show();
+                    }
+                } else {
+                    item.style.display = 'none';
+                }
+            });
+        });
+    }
+    
+    // Tooltips pour le glossaire
+    const glossaryTerms = document.querySelectorAll('.glossary-term');
+    glossaryTerms.forEach(term => {
+        new bootstrap.Tooltip(term);
+    });
+    
+    // Animation des étapes de la timeline
+    const timelineSteps = document.querySelectorAll('.timeline-step');
+    timelineSteps.forEach((step, index) => {
+        setTimeout(() => {
+            step.classList.add('animate__animated', 'animate__fadeInUp');
+        }, index * 200);
+    });
+    
+    // Accès rapide aux sections FAQ
+    const urlParams = new URLSearchParams(window.location.search);
+    const faqSection = urlParams.get('section');
+    
+    if (faqSection) {
+        const targetElement = document.getElementById(faqSection);
+        if (targetElement) {
+            const collapse = new bootstrap.Collapse(targetElement);
+            collapse.show();
+            
+            // Scroller vers la section
+            setTimeout(() => {
+                targetElement.scrollIntoView({ behavior: 'smooth' });
+            }, 500);
+        }
+    }
+    
+    // Sauvegarder l'état des accordéons
+    const accordionButtons = document.querySelectorAll('.accordion-button');
+    accordionButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const targetId = this.getAttribute('data-bs-target').substring(1);
+            const isExpanded = this.classList.contains('collapsed');
+            
+            // Sauvegarder l'état dans sessionStorage
+            const states = JSON.parse(sessionStorage.getItem('faqStates') || '{}');
+            states[targetId] = !isExpanded;
+            sessionStorage.setItem('faqStates', JSON.stringify(states));
+        });
+    });
+    
+    // Restaurer l'état des accordéons
+    const savedStates = JSON.parse(sessionStorage.getItem('faqStates') || '{}');
+    Object.keys(savedStates).forEach(targetId => {
+        if (savedStates[targetId]) {
+            const button = document.querySelector(`[data-bs-target="#${targetId}"]`);
+            if (button && button.classList.contains('collapsed')) {
+                const collapse = new bootstrap.Collapse(
+                    document.getElementById(targetId)
+                );
+                collapse.show();
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

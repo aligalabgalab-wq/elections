@@ -1,0 +1,846 @@
+<!-- templates/voter/results_voter.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Résultats - Électeur{% endblock %}
+
+{% block styles %}
+<style>
+    .results-header {
+        background: linear-gradient(135deg, #0066b3 0%, #004d8c 100%);
+        border-radius: 1rem;
+        padding: 2rem;
+        color: white;
+        margin-bottom: 2rem;
+    }
+    
+    .stats-card {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .stats-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+    }
+    
+    .candidate-result {
+        border-left: 4px solid;
+        padding-left: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        position: relative;
+    }
+    
+    .candidate-result:hover {
+        transform: translateX(5px);
+    }
+    
+    .winner-badge {
+        position: absolute;
+        top: -10px;
+        right: -10px;
+        background: #ffc107;
+        color: #212529;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    
+    .progress-lg {
+        height: 20px;
+        border-radius: 10px;
+        overflow: hidden;
+    }
+    
+    .chart-container {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        height: 100%;
+    }
+    
+    .time-chart {
+        height: 200px;
+    }
+    
+    .region-stats {
+        max-height: 300px;
+        overflow-y: auto;
+    }
+    
+    .vote-animation {
+        animation: votePulse 2s infinite;
+    }
+    
+    @keyframes votePulse {
+        0% {
+            box-shadow: 0 0 0 0 rgba(25, 135, 84, 0.7);
+        }
+        70% {
+            box-shadow: 0 0 0 10px rgba(25, 135, 84, 0);
+        }
+        100% {
+            box-shadow: 0 0 0 0 rgba(25, 135, 84, 0);
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="results-header">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1 class="h2 mb-3">
+                <i class="ri-bar-chart-line me-2"></i>
+                Résultats de l'élection
+            </h1>
+            <p class="mb-0 opacity-75">
+                Suivez les résultats en temps réel de la simulation électorale
+                {% if election %}
+                    {{ election.year }}
+                {% endif %}
+            </p>
+        </div>
+        
+        <div class="col-md-4 text-center text-md-end">
+            <div class="bg-white text-primary rounded-3 p-3 d-inline-block">
+                <div class="small text-muted">Dernière mise à jour</div>
+                <div class="fw-bold fs-4">{{ now.strftime('%H:%M') }}</div>
+                <small class="text-muted">en temps réel</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Stats Overview -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-primary bg-opacity-10 rounded-circle p-3 me-3">
+                    <i class="ri-group-line text-primary fs-3"></i>
+                </div>
+                <div>
+                    <div class="fs-4 fw-bold">{{ election.total_voters_registered if election else 0 }}</div>
+                    <div class="text-muted small">Électeurs inscrits</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-success bg-opacity-10 rounded-circle p-3 me-3">
+                    <i class="bi bi-check2-square text-success fs-3"></i>
+                </div>
+                <div>
+                    <div class="fs-4 fw-bold">{{ total_votes }}</div>
+                    <div class="text-muted small">Votes exprimés</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-info bg-opacity-10 rounded-circle p-3 me-3">
+                    <i class="ri-percent-line text-info fs-3"></i>
+                </div>
+                <div>
+                    <div class="fs-4 fw-bold">
+                        {% if election and election.total_voters_registered > 0 %}
+                            {{ (total_votes / election.total_voters_registered * 100)|round(1) }}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small">Taux de participation</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex align-items-center mb-3">
+                <div class="bg-warning bg-opacity-10 rounded-circle p-3 me-3">
+                    <i class="ri-time-line text-warning fs-3"></i>
+                </div>
+                <div>
+                    <div class="fs-4 fw-bold">
+                        {% if election and election.is_voting_open %}
+                            {{ election.time_remaining }}
+                        {% else %}
+                            Terminé
+                        {% endif %}
+                    </div>
+                    <div class="text-muted small">Temps restant</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Left Column: Results -->
+    <div class="col-lg-8">
+        <!-- Candidates Results -->
+        <div class="chart-container">
+            <h4 class="h5 mb-4">
+                <i class="ri-user-star-line me-2 text-primary"></i>
+                Résultats par candidat
+            </h4>
+            
+            {% if candidates %}
+                {% set winner = candidates[0] if candidates else None %}
+                
+                {% for candidate in candidates %}
+                <div class="candidate-result position-relative" data-border-color="{{ get_candidate_color(loop.index0) }}">
+                    {% if loop.first and total_votes > 0 %}
+                    <div class="winner-badge">
+                        <i class="ri-trophy-fill"></i>
+                    </div>
+                    {% endif %}
+                    
+                    <div class="row align-items-center">
+                        <div class="col-md-2 mb-3 mb-md-0">
+                            {% set photo_url = candidate_photo_url(candidate) %}
+                            {% if photo_url %}
+                                <img src="{{ photo_url }}"
+                                     alt="{{ candidate.full_name }}"
+                                     class="rounded-circle img-fluid"
+                                     style="width: 80px; height: 80px; object-fit: cover;"
+                                     loading="lazy"
+                                     onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-avatar.svg') }}';">
+                            {% else %}
+                                <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center"
+                                     style="width: 80px; height: 80px;">
+                                    <i class="ri-user-line text-white fs-3"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-5 mb-3 mb-md-0">
+                            <h5 class="fw-bold mb-1">{{ candidate.full_name }}</h5>
+                            <p class="text-muted small mb-1">
+                                {{ candidate.party_name }}
+                                {% if candidate.party_acronym %}
+                                    ({{ candidate.party_acronym }})
+                                {% endif %}
+                            </p>
+                            <p class="text-muted small mb-0">
+                                <i class="ri-map-pin-line me-1"></i>{{ candidate.place_of_birth }} • 
+                                <i class="ri-cake-line me-1"></i>{{ candidate.age }} ans
+                            </p>
+                        </div>
+                        
+                        <div class="col-md-5">
+                            <div class="d-flex justify-content-between mb-2">
+                                <div class="fw-bold fs-4">{{ candidate.vote_count }}</div>
+                                <div class="fw-bold fs-4 text-primary">
+                                    {% if total_votes > 0 %}
+                                        {{ (candidate.vote_count / total_votes * 100)|round(1) }}%
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="progress progress-lg mb-2">
+                                <div class="progress-bar"
+                                     role="progressbar"
+                                     data-progress-percent="{% if total_votes > 0 %}{{ (candidate.vote_count / total_votes * 100) }}{% else %}0{% endif %}"
+                                     data-progress-color="{{ get_candidate_color(loop.index0) }}">
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between small text-muted">
+                                <span>{{ candidate.vote_count }} votes</span>
+                                <span>
+                                    {% if total_votes > 0 %}
+                                        {{ (candidate.vote_count / total_votes * 100)|round(1) }}%
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    {% if candidate.campaign_slogan %}
+                    <div class="mt-2">
+                        <small class="fst-italic">"{{ candidate.campaign_slogan }}"</small>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+                
+                <!-- Winner Announcement -->
+                {% if winner and total_votes > 0 %}
+                <div class="alert alert-success mt-4">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-trophy-fill fs-3 me-3"></i>
+                        <div>
+                            <h5 class="fw-bold mb-1">Candidat en tête : {{ winner.full_name }}</h5>
+                            <p class="mb-0">
+                                Avec {{ winner.vote_count }} votes (
+                                {% if total_votes > 0 %}
+                                    {{ (winner.vote_count / total_votes * 100)|round(1) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                                ), {{ winner.full_name }} est actuellement en tête de l'élection.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            {% else %}
+                <div class="text-center py-5">
+                    <i class="ri-user-search-line display-1 text-muted mb-3"></i>
+                    <h5 class="text-muted">Aucun résultat disponible</h5>
+                    <p class="text-muted small">Les résultats apparaîtront après le début du vote</p>
+                </div>
+            {% endif %}
+        </div>
+        
+        <!-- Participation Over Time -->
+        <div class="chart-container">
+            <h4 class="h5 mb-4">
+                <i class="ri-line-chart-line me-2 text-primary"></i>
+                Participation au fil du temps
+            </h4>
+            
+            <div class="time-chart">
+                <canvas id="participationChart"></canvas>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Column: Stats & Info -->
+    <div class="col-lg-4">
+        <!-- Voting Statistics -->
+        <div class="chart-container">
+            <h4 class="h5 mb-4">
+                <i class="ri-pie-chart-line me-2 text-primary"></i>
+                Statistiques de vote
+            </h4>
+            
+            <div class="text-center">
+                <canvas id="resultsChart" height="250"></canvas>
+            </div>
+            
+            <div class="mt-4">
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Votes exprimés</span>
+                    <span class="fw-semibold">{{ total_votes }}</span>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Bulletins nuls</span>
+                    <span class="fw-semibold">0</span>
+                </div>
+                
+                <div class="d-flex justify-content-between mb-2">
+                    <span class="text-muted">Bulletins blancs</span>
+                    <span class="fw-semibold">0</span>
+                </div>
+                
+                <div class="d-flex justify-content-between">
+                    <span class="text-muted">Total des bulletins</span>
+                    <span class="fw-semibold">{{ total_votes }}</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Regional Stats -->
+        <div class="chart-container">
+            <h4 class="h5 mb-4">
+                <i class="ri-map-pin-line me-2 text-primary"></i>
+                Participation par région
+            </h4>
+            
+            <div class="region-stats">
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Région</th>
+                            <th class="text-end">Votes</th>
+                            <th class="text-end">%</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% set regions = [
+                            ('Djibouti-Ville', 45),
+                            ('Ali-Sabieh', 15),
+                            ('Dikhil', 12),
+                            ('Obock', 10),
+                            ('Tadjourah', 8),
+                            ('Arta', 6),
+                            ('Autres', 4)
+                        ] %}
+                        
+                        {% for region, percentage in regions %}
+                        <tr>
+                            <td>{{ region }}</td>
+                            <td class="text-end">
+                                {% if total_votes > 0 %}
+                                    {{ (total_votes * percentage / 100)|int }}
+                                {% else %}
+                                    0
+                                {% endif %}
+                            </td>
+                            <td class="text-end">{{ percentage }}%</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Live Updates -->
+        <div class="chart-container">
+            <h4 class="h5 mb-4">
+                <i class="ri-broadcast-line me-2 text-primary"></i>
+                Mises à jour en direct
+            </h4>
+            
+            <div class="list-group list-group-flush">
+                <div class="list-group-item border-0 px-0 py-2">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">Dernier vote</small>
+                        <small class="text-muted">il y a 2 min</small>
+                    </div>
+                    <div class="fw-semibold">Nouveau vote enregistré</div>
+                </div>
+                
+                <div class="list-group-item border-0 px-0 py-2">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">Participation</small>
+                        <small class="text-muted">+0.5%</small>
+                    </div>
+                    <div class="fw-semibold">Taux à la hausse</div>
+                </div>
+                
+                <div class="list-group-item border-0 px-0 py-2">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">Candidat en tête</small>
+                        <small class="text-muted">Stable</small>
+                    </div>
+                    <div class="fw-semibold">
+                        {% if candidates and candidates|length > 0 %}
+                            {{ candidates[0].full_name }}
+                        {% else %}
+                            Aucun
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="list-group-item border-0 px-0 py-2">
+                    <div class="d-flex justify-content-between">
+                        <small class="text-muted">Prochaine mise à jour</small>
+                        <small class="text-muted">1 min</small>
+                    </div>
+                    <div class="fw-semibold">Données en temps réel</div>
+                </div>
+            </div>
+            
+            <div class="mt-3">
+                <button class="btn btn-sm btn-outline-primary w-100" id="refreshResults">
+                    <i class="ri-refresh-line me-2"></i>
+                    Actualiser les résultats
+                </button>
+            </div>
+        </div>
+        
+        <!-- Your Vote -->
+        {% if voter and voter.has_voted %}
+        <div class="chart-container vote-animation">
+            <h4 class="h5 mb-4">
+                <i class="ri-checkbox-circle-line me-2 text-success"></i>
+                Votre vote
+            </h4>
+            
+            <div class="text-center">
+                <i class="ri-checkbox-circle-line display-1 text-success mb-3"></i>
+                <h5 class="fw-bold mb-3">Votre vote a été enregistré</h5>
+                <p class="text-muted mb-3">
+                    Vous avez voté le 
+                    <strong>{{ voter.voted_at|datetime_format if voter.voted_at else '' }}</strong>
+                </p>
+                
+                {% if voter.voted_for %}
+                <div class="bg-light rounded-3 p-3 mb-3">
+                    <h6 class="fw-semibold mb-2">Candidat choisi</h6>
+                    <div class="fw-bold">{{ voter.voted_for.full_name }}</div>
+                    <small class="text-muted">{{ voter.voted_for.party_name or '' }}</small>
+                </div>
+                {% endif %}
+                
+                <small class="text-muted d-block">
+                    <i class="ri-information-line me-1"></i>
+                    Votre vote est anonyme et sécurisé
+                </small>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Results Summary -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="chart-container">
+            <h4 class="h5 mb-4">
+                <i class="ri-file-text-line me-2 text-primary"></i>
+                Résumé des résultats
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="text-center p-3">
+                        <div class="fs-2 fw-bold text-primary mb-2">
+                            {% if election and election.total_voters_registered > 0 %}
+                                {{ (total_votes / election.total_voters_registered * 100)|round(1) }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </div>
+                        <div class="text-muted">Participation totale</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="text-center p-3">
+                        <div class="fs-2 fw-bold text-success mb-2">{{ total_votes }}</div>
+                        <div class="text-muted">Votes valides</div>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="text-center p-3">
+                        <div class="fs-2 fw-bold text-warning mb-2">
+                            {% if candidates and candidates|length > 0 and total_votes > 0 %}
+                                {{ (candidates[0].vote_count / total_votes * 100)|round(1) }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </div>
+                        <div class="text-muted">Score du candidat en tête</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mt-4">
+                <h6 class="fw-semibold mb-3">Observations</h6>
+                <ul class="text-muted">
+                    <li>Les résultats sont mis à jour en temps réel</li>
+                    <li>La participation est calculée sur la base des électeurs inscrits</li>
+                    <li>Les résultats définitifs seront proclamés à la fermeture du scrutin</li>
+                    <li>Tous les votes sont anonymes et vérifiés cryptographiquement</li>
+                </ul>
+            </div>
+            
+            <div class="d-flex justify-content-between mt-4">
+                <button class="btn btn-outline-primary">
+                    <i class="ri-download-line me-2"></i>
+                    Télécharger les résultats
+                </button>
+                
+                <button class="btn btn-outline-secondary">
+                    <i class="ri-printer-line me-2"></i>
+                    Imprimer
+                </button>
+                
+                <a href="{{ url_for('voter_dashboard') }}" class="btn btn-primary">
+                    <i class="ri-arrow-left-line me-2"></i>
+                    Retour au tableau de bord
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="application/json" id="results-data">
+{"candidates": {{ (candidates_json or [])|tojson|safe }}, "totalVotes": {{ total_votes|default(0) }}}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+// Colors for candidates
+const candidateColors = [
+    '#0066b3', // Blue
+    '#198754', // Green
+    '#ffc107', // Yellow
+    '#dc3545', // Red
+    '#6f42c1', // Purple
+    '#fd7e14', // Orange
+    '#20c997', // Teal
+    '#0dcaf0'  // Cyan
+];
+
+// Helper function to get candidate color
+function get_candidate_color(index) {
+    return candidateColors[index % candidateColors.length];
+}
+
+// Make it available globally for the template
+window.get_candidate_color = get_candidate_color;
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Apply dynamic styles from data attributes to keep the template linter-friendly
+    document.querySelectorAll('[data-border-color]').forEach((el) => {
+        const color = el.getAttribute('data-border-color');
+        if (color) {
+            el.style.borderLeftColor = color;
+        }
+    });
+    document.querySelectorAll('[data-progress-percent]').forEach((el) => {
+        const percent = parseFloat(el.getAttribute('data-progress-percent')) || 0;
+        el.style.width = `${percent}%`;
+        const color = el.getAttribute('data-progress-color');
+        if (color) {
+            el.style.backgroundColor = color;
+        }
+    });
+
+    // Initialize charts
+    initResultsChart();
+    initParticipationChart();
+    
+    // Refresh button
+    const refreshBtn = document.getElementById('refreshResults');
+    if (refreshBtn) {
+        refreshBtn.addEventListener('click', function() {
+            this.innerHTML = '<i class="ri-loader-4-line spin me-2"></i>Actualisation...';
+            this.disabled = true;
+            
+            // Simulate refresh
+            setTimeout(() => {
+                location.reload();
+            }, 1000);
+        });
+    }
+    
+    // Auto-refresh every 30 seconds
+    if (window.location.pathname.includes('results')) {
+        setInterval(() => {
+            // Update last vote time
+            const lastVoteElement = document.querySelector('.list-group-item:first-child small:last-child');
+            if (lastVoteElement) {
+                const now = new Date();
+                const minutes = now.getMinutes();
+                lastVoteElement.textContent = `il y a ${minutes % 5 || 1} min`;
+            }
+            
+            // Show notification
+            showToast('Résultats mis à jour', 'info');
+        }, 30000);
+    }
+});
+
+function initResultsChart() {
+    const ctx = document.getElementById('resultsChart');
+    if (!ctx) return;
+    
+    ctx.getContext('2d');
+    
+    // Get data from JSON script tag
+    let candidates = [];
+    let totalVotes = 0;
+    const resultsDataEl = document.getElementById('results-data');
+    if (resultsDataEl) {
+        try {
+            const parsed = JSON.parse(resultsDataEl.textContent || '{}');
+            candidates = parsed.candidates || [];
+            totalVotes = parsed.totalVotes || 0;
+        } catch (e) {
+            candidates = [];
+            totalVotes = 0;
+        }
+    }
+    
+    let labels = [];
+    let data = [];
+    let backgroundColors = [];
+    
+    if (candidates.length > 0 && totalVotes > 0) {
+        // Take top 5 candidates
+        const topCandidates = candidates.slice(0, 5);
+        labels = topCandidates.map(c => c.full_name.substring(0, 15) + (c.full_name.length > 15 ? '...' : ''));
+        data = topCandidates.map(c => c.vote_count);
+        backgroundColors = topCandidates.map((c, i) => candidateColors[i % candidateColors.length]);
+        
+        // Add "Others" if there are more candidates
+        if (candidates.length > 5) {
+            const otherVotes = candidates.slice(5).reduce((sum, c) => sum + c.vote_count, 0);
+            if (otherVotes > 0) {
+                labels.push('Autres');
+                data.push(otherVotes);
+                backgroundColors.push('#6c757d');
+            }
+        }
+    } else {
+        labels = ['Aucun résultat'];
+        data = [1];
+        backgroundColors = ['#e9ecef'];
+    }
+    
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: backgroundColors,
+                borderWidth: 2,
+                borderColor: '#fff'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        padding: 20,
+                        usePointStyle: true
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const label = context.label || '';
+                            const value = context.raw || 0;
+                            const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                            const percentage = total > 0 ? Math.round((value / total) * 100) : 0;
+                            return `${label}: ${value} votes (${percentage}%)`;
+                        }
+                    }
+                }
+            },
+            cutout: '70%'
+        }
+    });
+}
+
+function initParticipationChart() {
+    const ctx = document.getElementById('participationChart');
+    if (!ctx) return;
+    
+    ctx.getContext('2d');
+    
+    // Simulated data for participation over time
+    const hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00', '19:00'];
+    const participation = [5, 15, 25, 40, 50, 60, 70, 75, 80, 85, 90, 95];
+    
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: hours,
+            datasets: [{
+                label: 'Participation (%)',
+                data: participation,
+                borderColor: '#0066b3',
+                backgroundColor: 'rgba(0, 102, 179, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false
+                }
+            },
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Toast notification function
+function showToast(message, type = 'info') {
+    const toastContainer = document.getElementById('toast-container') || createToastContainer();
+    
+    const toastId = 'toast-' + Date.now();
+    const toast = document.createElement('div');
+    toast.id = toastId;
+    toast.className = `toast align-items-center text-bg-${type} border-0`;
+    toast.setAttribute('role', 'alert');
+    toast.setAttribute('aria-live', 'assertive');
+    toast.setAttribute('aria-atomic', 'true');
+    
+    const icons = {
+        'success': 'checkbox-circle',
+        'error': 'error-warning',
+        'warning': 'alert',
+        'info': 'information'
+    };
+    
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">
+                <i class="ri-${icons[type] || 'information'}-line me-2"></i>
+                ${message}
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toast);
+    const bsToast = new bootstrap.Toast(toast);
+    bsToast.show();
+    
+    toast.addEventListener('hidden.bs.toast', () => {
+        toast.remove();
+    });
+}
+
+function createToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '1060';
+    document.body.appendChild(container);
+    return container;
+}
+</script>
+{% endblock %}

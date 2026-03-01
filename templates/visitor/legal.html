@@ -1,0 +1,141 @@
+<!-- templates/visitor/legal.html -->
+{% extends "layouts/base.html" %}
+
+{% block main_class %}p-0{% endblock %}
+
+{% block content %}
+<section class="py-5 hero-section">
+    <div class="container">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-8">
+                <div class="hero-badge mb-3">
+                    <i class="bi bi-file-text"></i>
+                    Informations & cadre (simulation)
+                </div>
+
+                <h1 class="title mb-3">
+                    <span id="animated-text">
+                        {% if page == 'reglement' %}
+                            Règlement électoral (simulation)
+                        {% elif page == 'privacy' %}
+                            Politique de confidentialité
+                        {% elif page == 'candidate' %}
+                            Conditions de candidature
+                        {% elif page == 'password' %}
+                            Mot de passe oublié
+                        {% else %}
+                            Conditions d’utilisation
+                        {% endif %}
+                    </span>
+                </h1>
+
+                <p class="subtitle mb-0" style="max-width: 66ch;">
+                    Ces contenus sont fournis à titre pédagogique et concernent uniquement cette application de simulation.
+                </p>
+            </div>
+
+            <div class="col-lg-4 text-lg-end">
+                <div class="d-inline-flex flex-wrap gap-2 justify-content-lg-end">
+                    <a class="btn btn-outline-secondary" href="{{ url_for('index') }}">
+                        <i class="bi bi-house-door me-2"></i>
+                        Accueil
+                    </a>
+                    <a class="btn btn-primary" href="{{ url_for('contact') }}">
+                        <i class="bi bi-envelope-paper me-2"></i>
+                        Contact
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5 section-surface">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-10">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body p-4 p-lg-5">
+                        {% if page == 'reglement' %}
+                            <h2 class="h4 fw-bold mb-3">Règles clés</h2>
+                            <ul class="mb-4">
+                                <li><strong>Âge minimum (électeur) :</strong> {{ config.get('MIN_VOTER_AGE', 18) }} ans révolus.</li>
+                                <li><strong>Âge minimum (candidat) :</strong> {{ config.get('MIN_CANDIDATE_AGE', 40) }} ans révolus.</li>
+                                <li><strong>Unicité :</strong> 1 compte = 1 vote (contrôle automatique).</li>
+                                <li><strong>Confidentialité :</strong> le choix individuel n’est pas publié.</li>
+                            </ul>
+
+                            <div class="alert alert-info small mb-0">
+                                Ce règlement est un cadre <strong>de simulation</strong>. Pour un usage réel, adaptez le texte
+                                et les exigences selon les sources juridiques et les autorités compétentes.
+                            </div>
+
+                        {% elif page == 'privacy' %}
+                            <h2 class="h4 fw-bold mb-3">Données collectées</h2>
+                            <p class="text-muted">
+                                La plateforme collecte des informations nécessaires au fonctionnement de la simulation
+                                (ex. identité, date de naissance, informations de compte, journaux techniques).
+                            </p>
+                            <h3 class="h5 fw-bold mt-4">Utilisation</h3>
+                            <ul class="mb-3">
+                                <li>Gérer l’accès et la sécurité (authentification, anti‑double vote).</li>
+                                <li>Afficher des statistiques agrégées (participation, résultats).</li>
+                                <li>Traiter les demandes envoyées via le formulaire de contact.</li>
+                            </ul>
+                            <div class="alert alert-warning small mb-0">
+                                Simulation uniquement : ce service n’est pas un portail officiel et ne remplace pas
+                                les procédures administratives réelles.
+                            </div>
+
+                        {% elif page == 'candidate' %}
+                            <h2 class="h4 fw-bold mb-3">Engagement du candidat (simulation)</h2>
+                            <ul class="mb-4">
+                                <li>Fournir des informations exactes et à jour.</li>
+                                <li>Respecter les règles de la plateforme (contenus, images, liens).</li>
+                                <li>Ne pas publier d’informations sensibles (documents officiels, données privées).</li>
+                            </ul>
+                            <div class="alert alert-info small mb-0">
+                                Recommandation : utilisez une photo claire et professionnelle, et un programme structuré.
+                            </div>
+
+                        {% elif page == 'password' %}
+                            <h2 class="h4 fw-bold mb-3">Récupération du mot de passe</h2>
+                            <p class="text-muted mb-3">
+                                La réinitialisation automatique n’est pas encore disponible dans cette version.
+                            </p>
+                            <ol class="mb-4">
+                                <li>Ouvrez la page Contact.</li>
+                                <li>Indiquez votre email et le rôle (électeur / candidat / admin).</li>
+                                <li>Décrivez le problème pour que le support vous assiste.</li>
+                            </ol>
+                            <a class="btn btn-primary" href="{{ url_for('contact') }}">
+                                <i class="bi bi-envelope-check me-2"></i>
+                                Contacter le support
+                            </a>
+
+                        {% else %}
+                            <h2 class="h4 fw-bold mb-3">Conditions d’utilisation</h2>
+                            <ul class="mb-4">
+                                <li>Cette application est une <strong>simulation</strong> à but pédagogique.</li>
+                                <li>Vous vous engagez à ne pas l’utiliser pour produire de documents officiels.</li>
+                                <li>Tout abus (spam, fausse déclaration) peut entraîner la désactivation du compte.</li>
+                            </ul>
+                            <div class="alert alert-info small mb-0">
+                                Besoin d’aide ? Consultez la FAQ ou contactez le support.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="text-center mt-4">
+                    <a class="btn btn-outline-secondary" href="{{ url_for('faq') }}">
+                        <i class="bi bi-question-circle me-2"></i>
+                        Consulter la FAQ
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+

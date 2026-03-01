@@ -1,0 +1,346 @@
+<!-- templates/voter/dashboard.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Tableau de bord - Électeur{% endblock %}
+
+{% block styles %}
+<style>
+    .voter-hero {
+        background: radial-gradient(1200px 600px at 15% 15%, rgba(255, 255, 255, 0.18), rgba(255, 255, 255, 0) 45%),
+                    linear-gradient(135deg, #0b5ed7 0%, #0a58ca 30%, #084298 100%);
+        border-radius: 1.25rem;
+        color: #fff;
+        padding: 2rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 12px 28px rgba(8, 66, 152, 0.25);
+    }
+
+    .voter-hero::after {
+        content: '';
+        position: absolute;
+        inset: -2px;
+        background: radial-gradient(900px 320px at 75% 25%, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0) 55%);
+        pointer-events: none;
+    }
+
+    .voter-card {
+        background: #fff;
+        border-radius: 1rem;
+        box-shadow: 0 6px 16px rgba(16, 24, 40, 0.08);
+        border: 1px solid rgba(15, 23, 42, 0.06);
+    }
+
+    .stat-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        flex: 0 0 auto;
+    }
+
+    .soft-divider {
+        height: 1px;
+        background: linear-gradient(90deg, rgba(15, 23, 42, 0.04), rgba(15, 23, 42, 0.12), rgba(15, 23, 42, 0.04));
+    }
+
+    .candidate-item + .candidate-item {
+        border-top: 1px solid rgba(15, 23, 42, 0.06);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+{% set voting_open = election and election.is_voting_open %}
+{% set registration_open = election and election.is_registration_open %}
+
+<div class="container">
+    <div class="voter-hero mb-4">
+        <div class="row align-items-center">
+            <div class="col-lg-8 position-relative">
+                <h1 class="h3 mb-2">
+                    Bonjour, {{ voter.full_name }}
+                </h1>
+                <p class="mb-0 opacity-75">
+                    Suivez l’état de la simulation et, quand le vote est ouvert, exprimez votre choix en toute simplicité.
+                </p>
+
+                <div class="d-flex flex-wrap gap-2 mt-3">
+                    {% if voting_open and not voter.has_voted %}
+                        <a class="btn btn-light fw-semibold" href="{{ url_for('voter_vote') }}">
+                            <i class="bi bi-check2-square me-2"></i>
+                            Voter maintenant
+                        </a>
+                    {% else %}
+                        <a class="btn btn-outline-light fw-semibold" href="{{ url_for('voter_results') }}">
+                            <i class="ri-bar-chart-line me-2"></i>
+                            Voir les résultats
+                        </a>
+                    {% endif %}
+
+                    <a class="btn btn-outline-light" href="{{ url_for('voter_profile') }}">
+                        <i class="ri-user-line me-2"></i>
+                        Mon profil
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-lg-4 mt-3 mt-lg-0 text-lg-end position-relative">
+                {% if election %}
+                    <div class="d-inline-block text-start bg-white bg-opacity-10 border border-white border-opacity-25 rounded-4 p-3">
+                        <div class="d-flex align-items-center justify-content-between gap-3">
+                            <div>
+                                <div class="small opacity-75">Statut</div>
+                                <div class="fw-bold">
+                                    {% if voting_open %}
+                                        Vote ouvert
+                                    {% elif registration_open %}
+                                        Inscriptions ouvertes
+                                    {% else %}
+                                        Vote fermé
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div>
+                                {% if voting_open %}
+                                    <span class="badge bg-success">
+                                        <i class="bi bi-check-circle me-1"></i> Ouvert
+                                    </span>
+                                {% elif registration_open %}
+                                    <span class="badge bg-warning text-dark">
+                                        <i class="bi bi-pencil me-1"></i> Inscriptions
+                                    </span>
+                                {% else %}
+                                    <span class="badge bg-secondary">
+                                        <i class="bi bi-clock me-1"></i> Fermé
+                                    </span>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        <div class="soft-divider my-3"></div>
+
+                        <div class="d-flex justify-content-between">
+                            <span class="small opacity-75">Élection</span>
+                            <span class="small fw-semibold">{{ election.year }}</span>
+                        </div>
+                        <div class="d-flex justify-content-between">
+                            <span class="small opacity-75">Temps restant</span>
+                            <span class="small fw-semibold">{{ election.time_remaining if election else '' }}</span>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="alert alert-warning mb-0">
+                        Aucune élection n’est configurée.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-3 mb-4">
+        <div class="col-md-3">
+            <div class="voter-card p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                        <i class="ri-group-line"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold fs-4">{{ stats.total_voters|default(0) }}</div>
+                        <div class="text-muted small">Électeurs inscrits</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="voter-card p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-success bg-opacity-10 text-success">
+                        <i class="bi bi-check2-square"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold fs-4">{{ stats.total_votes|default(0) }}</div>
+                        <div class="text-muted small">Votes exprimés</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="voter-card p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon bg-info bg-opacity-10 text-info">
+                        <i class="ri-percent-line"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold fs-4">{{ stats.participation_rate|default(0)|round(1) }}%</div>
+                        <div class="text-muted small">Participation</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="voter-card p-3 h-100">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="stat-icon {% if voter.has_voted %}bg-success bg-opacity-10 text-success{% else %}bg-warning bg-opacity-10 text-warning{% endif %}">
+                        <i class="{% if voter.has_voted %}ri-checkbox-circle-line{% else %}ri-error-warning-line{% endif %}"></i>
+                    </div>
+                    <div>
+                        <div class="fw-bold fs-5">
+                            {% if voter.has_voted %}
+                                Vote enregistré
+                            {% else %}
+                                Pas encore voté
+                            {% endif %}
+                        </div>
+                        <div class="text-muted small">
+                            {% if voter.has_voted and voter.voted_at %}
+                                le {{ voter.voted_at.strftime('%d/%m/%Y à %H:%M') }}
+                            {% elif voting_open %}
+                                le vote est ouvert
+                            {% else %}
+                                en attente d’ouverture
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if voter.has_voted and my_candidate %}
+        <div class="voter-card p-3 p-md-4 mb-4 border-start border-success border-4">
+            <div class="d-flex flex-column flex-md-row align-items-start align-items-md-center justify-content-between gap-3">
+                <div>
+                    <div class="h5 mb-1">
+                        <i class="ri-checkbox-circle-line me-2 text-success"></i>
+                        Votre vote est bien enregistré
+                    </div>
+                    <div class="text-muted">
+                        Vous avez voté pour <span class="fw-semibold">{{ my_candidate.full_name }}</span>.
+                    </div>
+                </div>
+                <a class="btn btn-outline-success" href="{{ url_for('voter_results') }}">
+                    <i class="ri-bar-chart-line me-2"></i>
+                    Voir les résultats
+                </a>
+            </div>
+        </div>
+    {% endif %}
+
+    <div class="row g-3">
+        <div class="col-lg-7">
+            <div class="voter-card p-3 p-md-4 h-100">
+                <div class="d-flex align-items-center justify-content-between mb-3">
+                    <div>
+                        <h2 class="h5 mb-1">
+                            <i class="ri-trophy-line me-2"></i>
+                            Top candidats
+                        </h2>
+                        <div class="text-muted small">Classement provisoire (basé sur les votes enregistrés)</div>
+                    </div>
+                    <span class="badge bg-light text-dark border">
+                        {{ stats.approved_candidates|default(0) }} candidats
+                    </span>
+                </div>
+
+                {% if top_candidates and top_candidates|length > 0 %}
+                    <div class="candidate-list">
+                        {% for candidate in top_candidates %}
+                            <div class="candidate-item py-3">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div class="fw-semibold">
+                                        <span class="text-muted me-2">#{{ loop.index }}</span>
+                                        {{ candidate.full_name }}
+                                        {% if voter.has_voted and my_candidate and my_candidate.id == candidate.id %}
+                                            <span class="badge bg-success ms-2">Votre choix</span>
+                                        {% endif %}
+                                    </div>
+                                    <div class="text-muted small">
+                                        {{ candidate.vote_count }} votes
+                                    </div>
+                                </div>
+                                <div class="progress mt-2" style="height: 10px;">
+                                    <div class="progress-bar"
+                                         role="progressbar"
+                                         style="width: 0%;"
+                                         data-target-width="{{ candidate.percentage|round(1) }}%"
+                                         aria-valuenow="{{ candidate.percentage|round(1) }}"
+                                         aria-valuemin="0"
+                                         aria-valuemax="100"></div>
+                                </div>
+                                <div class="d-flex justify-content-end mt-1">
+                                    <small class="text-muted">{{ candidate.percentage|round(1) }}%</small>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-muted">
+                        Aucun candidat approuvé pour le moment.
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="voter-card p-3 p-md-4 h-100">
+                <h2 class="h5 mb-3">
+                    <i class="ri-compass-3-line me-2"></i>
+                    Actions rapides
+                </h2>
+
+                <div class="d-grid gap-2">
+                    {% if voting_open and not voter.has_voted %}
+                        <a class="btn btn-primary" href="{{ url_for('voter_vote') }}">
+                            <i class="bi bi-check2-square me-2"></i>
+                            Accéder au vote
+                        </a>
+                    {% else %}
+                        <a class="btn btn-outline-primary disabled" href="{{ url_for('voter_vote') }}" aria-disabled="true" tabindex="-1">
+                            <i class="bi bi-check2-square me-2"></i>
+                            Vote indisponible
+                        </a>
+                    {% endif %}
+
+                    <a class="btn btn-outline-secondary" href="{{ url_for('voter_results') }}">
+                        <i class="ri-bar-chart-line me-2"></i>
+                        Consulter les résultats
+                    </a>
+
+                    <a class="btn btn-outline-secondary" href="{{ url_for('candidates_list') }}">
+                        <i class="ri-team-line me-2"></i>
+                        Voir tous les candidats
+                    </a>
+
+                    <a class="btn btn-outline-secondary" href="{{ url_for('voter_profile') }}">
+                        <i class="ri-user-settings-line me-2"></i>
+                        Mettre à jour mon profil
+                    </a>
+                </div>
+
+                <div class="soft-divider my-4"></div>
+
+                <div class="small text-muted">
+                    {% if election %}
+                        {% if voting_open %}
+                            Le vote est actuellement ouvert. Vous pouvez voter une seule fois.
+                        {% elif registration_open %}
+                            Les inscriptions sont ouvertes. Le vote ouvrira prochainement.
+                        {% else %}
+                            Le vote est fermé. Consultez les résultats ou revenez plus tard.
+                        {% endif %}
+                    {% else %}
+                        L’élection n’est pas encore configurée par l’administration.
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

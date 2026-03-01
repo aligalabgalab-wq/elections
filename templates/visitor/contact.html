@@ -1,0 +1,241 @@
+<!-- templates/visitor/contact.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Contact{% endblock %}
+
+{% block main_class %}p-0{% endblock %}
+
+{% block content %}
+<section class="py-5 hero-section">
+    <div class="container">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-7">
+                <div class="hero-badge mb-3">
+                    <i class="bi bi-envelope-check"></i>
+                    Support & demandes
+                </div>
+
+                <h1 class="title mb-3">
+                    <span id="animated-text">Contactez-nous</span>
+                </h1>
+
+                <p class="subtitle mb-0" style="max-width: 56ch;">
+                    Envoyez votre message via le formulaire. Nous le recevons directement par email et vous répondons dès que possible.
+                </p>
+            </div>
+
+            <div class="col-lg-5 text-lg-end">
+                <div class="d-inline-flex flex-wrap gap-2 justify-content-lg-end">
+                    <a class="btn btn-outline-secondary" href="{{ url_for('faq') }}">
+                        <i class="bi bi-question-circle me-2"></i>
+                        Centre d’aide
+                    </a>
+                    <a class="btn btn-outline-primary" href="{{ url_for('index') }}">
+                        <i class="bi bi-house-door me-2"></i>
+                        Accueil
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5">
+    <div class="container">
+        <div class="row g-4">
+            <div class="col-lg-5">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body p-4 p-lg-5">
+                        <h2 class="h4 fw-bold mb-3">
+                            <i class="bi bi-headset me-2 text-primary"></i>
+                            Informations
+                        </h2>
+
+                        <div class="d-flex gap-3 align-items-start mb-3">
+                            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center"
+                                 style="width: 44px; height: 44px;">
+                                <i class="bi bi-envelope text-primary"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">Contact</div>
+                                <div class="text-muted small">Via le formulaire (réponse par email)</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-3 align-items-start mb-3">
+                            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center"
+                                 style="width: 44px; height: 44px;">
+                                <i class="bi bi-clock text-success"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">Délai de réponse</div>
+                                <div class="text-muted small">Sous 24–48h (jours ouvrés)</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-3 align-items-start">
+                            <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center"
+                                 style="width: 44px; height: 44px;">
+                                <i class="bi bi-shield-check text-warning"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">Confidentialité</div>
+                                <div class="text-muted small">Vos informations sont utilisées uniquement pour traiter votre demande.</div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <div class="alert alert-info mb-0">
+                            <div class="d-flex gap-2">
+                                <i class="bi bi-info-circle mt-1"></i>
+                                <div class="small">
+                                    Astuce : indiquez le contexte (page concernée, captures, étape) pour accélérer le traitement.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-7">
+                <div class="card border-0 shadow-sm h-100">
+                    <div class="card-body p-4 p-lg-5">
+                        <h2 class="h4 fw-bold mb-3">
+                            <i class="bi bi-pencil-square me-2 text-primary"></i>
+                            Envoyer un message
+                        </h2>
+
+                        {% set email_enabled = config.get('SMTP_HOST') and config.get('CONTACT_RECIPIENT') %}
+                        {% if not email_enabled %}
+                            <div class="alert alert-warning">
+                                <div class="d-flex gap-2">
+                                    <i class="bi bi-exclamation-triangle mt-1"></i>
+                                    <div class="small">
+                                        L’envoi par email n’est pas encore activé. Configurez l’email (SMTP) dans le fichier <code>.env</code>,
+                                        puis redémarrez l’application.
+                                    </div>
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        <form method="post" action="{{ url_for('contact') }}">
+                            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">Nom complet</label>
+                                    <input class="form-control" name="full_name" autocomplete="name" placeholder="Votre nom" value="{{ form_data.get('full_name', '') if form_data else '' }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Email</label>
+                                    <input class="form-control" name="email" type="email" autocomplete="email" placeholder="vous@exemple.com" value="{{ form_data.get('email', '') if form_data else '' }}" required>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Téléphone (optionnel)</label>
+                                    <input class="form-control" name="phone" type="tel" autocomplete="tel" placeholder="+253 ..." value="{{ form_data.get('phone', '') if form_data else '' }}">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Objet</label>
+                                    <input class="form-control" name="subject" placeholder="Sujet de votre message" value="{{ form_data.get('subject', '') if form_data else '' }}" required>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label">Message</label>
+                                    <textarea class="form-control" name="message" rows="6" placeholder="Décrivez votre demande..." required>{{ form_data.get('message', '') if form_data else '' }}</textarea>
+                                </div>
+                                <div class="col-12 d-flex flex-wrap gap-2 align-items-center">
+                                    <button class="btn btn-primary" type="submit" {% if not email_enabled %}disabled aria-disabled="true"{% endif %}>
+                                        <i class="bi bi-send me-2"></i>
+                                        Envoyer
+                                    </button>
+                                    <div class="text-muted small">
+                                        En cliquant sur “Envoyer”, votre message est transmis par email à notre support.
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section class="py-5 bg-white">
+    <div class="container">
+        <div class="text-center mb-4">
+            <h2 class="fw-bold mb-2">Nous trouver</h2>
+            <p class="text-secondary mx-auto mb-0" style="max-width: 52rem;">
+                Localisation indicative (simulation) — pour un projet réel, remplacez l’adresse et les coordonnées.
+            </p>
+        </div>
+
+        <div class="card border-0 shadow-sm contact-map-card overflow-hidden">
+            <div class="row g-0">
+                <div class="col-lg-4">
+                    <div class="p-4 p-lg-5 h-100 d-flex flex-column justify-content-center">
+                        <div class="d-flex align-items-start gap-3 mb-3">
+                            <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center"
+                                 style="width: 44px; height: 44px;">
+                                <i class="bi bi-geo-alt text-primary"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">Ville</div>
+                                <div class="text-muted small">Djibouti-ville</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-start gap-3 mb-3">
+                            <div class="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center"
+                                 style="width: 44px; height: 44px;">
+                                <i class="bi bi-clock text-success"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">Horaires</div>
+                                <div class="text-muted small">Lun – Ven : 08:00 – 18:00</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex align-items-start gap-3">
+                            <div class="bg-warning bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center"
+                                 style="width: 44px; height: 44px;">
+                                <i class="bi bi-map text-warning"></i>
+                            </div>
+                            <div>
+                                <div class="fw-semibold">Carte</div>
+                                <div class="text-muted small">OpenStreetMap (intégration)</div>
+                            </div>
+                        </div>
+
+                        <div class="mt-4 d-flex flex-wrap gap-2">
+                            <a class="btn btn-outline-primary btn-sm"
+                               target="_blank" rel="noopener"
+                               href="https://www.openstreetmap.org/?mlat=11.5880&mlon=43.1450#map=13/11.5880/43.1450">
+                                <i class="bi bi-box-arrow-up-right me-2"></i>
+                                Ouvrir la carte
+                            </a>
+                            <a class="btn btn-outline-secondary btn-sm"
+                               target="_blank" rel="noopener"
+                               href="https://www.openstreetmap.org/directions?engine=fossgis_osrm_car&route=11.5880%2C43.1450%3B11.5880%2C43.1450">
+                                <i class="bi bi-sign-turn-right me-2"></i>
+                                Itinéraire
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-8">
+                    <div class="ratio ratio-16x9 contact-map">
+                        <iframe
+                            title="Carte - Djibouti-ville"
+                            loading="lazy"
+                            referrerpolicy="no-referrer-when-downgrade"
+                            src="https://www.openstreetmap.org/export/embed.html?bbox=43.1165%2C11.5655%2C43.1800%2C11.6200&layer=mapnik&marker=11.5880%2C43.1450">
+                        </iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

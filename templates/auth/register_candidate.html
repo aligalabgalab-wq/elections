@@ -1,0 +1,499 @@
+<!-- templates/auth/register_candidate.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Inscription Candidat - Simulation Électorale{% endblock %}
+
+{% block styles %}
+<style>
+    .candidate-registration {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    .requirement-list {
+        list-style: none;
+        padding-left: 0;
+    }
+    .requirement-list li {
+        padding: 0.5rem 0;
+        border-bottom: 1px solid #e9ecef;
+    }
+    .requirement-list li:last-child {
+        border-bottom: none;
+    }
+    .requirement-icon {
+        width: 24px;
+        height: 24px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 10px;
+        border-radius: 50%;
+    }
+    .requirement-valid .requirement-icon {
+        background-color: #d1e7dd;
+        color: #0a7e3a;
+    }
+    .requirement-invalid .requirement-icon {
+        background-color: #f8d7da;
+        color: #842029;
+    }
+    .program-editor {
+        min-height: 200px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Header -->
+            <div class="text-center mb-5">
+                <i class="ri-user-star-line display-4 text-primary mb-3"></i>
+                <h1 class="h2 mb-3">Candidature à l'élection nationale</h1>
+                <p class="text-muted">
+                    Remplissez ce formulaire pour déposer votre candidature à l'élection nationale (simulation).
+                </p>
+            </div>
+        
+        <!-- Requirements Check -->
+        <div class="card border-warning shadow-sm mb-5">
+            <div class="card-header bg-warning bg-opacity-10 border-warning">
+                <h4 class="mb-0">
+                    <i class="ri-alert-line me-2 text-warning"></i>
+                    Conditions de candidature
+                </h4>
+            </div>
+            <div class="card-body">
+                <ul class="requirement-list">
+                    <li class="requirement-valid">
+                        <div class="d-flex align-items-center">
+                            <div class="requirement-icon">
+                                <i class="ri-check-line"></i>
+                            </div>
+                            <div>
+                                <strong>Citoyenneté djiboutienne</strong>
+                                <p class="text-muted small mb-0">Être citoyen djiboutien de naissance</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="requirement-valid">
+                        <div class="d-flex align-items-center">
+                            <div class="requirement-icon">
+                                <i class="ri-check-line"></i>
+                            </div>
+                            <div>
+                                <strong>Âge minimum</strong>
+                                <p class="text-muted small mb-0">Avoir au moins {{ config.get('MIN_CANDIDATE_AGE', 40) }} ans révolus</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="requirement-valid">
+                        <div class="d-flex align-items-center">
+                            <div class="requirement-icon">
+                                <i class="ri-check-line"></i>
+                            </div>
+                            <div>
+                                <strong>Droits civiques</strong>
+                                <p class="text-muted small mb-0">Jouir de tous ses droits civiques et politiques</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="requirement-valid">
+                        <div class="d-flex align-items-center">
+                            <div class="requirement-icon">
+                                <i class="ri-check-line"></i>
+                            </div>
+                            <div>
+                                <strong>CNI valide</strong>
+                                <p class="text-muted small mb-0">Posséder une Carte Nationale d'Identité valide</p>
+                            </div>
+                        </div>
+                    </li>
+                    <li class="requirement-valid">
+                        <div class="d-flex align-items-center">
+                            <div class="requirement-icon">
+                                <i class="ri-check-line"></i>
+                            </div>
+                            <div>
+                                <strong>Programme politique</strong>
+                                <p class="text-muted small mb-0">Présenter un programme politique clair</p>
+                            </div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Registration Form -->
+        <div class="card shadow-lg border-0 candidate-registration">
+            <div class="card-body p-4 p-md-5">
+                <form method="POST" action="{{ url_for('register_candidate') }}" enctype="multipart/form-data">
+                    <!-- Section 1: Informations Personnelles -->
+                    <h4 class="mb-4 border-bottom pb-3">
+                        <i class="ri-user-fill me-2 text-primary"></i>
+                        Informations Personnelles
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="first_name" class="form-label fw-semibold">
+                                Prénom <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control py-3" 
+                                   id="first_name" name="first_name" 
+                                   placeholder="Votre prénom"
+                                   required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <label for="last_name" class="form-label fw-semibold">
+                                Nom <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control py-3" 
+                                   id="last_name" name="last_name" 
+                                   placeholder="Votre nom"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="date_of_birth" class="form-label fw-semibold">
+                                Date de naissance <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control py-3" 
+                                   id="date_of_birth" name="date_of_birth" 
+                                   required
+                                   max="{{ now.strftime('%Y-%m-%d') }}">
+                            <small class="text-muted">Vous devez avoir au moins {{ config.get('MIN_CANDIDATE_AGE', 40) }} ans</small>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <label for="place_of_birth" class="form-label fw-semibold">
+                                Lieu de naissance <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select py-3" id="place_of_birth" name="place_of_birth" required>
+                                <option value="">Sélectionner une région...</option>
+                                <option value="Djibouti-Ville">Djibouti-Ville</option>
+                                <option value="Ali-Sabieh">Ali-Sabieh</option>
+                                <option value="Dikhil">Dikhil</option>
+                                <option value="Obock">Obock</option>
+                                <option value="Tadjourah">Tadjourah</option>
+                                <option value="Arta">Arta</option>
+                                <option value="Ali-Addeh">Ali-Addeh</option>
+                                <option value="Hol-Hol">Hol-Hol</option>
+                                <option value="As-Eyla">As-Eyla</option>
+                                <option value="Yoboki">Yoboki</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="cni_number" class="form-label fw-semibold">
+                                Numéro CNI <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control py-3" 
+                                   id="cni_number" name="cni_number" 
+                                   placeholder="12345678901234"
+                                   pattern="[0-9]{14}"
+                                   title="14 chiffres requis"
+                                   required>
+                            <small class="text-muted">Format: 14 chiffres (ex: 12345678901234)</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 2: Informations Politiques -->
+                    <h4 class="mb-4 mt-5 border-bottom pb-3">
+                        <i class="ri-government-fill me-2 text-primary"></i>
+                        Informations Politiques
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="party_name" class="form-label fw-semibold">
+                                Nom du parti <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control py-3" 
+                                   id="party_name" name="party_name" 
+                                   placeholder="Nom de votre parti politique"
+                                   required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <label for="party_acronym" class="form-label fw-semibold">
+                                Sigle du parti
+                            </label>
+                            <input type="text" class="form-control py-3" 
+                                   id="party_acronym" name="party_acronym" 
+                                   placeholder="Ex: RPP, UMP, etc.">
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <label for="slogan" class="form-label fw-semibold">
+                                Slogan de campagne <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control py-3" 
+                                   id="slogan" name="slogan" 
+                                   placeholder="Votre slogan électoral"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <label for="program" class="form-label fw-semibold">
+                                Programme politique <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control program-editor" 
+                                      id="program" name="program" 
+                                      rows="6"
+                                      placeholder="Présentez votre programme politique, vos objectifs et vos propositions..."
+                                      required></textarea>
+                            <small class="text-muted">Décrivez votre vision pour Djibouti et vos principales propositions</small>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 3: Compte Utilisateur -->
+                    <h4 class="mb-4 mt-5 border-bottom pb-3">
+                        <i class="ri-mail-fill me-2 text-primary"></i>
+                        Compte Utilisateur
+                    </h4>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="email" class="form-label fw-semibold">
+                                Adresse Email <span class="text-danger">*</span>
+                            </label>
+                            <input type="email" class="form-control py-3" 
+                                   id="email" name="email" 
+                                   placeholder="votre.email@domaine.dj"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label for="password" class="form-label fw-semibold">
+                                Mot de passe <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control py-3" 
+                                       id="password" name="password" 
+                                       placeholder="••••••••"
+                                       minlength="8"
+                                       required>
+                                <button class="btn btn-outline-secondary toggle-password" type="button">
+                                    <i class="ri-eye-line"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Minimum 8 caractères</small>
+                        </div>
+                        
+                        <div class="col-md-6 mb-4">
+                            <label for="confirm_password" class="form-label fw-semibold">
+                                Confirmer le mot de passe <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control py-3" 
+                                       id="confirm_password" name="confirm_password" 
+                                       placeholder="••••••••"
+                                       minlength="8"
+                                       required>
+                                <button class="btn btn-outline-secondary toggle-password" type="button">
+                                    <i class="ri-eye-line"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 4: Documents -->
+                    <h4 class="mb-4 mt-5 border-bottom pb-3">
+                        <i class="ri-folder-fill me-2 text-primary"></i>
+                        Documents à fournir
+                    </h4>
+                    
+                    <div class="alert alert-info">
+                        <div class="d-flex">
+                            <i class="ri-information-line me-2 fs-4"></i>
+                            <div>
+                                <h6 class="alert-heading mb-2">Documents facultatifs pour la simulation</h6>
+                                <p class="mb-0 small">
+                                    Dans cette simulation, les documents sont facultatifs. 
+                                    Dans un processus réel, vous devriez fournir une copie de votre CNI, 
+                                    un certificat de bonne vie et mœurs, et d'autres documents requis.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Section 5: Conditions -->
+                    <div class="mb-4 mt-5">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
+                            <label class="form-check-label" for="terms">
+                                Je certifie sur l'honneur l'exactitude des informations fournies et 
+                                j'accepte les <a href="{{ url_for('candidate_terms') }}" class="text-decoration-none" target="_blank" rel="noopener">Conditions de candidature</a>.
+                                <span class="text-danger">*</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="declaration" name="declaration" required>
+                            <label class="form-check-label" for="declaration">
+                                Je déclare être citoyen djiboutien, jouir de tous mes droits civiques 
+                                et politiques, et ne faire l'objet d'aucune condamnation incompatible 
+                                avec la fonction élective visée par la simulation.
+                                <span class="text-danger">*</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Important Notice -->
+                    <div class="alert alert-warning">
+                        <div class="d-flex">
+                            <i class="ri-alert-line me-2 fs-4"></i>
+                            <div>
+                                <h6 class="alert-heading mb-2">Processus de vérification</h6>
+                                <p class="mb-0 small">
+                                    Votre candidature sera examinée par la commission électorale. 
+                                    Vous serez notifié par email une fois votre candidature approuvée ou rejetée.
+                                    Toute fausse déclaration entraînera le rejet immédiat de votre candidature.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit buttons -->
+                    <div class="d-flex justify-content-between mt-5">
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-lg px-4">
+                            <i class="ri-arrow-left-line me-2"></i>Annuler
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg px-5">
+                            <i class="ri-send-plane-line me-2"></i>Soumettre ma candidature
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <!-- Process Information -->
+        <div class="text-center mt-4">
+            <div class="alert alert-light border" role="alert">
+                <div class="d-flex align-items-center justify-content-center">
+                    <i class="ri-time-line text-primary me-2"></i>
+                    <span class="small">
+                        <strong>Délai de traitement :</strong> 2 à 3 jours ouvrables • 
+                        <strong>Contact :</strong> commission@election-simulation.dj
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Age validation for candidates
+    const dobInput = document.getElementById('date_of_birth');
+    const minAge = {{ config.get('MIN_CANDIDATE_AGE', 40) }};
+    if (dobInput) {
+        dobInput.addEventListener('change', function() {
+            const dob = new Date(this.value);
+            const today = new Date();
+            const age = today.getFullYear() - dob.getFullYear();
+            const monthDiff = today.getMonth() - dob.getMonth();
+            
+            if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+                age--;
+            }
+            
+            if (age < minAge) {
+                this.setCustomValidity(`Vous devez avoir au moins ${minAge} ans pour être candidat`);
+                showValidationMessage(this, `Âge insuffisant. Minimum ${minAge} ans requis pour les candidats.`, 'error');
+            } else if (age > 120) {
+                this.setCustomValidity('Âge invalide');
+                showValidationMessage(this, 'Âge invalide. Veuillez vérifier votre date de naissance.', 'error');
+            } else {
+                this.setCustomValidity('');
+                showValidationMessage(this, `Âge valide: ${age} ans ✓`, 'success');
+            }
+        });
+    }
+    
+    // Program character counter
+    const programInput = document.getElementById('program');
+    if (programInput) {
+        const counter = document.createElement('div');
+        counter.className = 'text-muted small mt-1 text-end';
+        counter.id = 'program-counter';
+        programInput.parentElement.appendChild(counter);
+        
+        function updateCounter() {
+            const length = programInput.value.length;
+            counter.textContent = `${length} caractères`;
+            
+            if (length < 100) {
+                counter.classList.add('text-danger');
+                counter.classList.remove('text-success');
+            } else {
+                counter.classList.remove('text-danger');
+                counter.classList.add('text-success');
+            }
+        }
+        
+        programInput.addEventListener('input', updateCounter);
+        updateCounter(); // Initial count
+    }
+    
+    // Form validation before submission
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            if (!validateCandidateForm()) {
+                e.preventDefault();
+            }
+        });
+    }
+});
+
+function validateCandidateForm() {
+    let isValid = true;
+    
+    // Check program length
+    const programInput = document.getElementById('program');
+    if (programInput && programInput.value.length < 100) {
+        showToast('Le programme politique doit contenir au moins 100 caractères', 'warning');
+        programInput.focus();
+        isValid = false;
+    }
+    
+    // Check declarations
+    const terms = document.getElementById('terms');
+    const declaration = document.getElementById('declaration');
+    
+    if (!terms.checked) {
+        showToast('Vous devez accepter les conditions de candidature', 'warning');
+        terms.focus();
+        isValid = false;
+    } else if (!declaration.checked) {
+        showToast('Vous devez valider la déclaration sur l\'honneur', 'warning');
+        declaration.focus();
+        isValid = false;
+    }
+    
+    return isValid;
+}
+
+function showToast(message, type) {
+    // Simple alert for now - could be enhanced with a proper toast system
+    alert(message);
+}
+</script>
+{% endblock %}

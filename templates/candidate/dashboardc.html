@@ -1,0 +1,753 @@
+<!-- templates/candidate/dashboardc.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Tableau de bord - Candidat{% endblock %}
+
+{% block styles %}
+<style>
+    .candidate-header {
+        background: linear-gradient(135deg, var(--success) 0%, #0d8c1f 100%);
+        color: white;
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .stat-card {
+        transition: transform 0.3s ease;
+    }
+    
+    .stat-card:hover {
+        transform: translateY(-5px);
+    }
+    
+    .campaign-progress {
+        height: 10px;
+        background-color: #e9ecef;
+        border-radius: var(--border-radius-sm);
+        overflow: hidden;
+    }
+    
+    .campaign-progress-bar {
+        height: 100%;
+        background: linear-gradient(90deg, var(--success), var(--primary));
+        transition: width 1s ease;
+    }
+    
+    .activity-timeline {
+        border-left: 2px solid var(--success);
+        padding-left: var(--spacing-lg);
+        margin-left: var(--spacing-md);
+    }
+    
+    .activity-item {
+        position: relative;
+        margin-bottom: var(--spacing-lg);
+    }
+    
+    .activity-item::before {
+        content: '';
+        position: absolute;
+        left: calc(-1 * var(--spacing-lg) - 5px);
+        top: 0;
+        width: 12px;
+        height: 12px;
+        border-radius: var(--border-radius-circle);
+        background-color: var(--success);
+        border: 2px solid white;
+    }
+    
+    .quick-action-card {
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .quick-action-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg) !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- En-tête du candidat -->
+    <div class="candidate-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <div class="d-flex align-items-center mb-3">
+                    {% set photo_url = candidate_photo_url(candidate) %}
+                    {% if photo_url %}
+                        <img src="{{ photo_url }}"
+                             alt="{{ candidate.full_name }}"
+                             class="rounded-circle me-3"
+                             style="width: 80px; height: 80px; object-fit: cover;"
+                             loading="lazy"
+                             onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-avatar.svg') }}';">
+                    {% else %}
+                        <div class="rounded-circle bg-white d-flex align-items-center justify-content-center me-3"
+                             style="width: 80px; height: 80px;">
+                            <i class="ri-user-star-line text-success fs-2"></i>
+                        </div>
+                    {% endif %}
+                    <div>
+                        <h1 class="display-6 fw-bold mb-1">{{ candidate.full_name }}</h1>
+                        <p class="lead mb-0 opacity-90">
+                            {{ candidate.party_name }}
+                            {% if candidate.party_acronym %}
+                                ({{ candidate.party_acronym }})
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                <div class="d-flex flex-wrap gap-2">
+                    <span class="badge bg-white text-success">
+                        <i class="ri-map-pin-line me-1"></i>
+                        {{ candidate.place_of_birth }}
+                    </span>
+                    <span class="badge bg-white text-success">
+                        <i class="ri-cake-line me-1"></i>
+                        {{ candidate.age }} ans
+                    </span>
+                    <span class="badge bg-white text-success">
+                        <i class="bi bi-check2-square me-1"></i>
+                        {{ candidate.vote_count }} votes
+                    </span>
+                    {% if candidate.is_approved %}
+                    <span class="badge bg-success">
+                        <i class="ri-check-double-line me-1"></i>
+                        Candidat approuvé
+                    </span>
+                    {% else %}
+                    <span class="badge bg-warning">
+                        <i class="ri-time-line me-1"></i>
+                        En attente d'approbation
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="col-md-4 text-center text-md-end">
+                {% if candidate.campaign_slogan %}
+                <div class="bg-white text-success rounded-3 p-3 d-inline-block">
+                    <i class="ri-double-quotes-l mb-2 d-block fs-1"></i>
+                    <p class="fst-italic mb-0">"{{ candidate.campaign_slogan }}"</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistiques rapides -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm stat-card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="bg-success bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                         style="width: 64px; height: 64px;">
+                        <i class="bi bi-check2-square text-success fs-2"></i>
+                    </div>
+                    <h3 class="fw-bold mb-2">{{ candidate.vote_count }}</h3>
+                    <p class="text-muted small mb-0">Votes obtenus</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm stat-card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="bg-primary bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                         style="width: 64px; height: 64px;">
+                        <i class="ri-bar-chart-line text-primary fs-2"></i>
+                    </div>
+                    <h3 class="fw-bold mb-2">
+                        {% set total_votes_all = total_votes|default(1) %}
+                        {% if total_votes_all > 0 %}
+                            {{ (candidate.vote_count / total_votes_all * 100)|round(1) }}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </h3>
+                    <p class="text-muted small mb-0">Part des votes</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm stat-card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="bg-warning bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                         style="width: 64px; height: 64px;">
+                        <i class="ri-trophy-line text-warning fs-2"></i>
+                    </div>
+                    <h3 class="fw-bold mb-2">
+                        {% if ranking %}
+                            {{ ranking }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </h3>
+                    <p class="text-muted small mb-0">Classement</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-3">
+            <div class="card border-0 shadow-sm stat-card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="bg-info bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                         style="width: 64px; height: 64px;">
+                        <i class="ri-calendar-event-line text-info fs-2"></i>
+                    </div>
+                    <h3 class="fw-bold mb-2">
+                        {% if election and election.time_remaining %}
+                            {{ election.time_remaining.split(' ')[0] }}
+                        {% else %}
+                            -
+                        {% endif %}
+                    </h3>
+                    <p class="text-muted small mb-0">Jours restants</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contenu principal -->
+    <div class="row g-4">
+        <!-- Colonne de gauche -->
+        <div class="col-lg-8">
+            <!-- Progression de campagne -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-road-map-line me-2 text-success"></i>
+                        Progression de votre campagne
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span class="fw-semibold">Objectif de votes</span>
+                            <span>{{ candidate.vote_count }} / {{ target_votes|default(1000) }}</span>
+                        </div>
+                        <div class="campaign-progress">
+                            <div class="campaign-progress-bar" 
+                                 style="width: {% if target_votes and target_votes > 0 %}{{ (candidate.vote_count / target_votes * 100)|round(1) }}{% else %}0{% endif %}%">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Objectifs -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="ri-checkbox-circle-line text-success fs-4 me-3"></i>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Profil complet</h6>
+                                    <p class="text-muted small mb-0">
+                                        {% if candidate.political_program and candidate.biography %}
+                                            <span class="text-success">✓ Complété</span>
+                                        {% else %}
+                                            <span class="text-warning">À compléter</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="ri-checkbox-circle-line text-success fs-4 me-3"></i>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Photos de campagne</h6>
+                                    <p class="text-muted small mb-0">
+                                        {% if candidate.profile_image and candidate.profile_image != 'default-candidate.jpg' %}
+                                            <span class="text-success">✓ Ajoutées</span>
+                                        {% else %}
+                                            <span class="text-warning">À ajouter</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="ri-checkbox-circle-line text-success fs-4 me-3"></i>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Réseaux sociaux</h6>
+                                    <p class="text-muted small mb-0">
+                                        {% if candidate.website_url or candidate.facebook_url or candidate.twitter_url %}
+                                            <span class="text-success">✓ Configurés</span>
+                                        {% else %}
+                                            <span class="text-warning">À configurer</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <div class="d-flex align-items-center">
+                                <i class="ri-checkbox-circle-line text-success fs-4 me-3"></i>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Vidéo de campagne</h6>
+                                    <p class="text-muted small mb-0">
+                                        {% if candidate.campaign_video_url %}
+                                            <span class="text-success">✓ Ajoutée</span>
+                                        {% else %}
+                                            <span class="text-warning">À ajouter</span>
+                                        {% endif %}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions rapides -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-zap-line me-2 text-warning"></i>
+                        Actions rapides
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <a href="{{ url_for('candidate_campaign') }}" 
+                               class="card border-0 shadow-sm quick-action-card text-decoration-none">
+                                <div class="card-body text-center p-4">
+                                    <i class="ri-megaphone-line display-6 text-primary mb-3"></i>
+                                    <h6 class="fw-bold mb-2">Gérer ma campagne</h6>
+                                    <p class="text-muted small mb-0">
+                                        Modifier programme, slogan et photos
+                                    </p>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <a href="{{ url_for('candidate_statistics') }}" 
+                               class="card border-0 shadow-sm quick-action-card text-decoration-none">
+                                <div class="card-body text-center p-4">
+                                    <i class="ri-bar-chart-line display-6 text-success mb-3"></i>
+                                    <h6 class="fw-bold mb-2">Voir les statistiques</h6>
+                                    <p class="text-muted small mb-0">
+                                        Analyser votes et tendances
+                                    </p>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <a href="{{ url_for('candidate_profile') }}" 
+                               class="card border-0 shadow-sm quick-action-card text-decoration-none">
+                                <div class="card-body text-center p-4">
+                                    <i class="ri-user-settings-line display-6 text-info mb-3"></i>
+                                    <h6 class="fw-bold mb-2">Modifier mon profil</h6>
+                                    <p class="text-muted small mb-0">
+                                        Mettre à jour mes informations
+                                    </p>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <a href="{{ url_for('candidates_list') }}" 
+                               class="card border-0 shadow-sm quick-action-card text-decoration-none">
+                                <div class="card-body text-center p-4">
+                                    <i class="ri-user-search-line display-6 text-warning mb-3"></i>
+                                    <h6 class="fw-bold mb-2">Voir les concurrents</h6>
+                                    <p class="text-muted small mb-0">
+                                        Consulter les autres candidats
+                                    </p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dernières activités -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-history-line me-2 text-primary"></i>
+                        Dernières activités
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="activity-timeline">
+                        {% if activities %}
+                            {% for activity in activities[:5] %}
+                            <div class="activity-item">
+                                <h6 class="fw-bold mb-1">{{ activity.title }}</h6>
+                                <p class="text-muted small mb-1">{{ activity.description }}</p>
+                                <small class="text-muted">{{ activity.time|time_ago }}</small>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="ri-inbox-line fs-1 text-muted mb-3"></i>
+                                <p class="text-muted mb-0">Aucune activité récente</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Colonne de droite -->
+        <div class="col-lg-4">
+            <!-- État de la campagne -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-dashboard-line me-2 text-success"></i>
+                        État de la campagne
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold">Statut</span>
+                            {% if candidate.is_approved %}
+                            <span class="badge bg-success">Approuvé</span>
+                            {% else %}
+                            <span class="badge bg-warning">En attente</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold">Éligibilité</span>
+                            {% if candidate.is_eligible %}
+                            <span class="badge bg-success">Validée</span>
+                            {% else %}
+                            <span class="badge bg-danger">Non éligible</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold">Campagne active</span>
+                            {% if election and election.is_voting_open %}
+                            <span class="badge bg-success">Oui</span>
+                            {% else %}
+                            <span class="badge bg-secondary">Non</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-semibold">Date d'inscription</span>
+                            <span class="text-muted small">{{ candidate.created_at|date_format }}</span>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <div class="text-center">
+                        <h6 class="fw-bold mb-3">Performance</h6>
+                        <div class="display-4 fw-bold text-success mb-2">
+                            {% if total_votes and total_votes > 0 %}
+                                {{ (candidate.vote_count / total_votes * 100)|round(1) }}%
+                            {% else %}
+                                0%
+                            {% endif %}
+                        </div>
+                        <p class="text-muted small mb-0">des votes exprimés</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Élection en cours -->
+            {% if election %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-calendar-event-line me-2 text-primary"></i>
+                        Élection en cours
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold mb-2">{{ election.name }}</h6>
+                    <p class="text-muted small mb-3">{{ election.description|truncate(100) }}</p>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="ri-time-line text-primary me-2"></i>
+                            <div>
+                                <div class="fw-semibold">Statut</div>
+                                <div class="text-muted small">
+                                    {% if election.is_voting_open %}
+                                        <span class="text-success">• En cours</span>
+                                    {% else %}
+                                        <span class="text-warning">• Programmé</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="bi bi-check2-square text-primary me-2"></i>
+                            <div>
+                                <div class="fw-semibold">Période de vote</div>
+                                <div class="text-muted small">
+                                    {{ election.voting_start|date_format }}<br>
+                                    au {{ election.voting_end|date_format }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex align-items-center">
+                            <i class="ri-group-line text-primary me-2"></i>
+                            <div>
+                                <div class="fw-semibold">Participation</div>
+                                <div class="text-muted small">
+                                    {{ election.total_votes_cast }} votes sur {{ election.total_voters_registered }} électeurs
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="alert alert-info">
+                        <i class="ri-information-line me-2"></i>
+                        <small>
+                            {% if election.is_voting_open %}
+                                Il reste {{ election.time_remaining }} pour la campagne.
+                            {% else %}
+                                L'élection débutera le {{ election.voting_start|date_format }}.
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Annonces -->
+            {% if announcements %}
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-megaphone-line me-2 text-warning"></i>
+                        Annonces officielles
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="announcements-list" style="max-height: 300px; overflow-y: auto;">
+                        {% for announcement in announcements %}
+                        <div class="border-bottom p-3">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <span class="badge bg-{{ 'danger' if announcement.is_urgent else 'primary' }}">
+                                    {{ 'URGENT' if announcement.is_urgent else 'INFO' }}
+                                </span>
+                                <small class="text-muted">{{ announcement.created_at|time_ago }}</small>
+                            </div>
+                            <h6 class="fw-semibold mb-1">{{ announcement.title }}</h6>
+                            <p class="small text-muted mb-0">{{ announcement.content|truncate(80) }}</p>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Section d'encouragement -->
+    {% if candidate.is_approved and election and election.is_voting_open %}
+    <div class="card border-0 shadow-sm mt-4 bg-success bg-opacity-10 border-success">
+        <div class="card-body text-center p-5">
+            <i class="ri-trophy-line display-1 text-success mb-3"></i>
+            <h3 class="fw-bold text-success mb-3">Campagne en cours !</h3>
+            <p class="text-success mb-4">
+                Votre candidature est approuvée et la campagne électorale est en cours. 
+                Continuez à promouvoir votre programme et à interagir avec les électeurs.
+            </p>
+            <div class="d-flex justify-content-center gap-3">
+                <a href="{{ url_for('candidate_campaign') }}" class="btn btn-success">
+                    <i class="ri-megaphone-line me-2"></i>
+                    Gérer ma campagne
+                </a>
+                <a href="{{ url_for('candidate_statistics') }}" class="btn btn-outline-success">
+                    <i class="ri-bar-chart-line me-2"></i>
+                    Voir les stats
+                </a>
+            </div>
+        </div>
+    </div>
+    {% elif not candidate.is_approved %}
+    <div class="card border-0 shadow-sm mt-4 bg-warning bg-opacity-10 border-warning">
+        <div class="card-body text-center p-5">
+            <i class="ri-time-line display-1 text-warning mb-3"></i>
+            <h3 class="fw-bold text-warning mb-3">Candidature en attente</h3>
+            <p class="text-warning mb-4">
+                Votre candidature est en cours d'examen par la commission électorale. 
+                Vous serez notifié dès qu'une décision sera prise.
+            </p>
+            <p class="text-muted small mb-0">
+                <i class="ri-information-line me-1"></i>
+                Vous pouvez déjà compléter votre profil et préparer votre campagne.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Animation des cartes de statistiques
+    document.querySelectorAll('.stat-card').forEach((card, index) => {
+        setTimeout(() => {
+            card.classList.add('animate__animated', 'animate__fadeInUp');
+        }, index * 100);
+    });
+    
+    // Animation des cartes d'action rapide
+    document.querySelectorAll('.quick-action-card').forEach((card, index) => {
+        card.addEventListener('mouseenter', function() {
+            this.classList.add('hover-lift');
+        });
+        
+        card.addEventListener('mouseleave', function() {
+            this.classList.remove('hover-lift');
+        });
+    });
+    
+    // Barre de progression animée
+    const progressBar = document.querySelector('.campaign-progress-bar');
+    if (progressBar) {
+        const width = progressBar.style.width;
+        progressBar.style.width = '0%';
+        
+        setTimeout(() => {
+            progressBar.style.width = width;
+        }, 500);
+    }
+    
+    // Mises à jour en temps réel des votes
+    function updateVoteCount() {
+        // Simuler une mise à jour (dans une vraie app, ce serait une requête API)
+        const voteCountElement = document.querySelector('.stat-card h3');
+        if (voteCountElement) {
+            const currentVotes = parseInt(voteCountElement.textContent);
+            const newVotes = currentVotes + Math.floor(Math.random() * 3);
+            
+            animateCounter(voteCountElement, currentVotes, newVotes);
+        }
+    }
+    
+    // Mettre à jour toutes les 30 secondes si l'élection est en cours
+    if ({{ 'true' if election and election.is_voting_open else 'false' }}) {
+        setInterval(updateVoteCount, 30000);
+    }
+    
+    // Fonction pour animer les compteurs
+    function animateCounter(element, start, end) {
+        const duration = 1000;
+        const steps = 60;
+        const step = (end - start) / steps;
+        let current = start;
+        
+        const timer = setInterval(() => {
+            current += step;
+            if ((step > 0 && current >= end) || (step < 0 && current <= end)) {
+                current = end;
+                clearInterval(timer);
+            }
+            element.textContent = Math.round(current);
+        }, duration / steps);
+    }
+    
+    // Notification de nouvelle annonce
+    let lastAnnouncementId = null;
+    
+    function checkNewAnnouncements() {
+        fetch('/api/candidate/announcements/latest')
+            .then(response => response.json())
+            .then(data => {
+                if (data.id !== lastAnnouncementId) {
+                    showToast('Nouvelle annonce : ' + data.title, 'info');
+                    lastAnnouncementId = data.id;
+                }
+            })
+            .catch(error => console.error('Erreur:', error));
+    }
+    
+    // Vérifier les nouvelles annonces toutes les minutes
+    setInterval(checkNewAnnouncements, 60000);
+    
+    // Chargement initial
+    checkNewAnnouncements();
+    
+    // Guide de campagne
+    const campaignGuideBtn = document.getElementById('campaignGuideBtn');
+    if (campaignGuideBtn) {
+        campaignGuideBtn.addEventListener('click', function() {
+            const modalContent = `
+                <div class="campaign-guide">
+                    <h5 class="fw-bold mb-3">Guide de campagne</h5>
+                    <div class="mb-4">
+                        <h6 class="fw-semibold mb-2">1. Complétez votre profil</h6>
+                        <p class="text-muted small">Ajoutez une photo professionnelle, votre biographie et votre programme.</p>
+                    </div>
+                    <div class="mb-4">
+                        <h6 class="fw-semibold mb-2">2. Définissez votre message</h6>
+                        <p class="text-muted small">Créez un slogan percutant et un programme politique clair.</p>
+                    </div>
+                    <div class="mb-4">
+                        <h6 class="fw-semibold mb-2">3. Utilisez les réseaux sociaux</h6>
+                        <p class="text-muted small">Partagez votre campagne sur vos plateformes sociales.</p>
+                    </div>
+                    <div>
+                        <h6 class="fw-semibold mb-2">4. Analysez vos performances</h6>
+                        <p class="text-muted small">Suivez vos statistiques pour ajuster votre stratégie.</p>
+                    </div>
+                </div>
+            `;
+            
+            showModal('Guide de campagne', modalContent, 'success');
+        });
+    }
+    
+    // Fonction utilitaire pour afficher un modal
+    function showModal(title, content, type = 'info') {
+        const modalId = 'customModal-' + Date.now();
+        const modalHTML = `
+            <div class="modal fade" id="${modalId}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header border-0">
+                            <h5 class="modal-title fw-bold text-${type}">
+                                <i class="ri-information-line me-2"></i>
+                                ${title}
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${content}
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                Fermer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        const modal = new bootstrap.Modal(document.getElementById(modalId));
+        modal.show();
+        
+        // Supprimer le modal après fermeture
+        document.getElementById(modalId).addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+    }
+});
+</script>
+{% endblock %}

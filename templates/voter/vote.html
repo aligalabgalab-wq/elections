@@ -1,0 +1,604 @@
+<!-- templates/voter/vote.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Bulletin de vote - Simulation Électorale{% endblock %}
+
+{% block styles %}
+<style>
+    .vote-header {
+        background: linear-gradient(135deg, var(--primary) 0%, #004d8c 100%);
+        color: white;
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .candidate-option {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        border: 2px solid transparent;
+        border-radius: var(--border-radius-md);
+    }
+    
+    .candidate-option:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .candidate-option.selected {
+        border-color: var(--primary);
+        background-color: rgba(0, 102, 179, 0.05);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .vote-confirmation {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: white;
+        box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.1);
+        padding: var(--spacing-md);
+        z-index: 1000;
+        display: none;
+    }
+    
+    .vote-confirmation.show {
+        display: block;
+        animation: slideInUp 0.3s ease;
+    }
+    
+    .candidate-radio {
+        display: none;
+    }
+    
+    .candidate-radio:checked + .candidate-option {
+        border-color: var(--primary);
+        background-color: rgba(0, 102, 179, 0.05);
+    }
+    
+    .vote-progress {
+        height: 8px;
+        background-color: #e9ecef;
+        border-radius: var(--border-radius-sm);
+        overflow: hidden;
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .vote-progress-bar {
+        height: 100%;
+        background-color: var(--primary);
+        width: 0%;
+        transition: width 1s ease;
+    }
+    
+    .empty-state {
+        padding: var(--spacing-xxl) 0;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- En-tête du vote -->
+    <div class="vote-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-6 fw-bold mb-3">
+                    <i class="bi bi-check2-square me-2"></i>
+                    Bulletin de vote électronique
+                </h1>
+                <p class="lead mb-0 opacity-90">
+                    Exercez votre droit de vote démocratique. Sélectionnez votre candidat préféré 
+                    pour l'élection nationale.
+                </p>
+            </div>
+            <div class="col-md-4 text-center text-md-end">
+                <div class="bg-white text-primary rounded-3 p-3 d-inline-block">
+                    <div class="fw-bold mb-1">Code électeur</div>
+                    <div class="fs-4 fw-bold">{{ voter.cni_masked }}</div>
+                    <small class="text-muted">Votre vote est anonyme</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Vérifications -->
+    {% if not election %}
+    <div class="alert alert-danger">
+        <i class="ri-error-warning-line me-2"></i>
+        <strong>Aucune élection active :</strong> Il n'y a actuellement aucune élection en cours.
+    </div>
+    
+    {% elif not election.is_voting_open %}
+    <div class="alert alert-warning">
+        <i class="ri-time-line me-2"></i>
+        <strong>Période de vote fermée :</strong> 
+        {% if election.voting_start %}
+            Le vote ouvrira le <strong>{{ election.voting_start|datetime_format }}</strong>.
+        {% else %}
+            La date de début du vote n'a pas encore été fixée.
+        {% endif %}
+    </div>
+    
+    {% elif not voter.is_eligible %}
+    <div class="alert alert-warning">
+        <i class="ri-user-forbid-line me-2"></i>
+        <strong>Éligibilité en attente :</strong> 
+        Votre éligibilité est en cours de vérification par la commission électorale.
+        {% if voter.eligibility_reason %}
+            <div class="mt-2 small">{{ voter.eligibility_reason }}</div>
+        {% endif %}
+    </div>
+    
+    {% elif voter.has_voted %}
+    <div class="alert alert-success">
+        <i class="ri-check-double-line me-2"></i>
+        <strong>Vote déjà effectué :</strong> 
+        Vous avez exercé votre droit de vote le <strong>{{ voter.voted_at|datetime_format }}</strong>.
+        <div class="mt-2">
+            <a href="{{ url_for('voter_results') }}" class="btn btn-outline-success btn-sm">
+                <i class="ri-bar-chart-line me-1"></i>
+                Voir les résultats
+            </a>
+        </div>
+    </div>
+    
+    {% elif not candidates %}
+    <div class="alert alert-info">
+        <i class="ri-user-search-line me-2"></i>
+        <strong>Aucun candidat disponible :</strong> 
+        Aucun candidat n'est actuellement approuvé pour cette élection.
+    </div>
+    
+    {% else %}
+    <!-- Instructions -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h5 class="fw-bold mb-2">
+                        <i class="ri-information-line me-2 text-primary"></i>
+                        Instructions importantes
+                    </h5>
+                    <ul class="mb-0 text-muted">
+                        <li>Vous ne pourrez modifier votre choix après confirmation</li>
+                        <li>Votre vote est totalement anonyme et sécurisé</li>
+                        <li>Vous ne pouvez voter qu'une seule fois</li>
+                        <li>Le vote reste ouvert jusqu'au {{ election.voting_end|datetime_format }}</li>
+                    </ul>
+                </div>
+                <div class="col-md-4 text-center">
+                    <div class="bg-light rounded-3 p-3">
+                        <div class="text-muted small mb-1">Temps restant</div>
+                        <div class="h4 fw-bold text-primary">{{ election.time_remaining }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Barre de progression -->
+    <div class="vote-progress">
+        <div class="vote-progress-bar" id="voteProgress"></div>
+    </div>
+    
+    <!-- Formulaire de vote -->
+    <form method="POST" action="{{ url_for('voter_vote') }}" id="voteForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        
+        <!-- Sélection du candidat -->
+        <h3 class="fw-bold mb-4">
+            <i class="ri-user-star-line me-2 text-primary"></i>
+            Sélectionnez votre candidat
+        </h3>
+        
+        <div class="row g-4 mb-5" id="candidatesContainer">
+            {% for candidate in candidates %}
+            <div class="col-md-6 col-lg-4">
+                <input type="radio" 
+                       name="candidate_id" 
+                       value="{{ candidate.id }}" 
+                       id="candidate_{{ candidate.id }}" 
+                       class="candidate-radio" 
+                       required>
+                
+                <label for="candidate_{{ candidate.id }}" class="d-block h-100">
+                    <div class="candidate-option card border h-100">
+                        <div class="card-body">
+                            <!-- Photo du candidat -->
+                            <div class="text-center mb-3">
+                                {% set photo_url = candidate_photo_url(candidate) %}
+                                {% if photo_url %}
+                                    <img src="{{ photo_url }}"
+                                         alt="{{ candidate.full_name }}"
+                                         class="rounded-circle"
+                                         style="width: 100px; height: 100px; object-fit: cover;"
+                                         loading="lazy"
+                                         onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-avatar.svg') }}';">
+                                {% else %}
+                                    <div class="rounded-circle bg-primary d-flex align-items-center justify-content-center mx-auto"
+                                         style="width: 100px; height: 100px;">
+                                        <i class="ri-user-line text-white fs-1"></i>
+                                    </div>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Informations du candidat -->
+                            <h5 class="card-title fw-bold text-center mb-2 js-candidate-name">{{ candidate.full_name }}</h5>
+                            
+                            <p class="text-primary fw-semibold text-center mb-2 js-candidate-party">
+                                {{ candidate.party_name }}
+                                {% if candidate.party_acronym %}
+                                    <span class="badge bg-primary ms-1">{{ candidate.party_acronym }}</span>
+                                {% endif %}
+                            </p>
+                            
+                            <div class="text-center text-muted small mb-3">
+                                <div class="js-candidate-place">
+                                    <i class="ri-map-pin-line me-1"></i>
+                                    {{ candidate.place_of_birth }}
+                                </div>
+                                <div class="js-candidate-age">
+                                    <i class="ri-cake-line me-1"></i>
+                                    {{ candidate.age }} ans
+                                </div>
+                            </div>
+                            
+                            {% if candidate.campaign_slogan %}
+                            <div class="mb-3">
+                                <p class="fst-italic text-center text-muted mb-0 js-candidate-slogan">
+                                    <i class="ri-double-quotes-l me-1"></i>
+                                    "{{ candidate.campaign_slogan }}"
+                                </p>
+                            </div>
+                            {% endif %}
+                            
+                            <!-- Statistiques -->
+                            <div class="mt-3">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <small class="text-muted">Votes</small>
+                                    <small class="fw-semibold">{{ candidate.vote_count }}</small>
+                                </div>
+                                {% set total_votes_all = total_votes|default(1) %}
+                                {% set vote_percentage = (candidate.vote_count / total_votes_all * 100) if total_votes_all > 0 else 0 %}
+                                <div class="progress" style="height: 5px;">
+                                    <div class="progress-bar" 
+                                         style="width: {{ vote_percentage }}%"></div>
+                                </div>
+                            </div>
+                            
+                            <!-- Indicateur de sélection -->
+                            <div class="text-center mt-3">
+                                <div class="badge bg-primary js-selected-badge" style="display: none;">
+                                    <i class="ri-check-line me-1"></i>
+                                    Sélectionné
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </label>
+            </div>
+            {% endfor %}
+        </div>
+        
+        <!-- Confirmation en bas de page -->
+        <div class="vote-confirmation" id="voteConfirmation">
+            <div class="container">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h6 class="fw-bold mb-1" id="selectedCandidateName">
+                            Aucun candidat sélectionné
+                        </h6>
+                        <p class="text-muted small mb-0" id="selectedCandidateInfo">
+                            Veuillez sélectionner un candidat pour confirmer votre vote
+                        </p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button type="button" class="btn btn-secondary me-2" id="cancelSelection">
+                            Annuler
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="confirmVoteBtn" disabled>
+                            <i class="ri-send-plane-line me-2"></i>
+                            Confirmer mon vote
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Bouton de soumission (caché) -->
+        <div class="text-center mb-5">
+            <button type="submit" class="btn btn-primary btn-lg px-5" id="submitVoteBtn">
+                <i class="ri-send-plane-line me-2"></i>
+                Soumettre mon vote
+            </button>
+            <p class="text-muted small mt-2">
+                <i class="ri-information-line me-1"></i>
+                Le bouton sera activé une fois un candidat sélectionné
+            </p>
+        </div>
+    </form>
+    
+    <!-- Modal de confirmation -->
+    <div class="modal fade" id="voteConfirmationModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header border-0">
+                    <h5 class="modal-title fw-bold">Confirmer votre vote</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body text-center py-4">
+                    <div class="bg-primary bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center p-4 mb-3">
+                        <i class="ri-check-line text-primary fs-1"></i>
+                    </div>
+                    <h4 class="fw-bold mb-3">Êtes-vous sûr de votre choix ?</h4>
+                    
+                    <div class="text-center mb-4" id="finalCandidateInfo">
+                        <!-- Rempli par JavaScript -->
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <div class="d-flex">
+                            <i class="ri-alert-line me-2 mt-1"></i>
+                            <div>
+                                <strong>Attention :</strong> Cette action est irréversible. 
+                                Vous ne pourrez plus modifier votre vote après confirmation.
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="text-muted small mt-3">
+                        <i class="ri-shield-check-line me-1"></i>
+                        Votre vote sera enregistré de manière anonyme et sécurisée.
+                    </div>
+                </div>
+                <div class="modal-footer border-0 justify-content-center">
+                    <button type="button" class="btn btn-outline-secondary px-4" 
+                            data-bs-dismiss="modal">
+                        Retour
+                    </button>
+                    <button type="button" class="btn btn-primary px-4" 
+                            id="finalConfirmVoteBtn">
+                        <i class="ri-check-double-line me-2"></i>
+                        Confirmer définitivement
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- État vide (quand on ne peut pas voter) -->
+    {% if not election or not election.is_voting_open or not voter.is_eligible or voter.has_voted or not candidates %}
+    <div class="empty-state text-center">
+        <i class="bi bi-check2-square display-1 text-muted mb-3"></i>
+        <h3 class="text-muted mb-3">Bulletin de vote non disponible</h3>
+        <p class="text-muted mb-4">
+            Vous ne pouvez pas voter pour le moment. Consultez votre tableau de bord 
+            pour plus d'informations sur votre statut.
+        </p>
+        <a href="{{ url_for('voter_dashboard') }}" class="btn btn-primary">
+            <i class="ri-dashboard-line me-2"></i>
+            Retour au tableau de bord
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Éléments DOM
+    const voteForm = document.getElementById('voteForm');
+    const candidatesContainer = document.getElementById('candidatesContainer');
+    const voteConfirmation = document.getElementById('voteConfirmation');
+    const selectedCandidateName = document.getElementById('selectedCandidateName');
+    const selectedCandidateInfo = document.getElementById('selectedCandidateInfo');
+    const confirmVoteBtn = document.getElementById('confirmVoteBtn');
+    const submitVoteBtn = document.getElementById('submitVoteBtn');
+    const cancelSelectionBtn = document.getElementById('cancelSelection');
+    const voteConfirmationModal = document.getElementById('voteConfirmationModal');
+    const finalConfirmVoteBtn = document.getElementById('finalConfirmVoteBtn');
+    const finalCandidateInfo = document.getElementById('finalCandidateInfo');
+    const voteProgress = document.getElementById('voteProgress');
+    
+    let selectedCandidate = null;
+    let voteFormSubmitted = false;
+    
+    // Sélection d'un candidat
+    if (candidatesContainer) {
+        candidatesContainer.addEventListener('click', function(e) {
+            const candidateOption = e.target.closest('.candidate-option');
+            if (!candidateOption) return;
+
+            // Le radio est un frère du <label>, on le récupère via l'attribut `for`.
+            const label = candidateOption.closest('label');
+            const inputId = label ? label.getAttribute('for') : null;
+            const radioInput = inputId ? document.getElementById(inputId) : null;
+            if (!radioInput) return;
+            
+            // Désélectionner toutes les options
+            document.querySelectorAll('.candidate-option').forEach(option => {
+                option.classList.remove('selected');
+                const badge = option.querySelector('.js-selected-badge');
+                if (badge) badge.style.display = 'none';
+            });
+            
+            // Sélectionner l'option cliquée
+            radioInput.checked = true;
+            candidateOption.classList.add('selected');
+            const selectedBadge = candidateOption.querySelector('.js-selected-badge');
+            if (selectedBadge) selectedBadge.style.display = 'inline-block';
+            
+            // Récupérer les informations du candidat
+            const candidateName = candidateOption.querySelector('.js-candidate-name')?.textContent?.trim() || '';
+            const candidateParty = candidateOption.querySelector('.js-candidate-party')?.textContent?.trim() || '';
+            const candidateAge = candidateOption.querySelector('.js-candidate-age')?.textContent?.trim() || '';
+            const candidateSlogan = candidateOption.querySelector('.js-candidate-slogan')?.textContent?.trim() || '';
+            
+            selectedCandidate = {
+                id: radioInput.value,
+                name: candidateName,
+                party: candidateParty,
+                age: candidateAge,
+                slogan: candidateSlogan
+            };
+            
+            // Mettre à jour l'affichage de confirmation
+            selectedCandidateName.textContent = selectedCandidate.name;
+            selectedCandidateInfo.innerHTML = `
+                ${selectedCandidate.party} • ${selectedCandidate.age}<br>
+                ${selectedCandidate.slogan ? `"${selectedCandidate.slogan}"` : ''}
+            `;
+            
+            // Activer les boutons
+            confirmVoteBtn.disabled = false;
+            submitVoteBtn.disabled = false;
+            
+            // Afficher la confirmation en bas
+            voteConfirmation.classList.add('show');
+            
+            // Mettre à jour la barre de progression
+            updateProgressBar(100);
+            
+            // Scroller vers le bas pour voir la confirmation
+            setTimeout(() => {
+                voteConfirmation.scrollIntoView({ behavior: 'smooth' });
+            }, 300);
+        });
+    }
+    
+    // Annuler la sélection
+    if (cancelSelectionBtn) {
+        cancelSelectionBtn.addEventListener('click', function() {
+            // Désélectionner toutes les options
+            document.querySelectorAll('.candidate-option').forEach(option => {
+                option.classList.remove('selected');
+                const badge = option.querySelector('.js-selected-badge');
+                if (badge) badge.style.display = 'none';
+            });
+            
+            // Décocher les radio buttons
+            document.querySelectorAll('.candidate-radio').forEach(radio => {
+                radio.checked = false;
+            });
+            
+            // Réinitialiser l'affichage
+            selectedCandidate = null;
+            selectedCandidateName.textContent = 'Aucun candidat sélectionné';
+            selectedCandidateInfo.textContent = 'Veuillez sélectionner un candidat pour confirmer votre vote';
+            
+            // Désactiver les boutons
+            confirmVoteBtn.disabled = true;
+            submitVoteBtn.disabled = true;
+            
+            // Cacher la confirmation
+            voteConfirmation.classList.remove('show');
+            
+            // Réinitialiser la barre de progression
+            updateProgressBar(0);
+        });
+    }
+    
+    // Soumission du formulaire (bouton principal)
+    if (submitVoteBtn) {
+        submitVoteBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            
+            if (!selectedCandidate) {
+                showToast('Veuillez sélectionner un candidat', 'warning');
+                return;
+            }
+            
+            showConfirmationModal();
+        });
+    }
+    
+    // Confirmation (bouton en bas)
+    if (confirmVoteBtn) {
+        confirmVoteBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            showConfirmationModal();
+        });
+    }
+    
+    // Afficher le modal de confirmation
+    function showConfirmationModal() {
+        if (!selectedCandidate) return;
+        
+        // Mettre à jour les informations dans le modal
+        finalCandidateInfo.innerHTML = `
+            <div class="text-center">
+                <h5 class="fw-bold mb-2">${selectedCandidate.name}</h5>
+                <p class="text-primary mb-2">${selectedCandidate.party}</p>
+                <p class="text-muted small mb-0">
+                    ${selectedCandidate.age}<br>
+                    ${selectedCandidate.slogan ? `"${selectedCandidate.slogan}"` : ''}
+                </p>
+            </div>
+        `;
+        
+        // Afficher le modal
+        const modal = new bootstrap.Modal(voteConfirmationModal);
+        modal.show();
+    }
+    
+    // Confirmation finale
+    if (finalConfirmVoteBtn) {
+        finalConfirmVoteBtn.addEventListener('click', function() {
+            // Désactiver le bouton pendant l'envoi
+            this.disabled = true;
+            this.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Enregistrement...
+            `;
+            
+            // Soumettre le formulaire
+            voteForm.submit();
+        });
+    }
+    
+    // Mettre à jour la barre de progression
+    function updateProgressBar(percent) {
+        if (voteProgress) {
+            voteProgress.style.width = percent + '%';
+        }
+    }
+    
+    // Animation initiale de la barre de progression
+    setTimeout(() => {
+        updateProgressBar(selectedCandidate ? 100 : 0);
+    }, 500);
+    
+    // Vérification avant de quitter la page
+    window.addEventListener('beforeunload', function(e) {
+        if (selectedCandidate && !voteFormSubmitted) {
+            e.preventDefault();
+            e.returnValue = 'Vous avez sélectionné un candidat. Voulez-vous vraiment quitter sans voter ?';
+        }
+    });
+    
+    // Animation des cartes candidat
+    document.querySelectorAll('.candidate-option').forEach((card, index) => {
+        setTimeout(() => {
+            card.classList.add('animate__animated', 'animate__fadeInUp');
+        }, index * 100);
+    });
+    
+    // Validation du formulaire
+    if (voteForm) {
+        voteForm.addEventListener('submit', function(e) {
+            if (!selectedCandidate) {
+                e.preventDefault();
+                showToast('Veuillez sélectionner un candidat', 'warning');
+                return;
+            }
+
+            voteFormSubmitted = true;
+        });
+    }
+});
+</script>
+{% endblock %}

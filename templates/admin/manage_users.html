@@ -1,0 +1,565 @@
+<!-- templates/admin/manage_users.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Gestion des utilisateurs - Administration{% endblock %}
+
+{% block styles %}
+<style>
+    .user-avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #0066b3 0%, #004d8c 100%);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+    }
+    
+    .role-badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .status-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: inline-block;
+        margin-right: 5px;
+    }
+    
+    .status-active { background-color: #198754; }
+    .status-inactive { background-color: #dc3545; }
+    .status-pending { background-color: #ffc107; }
+    
+    .filters-bar {
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-bottom: 1.5rem;
+    }
+    
+    .stats-badge {
+        font-size: 0.875rem;
+        padding: 0.5rem 1rem;
+        border-radius: 2rem;
+    }
+    
+    .action-buttons {
+        display: flex;
+        gap: 0.5rem;
+    }
+    
+    .user-details {
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        padding: 1rem;
+        margin-top: 1rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Header -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-2">
+            <i class="ri-group-line me-2 text-primary"></i>
+            Gestion des utilisateurs
+        </h1>
+        <p class="text-muted mb-0">
+            Gérez les comptes utilisateurs, les rôles et les permissions
+        </p>
+    </div>
+    <div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
+            <i class="ri-user-add-line me-2"></i>
+            Ajouter un utilisateur
+        </button>
+    </div>
+</div>
+
+<!-- Stats -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="text-primary fs-2 mb-2">
+                    <i class="ri-group-line"></i>
+                </div>
+                <h3 class="fw-bold mb-1">{{ users|length }}</h3>
+                <p class="text-muted mb-0">Utilisateurs totaux</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="text-success fs-2 mb-2">
+                    <i class="ri-user-line"></i>
+                </div>
+                <h3 class="fw-bold mb-1">{{ users|selectattr('role', 'equalto', 'voter')|list|length }}</h3>
+                <p class="text-muted mb-0">Électeurs</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="text-warning fs-2 mb-2">
+                    <i class="ri-user-star-line"></i>
+                </div>
+                <h3 class="fw-bold mb-1">{{ users|selectattr('role', 'equalto', 'candidate')|list|length }}</h3>
+                <p class="text-muted mb-0">Candidats</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-3">
+        <div class="card border-0 shadow-sm">
+            <div class="card-body text-center">
+                <div class="text-danger fs-2 mb-2">
+                    <i class="ri-admin-line"></i>
+                </div>
+                <h3 class="fw-bold mb-1">{{ users|selectattr('role', 'equalto', 'admin')|list|length }}</h3>
+                <p class="text-muted mb-0">Administrateurs</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="filters-bar mb-4">
+    <div class="row align-items-center">
+        <div class="col-md-4 mb-3 mb-md-0">
+            <div class="input-group">
+                <span class="input-group-text">
+                    <i class="ri-search-line"></i>
+                </span>
+                <input type="text" class="form-control" id="searchUsers" placeholder="Rechercher un utilisateur...">
+            </div>
+        </div>
+        
+        <div class="col-md-4 mb-3 mb-md-0">
+            <select class="form-select" id="filterRole">
+                <option value="">Tous les rôles</option>
+                <option value="admin">Administrateur</option>
+                <option value="voter">Électeur</option>
+                <option value="candidate">Candidat</option>
+                <option value="visitor">Visiteur</option>
+            </select>
+        </div>
+        
+        <div class="col-md-4">
+            <select class="form-select" id="filterStatus">
+                <option value="">Tous les statuts</option>
+                <option value="active">Actif</option>
+                <option value="inactive">Inactif</option>
+                <option value="pending">En attente</option>
+            </select>
+        </div>
+    </div>
+</div>
+
+<!-- Users Table -->
+<div class="card border-0 shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" id="usersTable">
+                <thead class="table-light">
+                    <tr>
+                        <th style="width: 50px;"></th>
+                        <th>Utilisateur</th>
+                        <th>Email</th>
+                        <th>Rôle</th>
+                        <th>Statut</th>
+                        <th>Date d'inscription</th>
+                        <th>Dernière connexion</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for user in users %}
+                    <tr class="user-row" data-role="{{ user.role }}" data-status="{{ 'active' if user.is_active else 'inactive' }}">
+                        <td>
+                            <div class="user-avatar">
+                                {{ user.email[0]|upper }}
+                            </div>
+                        </td>
+                        <td>
+                            <div class="fw-semibold">
+                                {% if user.role == 'voter' and user.voter_profile %}
+                                    {{ user.voter_profile.full_name }}
+                                {% elif user.role == 'candidate' and user.candidate_profile %}
+                                    {{ user.candidate_profile.full_name }}
+                                {% else %}
+                                    {{ user.email.split('@')[0] }}
+                                {% endif %}
+                            </div>
+                            <small class="text-muted">ID: {{ user.id }}</small>
+                        </td>
+                        <td>{{ user.email }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if user.role == 'admin' %}bg-danger
+                                {% elif user.role == 'candidate' %}bg-warning
+                                {% elif user.role == 'voter' %}bg-success
+                                {% else %}bg-secondary{% endif %}">
+                                {% if user.role == 'admin' %}Administrateur
+                                {% elif user.role == 'candidate' %}Candidat
+                                {% elif user.role == 'voter' %}Électeur
+                                {% else %}Visiteur{% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="d-flex align-items-center">
+                                <span class="status-dot status-{{ 'active' if user.is_active else 'inactive' }}"></span>
+                                {{ 'Actif' if user.is_active else 'Inactif' }}
+                            </span>
+                            {% if not user.is_email_verified %}
+                            <small class="text-warning d-block">Email non vérifié</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <small>{{ user.created_at|datetime_format }}</small>
+                        </td>
+                        <td>
+                            <small>
+                                {% if user.last_login %}
+                                    {{ user.last_login|datetime_format }}
+                                {% else %}
+                                    Jamais
+                                {% endif %}
+                            </small>
+                        </td>
+                        <td class="text-end">
+                            <div class="action-buttons">
+                                <button class="btn btn-sm btn-outline-primary" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#viewUserModal"
+                                        data-user-id="{{ user.id }}">
+                                    <i class="ri-eye-line"></i>
+                                </button>
+                                
+                                <button class="btn btn-sm btn-outline-warning" 
+                                        data-bs-toggle="modal" 
+                                        data-bs-target="#editUserModal"
+                                        data-user-id="{{ user.id }}">
+                                    <i class="ri-edit-line"></i>
+                                </button>
+                                
+                                {% if user.id != current_user.id %}
+                                <button class="btn btn-sm btn-outline-danger confirm-action"
+                                        data-message="Êtes-vous sûr de vouloir supprimer cet utilisateur ?"
+                                        data-url="{{ url_for('delete_user', user_id=user.id) }}">
+                                    <i class="ri-delete-bin-line"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    
+                    {% if not users %}
+                    <tr>
+                        <td colspan="8" class="text-center py-5">
+                            <i class="ri-user-search-line display-1 text-muted mb-3"></i>
+                            <h5 class="text-muted">Aucun utilisateur trouvé</h5>
+                            <p class="text-muted small">Ajoutez des utilisateurs pour commencer</p>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="card-footer bg-white border-0">
+        <div class="d-flex justify-content-between align-items-center">
+            <div class="text-muted small">
+                Affichage de <span id="visibleCount">{{ users|length }}</span> utilisateur(s) sur {{ users|length }}
+            </div>
+            <nav>
+                <ul class="pagination pagination-sm mb-0">
+                    <li class="page-item disabled">
+                        <a class="page-link" href="#">Précédent</a>
+                    </li>
+                    <li class="page-item active">
+                        <a class="page-link" href="#">1</a>
+                    </li>
+                    <li class="page-item">
+                        <a class="page-link" href="#">Suivant</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </div>
+</div>
+
+<!-- View User Modal -->
+<div class="modal fade" id="viewUserModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-user-line me-2"></i>
+                    Détails de l'utilisateur
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="viewUserContent">
+                <!-- Content loaded by JavaScript -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal">
+                    <i class="ri-edit-line me-2"></i>
+                    Modifier
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal fade" id="addUserModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-user-add-line me-2"></i>
+                    Ajouter un utilisateur
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('add_user') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="newEmail" class="form-label">Email</label>
+                        <input type="email" class="form-control" id="newEmail" name="email" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="newPassword" class="form-label">Mot de passe</label>
+                        <input type="password" class="form-control" id="newPassword" name="password" required>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="newRole" class="form-label">Rôle</label>
+                        <select class="form-select" id="newRole" name="role" required>
+                            <option value="voter">Électeur</option>
+                            <option value="candidate">Candidat</option>
+                            <option value="admin">Administrateur</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="newIsActive" name="is_active" checked>
+                            <label class="form-check-label" for="newIsActive">
+                                Compte actif
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ri-save-line me-2"></i>
+                        Créer l'utilisateur
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Filter users
+    const searchInput = document.getElementById('searchUsers');
+    const roleFilter = document.getElementById('filterRole');
+    const statusFilter = document.getElementById('filterStatus');
+    const userRows = document.querySelectorAll('.user-row');
+    const visibleCount = document.getElementById('visibleCount');
+    
+    function filterUsers() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const roleValue = roleFilter.value;
+        const statusValue = statusFilter.value;
+        
+        let visible = 0;
+        
+        userRows.forEach(row => {
+            const email = row.cells[2].textContent.toLowerCase();
+            const name = row.cells[1].querySelector('.fw-semibold').textContent.toLowerCase();
+            const role = row.dataset.role;
+            const status = row.dataset.status;
+            
+            const matchesSearch = email.includes(searchTerm) || name.includes(searchTerm);
+            const matchesRole = !roleValue || role === roleValue;
+            const matchesStatus = !statusValue || status === statusValue;
+            
+            if (matchesSearch && matchesRole && matchesStatus) {
+                row.style.display = '';
+                visible++;
+            } else {
+                row.style.display = 'none';
+            }
+        });
+        
+        visibleCount.textContent = visible;
+    }
+    
+    searchInput.addEventListener('input', filterUsers);
+    roleFilter.addEventListener('change', filterUsers);
+    statusFilter.addEventListener('change', filterUsers);
+    
+    // View user modal
+    const viewModal = document.getElementById('viewUserModal');
+    if (viewModal) {
+        viewModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const userId = button.dataset.userId;
+            
+            // Load user data via AJAX
+            fetch(`/admin/api/user/${userId}`)
+                .then(response => response.json())
+                .then(user => {
+                    const content = document.getElementById('viewUserContent');
+                    content.innerHTML = `
+                        <div class="row">
+                            <div class="col-md-4 text-center">
+                                <div class="user-avatar mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
+                                    ${user.email[0].toUpperCase()}
+                                </div>
+                                <h5 class="fw-bold">${user.email.split('@')[0]}</h5>
+                                <span class="badge ${getRoleBadgeClass(user.role)}">
+                                    ${getRoleLabel(user.role)}
+                                </span>
+                            </div>
+                            <div class="col-md-8">
+                                <h6 class="fw-bold mb-3">Informations du compte</h6>
+                                <table class="table table-sm">
+                                    <tr>
+                                        <th style="width: 140px;">Email:</th>
+                                        <td>${user.email}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Statut:</th>
+                                        <td>
+                                            <span class="badge ${user.is_active ? 'bg-success' : 'bg-danger'}">
+                                                ${user.is_active ? 'Actif' : 'Inactif'}
+                                            </span>
+                                            ${!user.is_email_verified ? '<span class="badge bg-warning ms-1">Email non vérifié</span>' : ''}
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <th>Date d'inscription:</th>
+                                        <td>${new Date(user.created_at).toLocaleDateString('fr-FR')}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Dernière connexion:</th>
+                                        <td>${user.last_login ? new Date(user.last_login).toLocaleString('fr-FR') : 'Jamais'}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Nombre de connexions:</th>
+                                        <td>${user.login_count || 0}</td>
+                                    </tr>
+                                </table>
+                                
+                                ${user.voter_profile || user.candidate_profile ? `
+                                <h6 class="fw-bold mb-3 mt-4">Informations personnelles</h6>
+                                <table class="table table-sm">
+                                    ${user.voter_profile ? `
+                                    <tr>
+                                        <th style="width: 140px;">Nom complet:</th>
+                                        <td>${user.voter_profile.first_name} ${user.voter_profile.last_name}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>CNI:</th>
+                                        <td>${user.voter_profile.cni_masked || 'Non renseignée'}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Date de naissance:</th>
+                                        <td>${new Date(user.voter_profile.date_of_birth).toLocaleDateString('fr-FR')}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Lieu de naissance:</th>
+                                        <td>${user.voter_profile.place_of_birth || 'Non renseigné'}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Éligibilité:</th>
+                                        <td>
+                                            <span class="badge ${user.voter_profile.is_eligible ? 'bg-success' : 'bg-warning'}">
+                                                ${user.voter_profile.is_eligible ? 'Éligible' : 'Non éligible'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    ` : ''}
+                                    
+                                    ${user.candidate_profile ? `
+                                    <tr>
+                                        <th style="width: 140px;">Nom complet:</th>
+                                        <td>${user.candidate_profile.first_name} ${user.candidate_profile.last_name}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Parti politique:</th>
+                                        <td>${user.candidate_profile.party_name || 'Non renseigné'}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Slogan:</th>
+                                        <td>${user.candidate_profile.campaign_slogan || 'Non renseigné'}</td>
+                                    </tr>
+                                    <tr>
+                                        <th>Statut:</th>
+                                        <td>
+                                            <span class="badge ${user.candidate_profile.is_approved ? 'bg-success' : 'bg-warning'}">
+                                                ${user.candidate_profile.is_approved ? 'Approuvé' : 'En attente'}
+                                            </span>
+                                        </td>
+                                    </tr>
+                                    ` : ''}
+                                </table>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                })
+                .catch(error => {
+                    console.error('Error loading user:', error);
+                    document.getElementById('viewUserContent').innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="ri-error-warning-line me-2"></i>
+                            Erreur lors du chargement des données utilisateur
+                        </div>
+                    `;
+                });
+        });
+    }
+    
+    function getRoleBadgeClass(role) {
+        switch(role) {
+            case 'admin': return 'bg-danger';
+            case 'candidate': return 'bg-warning';
+            case 'voter': return 'bg-success';
+            default: return 'bg-secondary';
+        }
+    }
+    
+    function getRoleLabel(role) {
+        switch(role) {
+            case 'admin': return 'Administrateur';
+            case 'candidate': return 'Candidat';
+            case 'voter': return 'Électeur';
+            default: return 'Visiteur';
+        }
+    }
+});
+</script>
+{% endblock %}

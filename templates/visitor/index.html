@@ -1,0 +1,429 @@
+<!-- templates/visitor/index.html -->
+{% extends "layouts/base.html" %}
+
+{% block main_class %}p-0{% endblock %}
+
+{% block content %}
+<div id="home-page" class="page-content">
+    <!-- Hero -->
+    <section class="py-5 hero-section">
+        <div class="container">
+            <div class="row align-items-center g-4">
+                <div class="col-lg-6">
+                    <div class="hero-badge mb-3">
+                        <i class="bi bi-shield-check"></i>
+                        Plateforme de simulation électorale
+                    </div>
+
+                    <h1 class="title">
+                        <span id="animated-text">Simulation électorale de Djibouti</span>
+                    </h1>
+
+                    <p class="subtitle">
+                        Comprenez le processus électoral, suivez la participation et visualisez les résultats en toute transparence.
+                    </p>
+
+                    <div class="button-group">
+                        <a class="btn btn-primary" href="{{ url_for('register_voter') }}">
+                            <i class="bi bi-person-plus me-2"></i>
+                            Commencer (électeur)
+                        </a>
+                        <a class="btn btn-outline-primary" href="{{ url_for('register_candidate') }}">
+                            <i class="bi bi-award me-2"></i>
+                            Je suis candidat
+                        </a>
+                        <a class="btn btn-outline-primary" href="{{ url_for('login') }}">
+                            <i class="bi bi-box-arrow-in-right me-2"></i>
+                            Connexion
+                        </a>
+                        <a class="btn btn-outline-secondary" href="{{ url_for('candidates_list') }}">
+                            <i class="bi bi-people me-2"></i>
+                            Voir les candidats
+                        </a>
+                    </div>
+
+                    <div class="hero-pills">
+                        <span class="hero-pill">
+                            <i class="bi bi-lightning-charge-fill text-warning"></i>
+                            Résultats & stats instantanés
+                        </span>
+                        <span class="hero-pill">
+                            <i class="bi bi-lock-fill text-success"></i>
+                            Contrôles d’unicité (1 compte = 1 vote)
+                        </span>
+                        <span class="hero-pill">
+                            <i class="bi bi-graph-up-arrow text-primary"></i>
+                            Indicateurs de participation
+                        </span>
+                    </div>
+
+                    {% if election %}
+                        <div class="mt-4 d-flex flex-wrap gap-2">
+                            {% if election.is_voting_open %}
+                                <span class="badge bg-success">
+                                    <i class="bi bi-check-circle me-1"></i>
+                                    Vote ouvert
+                                </span>
+                            {% elif election.is_registration_open %}
+                                <span class="badge bg-warning text-dark">
+                                    <i class="bi bi-pencil me-1"></i>
+                                    Inscriptions ouvertes
+                                </span>
+                            {% else %}
+                                <span class="badge bg-secondary">
+                                    <i class="bi bi-clock me-1"></i>
+                                    Vote fermé
+                                </span>
+                            {% endif %}
+
+                            <span class="badge bg-light text-dark border">
+                                <i class="bi bi-calendar-event me-1"></i>
+                                {{ election.year }}
+                            </span>
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="col-lg-6 text-center">
+                    <div class="hero-visual">
+                        <div class="image-wrapper">
+                            <img
+                                src="{{ url_for('static', filename='images/National_Assembly_of_Djibouti.jpg') }}"
+                                alt="Assemblée nationale de Djibouti"
+                                class="img-fluid rounded-circle hero-image"
+                                style="width: min(480px, 88vw); height: min(480px, 88vw); object-fit: cover; object-position: center;"
+                                fetchpriority="high"
+                                onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/djib.jpg') }}';"
+                            >
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="py-5 section-surface home-stats">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card kpi-card kpi-card--primary reveal h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="kpi-label">Électeurs</div>
+                                    <div class="kpi-value">{{ stats.total_voters|default(0) }}</div>
+                                </div>
+                                <div class="kpi-icon" aria-hidden="true">
+                                    <i class="bi bi-person-check"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-hint">Inscrits sur la plateforme</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card kpi-card kpi-card--success reveal h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="kpi-label">Candidats</div>
+                                    <div class="kpi-value">{{ stats.approved_candidates|default(0) }}</div>
+                                </div>
+                                <div class="kpi-icon" aria-hidden="true">
+                                    <i class="bi bi-award"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-hint">Candidatures approuvées</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card kpi-card kpi-card--danger reveal h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="kpi-label">Votes</div>
+                                    <div class="kpi-value">{{ stats.total_votes|default(0) }}</div>
+                                </div>
+                                <div class="kpi-icon" aria-hidden="true">
+                                    <i class="bi bi-check2-square"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-hint">Votes enregistrés</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="card kpi-card kpi-card--warning reveal h-100">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center justify-content-between">
+                                <div>
+                                    <div class="kpi-label">Participation</div>
+                                    <div class="kpi-value">{{ stats.participation_rate|default(0) }}%</div>
+                                </div>
+                                <div class="kpi-icon" aria-hidden="true">
+                                    <i class="bi bi-activity"></i>
+                                </div>
+                            </div>
+                            <div class="kpi-hint">Taux actuel</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Candidates -->
+    <section class="py-5 section-surface home-candidates">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold mb-3">Candidats mis en avant</h2>
+                <p class="text-secondary mx-auto" style="max-width: 44rem;">
+                    Découvrez les candidats approuvés et suivez leurs performances.
+                </p>
+            </div>
+
+            {% if candidates and candidates|length > 0 %}
+                <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-4 justify-content-center">
+                    {% for candidate in candidates %}
+                        <div class="col">
+                            <div class="card candidate-card reveal h-100">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-3">
+                                        {% set photo_url = candidate_photo_url(candidate) %}
+                                        {% if photo_url %}
+                                            <img
+                                                src="{{ photo_url }}"
+                                                alt="{{ candidate.full_name }}"
+                                                class="rounded-circle me-3"
+                                                style="width: 56px; height: 56px; object-fit: cover;"
+                                                loading="lazy"
+                                                onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-avatar.svg') }}';"
+                                            >
+                                        {% else %}
+                                            <div class="rounded-circle bg-success bg-opacity-10 d-inline-flex align-items-center justify-content-center me-3"
+                                                 style="width: 56px; height: 56px;">
+                                                <i class="bi bi-person-badge text-success fs-3"></i>
+                                            </div>
+                                        {% endif %}
+                                        <div class="flex-grow-1">
+                                            <div class="fw-bold">{{ candidate.full_name }}</div>
+                                            <div class="text-muted small">
+                                                {{ candidate.party_name or 'Indépendant' }}
+                                                {% if candidate.party_acronym %}
+                                                    <span class="badge bg-light text-dark border ms-1">{{ candidate.party_acronym }}</span>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {% if candidate.campaign_slogan %}
+                                        <p class="text-muted small mb-3">
+                                            <i class="bi bi-quote me-1"></i>
+                                            {{ candidate.campaign_slogan }}
+                                        </p>
+                                    {% else %}
+                                        <p class="text-muted small mb-3">
+                                            <i class="bi bi-info-circle me-1"></i>
+                                            Candidat approuvé – profil en cours de complétion.
+                                        </p>
+                                    {% endif %}
+
+                                    <div class="d-flex flex-wrap justify-content-between small text-muted">
+                                        <span>
+                                            <i class="bi bi-check2-square me-1"></i>
+                                            {{ candidate.vote_count }} vote(s)
+                                        </span>
+                                        {% if candidate.place_of_birth %}
+                                            <span>
+                                                <i class="bi bi-geo-alt me-1"></i>
+                                                {{ candidate.place_of_birth }}
+                                            </span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="card-footer bg-transparent border-0 pt-0">
+                                    <a class="btn btn-outline-primary w-100" href="{{ url_for('candidates_list') }}">
+                                        Voir les détails
+                                        <i class="bi bi-arrow-right ms-2"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <div class="text-center">
+                    <a href="{{ url_for('candidates_list') }}" class="btn btn-primary">
+                        <i class="bi bi-people me-2"></i>
+                        Voir tous les candidats
+                    </a>
+                </div>
+            {% else %}
+                <div class="text-center text-muted">
+                    Aucun candidat approuvé pour le moment.
+                </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- Themes -->
+    <section class="py-5 section-surface home-themes">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold mb-3">Thèmes principaux</h2>
+                <p class="text-secondary mx-auto" style="max-width: 44rem;">
+                    Les enjeux majeurs au cœur du débat électoral.
+                </p>
+            </div>
+
+            <div class="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4 text-center">
+                <div class="col">
+                    <div class="p-4 bg-white rounded-3 shadow-sm transition-hover reveal h-100">
+                        <div class="bg-primary bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                             style="width: 64px; height: 64px;">
+                            <i class="bi bi-graph-up-arrow text-primary fs-2"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2">Économie & emploi</h5>
+                        <p class="text-muted small mb-0">Croissance, formation, opportunités et pouvoir d’achat.</p>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="p-4 bg-white rounded-3 shadow-sm transition-hover reveal h-100">
+                        <div class="bg-success bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                             style="width: 64px; height: 64px;">
+                            <i class="bi bi-mortarboard text-success fs-2"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2">Éducation & jeunesse</h5>
+                        <p class="text-muted small mb-0">Écoles, universités, compétences et insertion professionnelle.</p>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="p-4 bg-white rounded-3 shadow-sm transition-hover reveal h-100">
+                        <div class="bg-danger bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                             style="width: 64px; height: 64px;">
+                            <i class="bi bi-heart-pulse text-danger fs-2"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2">Santé & cohésion</h5>
+                        <p class="text-muted small mb-0">Accès aux soins, protection sociale et solidarité.</p>
+                    </div>
+                </div>
+
+                <div class="col">
+                    <div class="p-4 bg-white rounded-3 shadow-sm transition-hover reveal h-100">
+                        <div class="bg-warning bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
+                             style="width: 64px; height: 64px;">
+                            <i class="bi bi-building text-warning fs-2"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2">Infrastructures</h5>
+                        <p class="text-muted small mb-0">Transport, énergie, services publics et numérique.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="py-5 section-surface home-how-it-works">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="fw-bold mb-3">Comment participer ?</h2>
+                <p class="text-secondary mx-auto" style="max-width: 44rem;">
+                    Suivez ces étapes simples pour participer à la simulation.
+                </p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-3">
+                    <div class="p-4 bg-light rounded-3 text-center shadow-sm transition-hover reveal h-100">
+                        <div class="bg-primary rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center"
+                             style="width: 64px; height: 64px;">
+                            <i class="bi bi-person-plus text-white fs-2"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2">1. Inscription</h5>
+                        <p class="text-muted small mb-3">Créez votre compte électeur en quelques secondes.</p>
+                        <a class="btn btn-sm btn-outline-primary" href="{{ url_for('register_voter') }}">S’inscrire</a>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="p-4 bg-light rounded-3 text-center shadow-sm transition-hover reveal h-100">
+                        <div class="bg-success rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center"
+                             style="width: 64px; height: 64px;">
+                            <i class="bi bi-people text-white fs-2"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2">2. Découverte</h5>
+                        <p class="text-muted small mb-3">Explorez les candidats et leurs programmes.</p>
+                        <a class="btn btn-sm btn-outline-success" href="{{ url_for('candidates_list') }}">Voir</a>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="p-4 bg-light rounded-3 text-center shadow-sm transition-hover reveal h-100">
+                        <div class="bg-danger rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center"
+                             style="width: 64px; height: 64px;">
+                            <i class="bi bi-check2-square text-white fs-2"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2">3. Vote</h5>
+                        <p class="text-muted small mb-3">Votez une seule fois lorsque le vote est ouvert.</p>
+                        <a class="btn btn-sm btn-outline-danger" href="{{ url_for('login') }}">Se connecter</a>
+                    </div>
+                </div>
+
+                <div class="col-md-3">
+                    <div class="p-4 bg-light rounded-3 text-center shadow-sm transition-hover reveal h-100">
+                        <div class="bg-warning rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center"
+                             style="width: 64px; height: 64px;">
+                            <i class="bi bi-bar-chart text-white fs-2"></i>
+                        </div>
+                        <h5 class="fw-semibold mb-2">4. Résultats</h5>
+                        <p class="text-muted small mb-3">Suivez les résultats et la participation.</p>
+                        <a class="btn btn-sm btn-outline-warning" href="{{ url_for('candidates_list') }}">Consulter</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="text-center mt-5">
+                <a class="btn btn-primary btn-lg" href="{{ url_for('register_voter') }}">
+                    <i class="bi bi-arrow-right-circle me-2"></i>
+                    Participer maintenant
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="py-5">
+        <div class="container">
+            <div class="cta-surface p-4 p-lg-5">
+                <div class="row align-items-center g-4">
+                    <div class="col-lg-8">
+                        <h2 class="h3 fw-bold mb-2">Une question ou une suggestion ?</h2>
+                        <p class="text-muted mb-0">
+                            Écrivez-nous via le formulaire de contact : nous répondons rapidement et traitons vos demandes avec sérieux.
+                        </p>
+                    </div>
+                    <div class="col-lg-4 text-lg-end">
+                        <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
+                            <a class="btn btn-primary btn-lg" href="{{ url_for('contact') }}">
+                                <i class="bi bi-envelope-paper me-2"></i>
+                                Contacter
+                            </a>
+                            <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('faq') }}">
+                                <i class="bi bi-question-circle me-2"></i>
+                                Aide
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

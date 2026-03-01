@@ -1,0 +1,18 @@
+<!-- templates/errors/500.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Erreur serveur{% endblock %}
+
+{% block content %}
+<div class="container py-5 text-center">
+    <h1 class="display-1 fw-bold text-danger mb-3">500</h1>
+    <h2 class="h4 fw-bold mb-3">Erreur serveur</h2>
+    <p class="text-muted mb-4">
+        Une erreur est survenue. Réessaie dans quelques instants.
+    </p>
+    <a class="btn btn-primary" href="{{ url_for('index') }}">
+        Retour à l'accueil
+    </a>
+</div>
+{% endblock %}
+

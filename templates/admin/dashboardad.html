@@ -1,0 +1,1128 @@
+<!-- templates/admin/dashboardad.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Tableau de bord - Administration{% endblock %}
+
+{% block styles %}
+<style>
+    .admin-header {
+        background: linear-gradient(135deg, var(--danger) 0%, #a50c28 100%);
+        color: white;
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .stat-card-admin {
+        transition: all 0.3s ease;
+        border-left: 4px solid var(--danger);
+    }
+    
+    .stat-card-admin:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .activity-log {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+    
+    .activity-item-admin {
+        padding: var(--spacing-sm) 0;
+        border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+    
+    .quick-action-admin {
+        cursor: pointer;
+        transition: all 0.3s ease;
+        height: 100%;
+    }
+    
+    .quick-action-admin:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg) !important;
+    }
+    
+    .system-health {
+        height: 10px;
+        background-color: #e9ecef;
+        border-radius: var(--border-radius-sm);
+        overflow: hidden;
+    }
+    
+    .system-health-bar {
+        height: 100%;
+        transition: width 1s ease;
+    }
+    
+    .critical-alert {
+        animation: pulse 2s infinite;
+    }
+    
+    @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête admin -->
+    <div class="admin-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-6 fw-bold mb-3">
+                    <i class="ri-admin-line me-2"></i>
+                    Tableau de bord administratif
+                </h1>
+                <p class="lead mb-0 opacity-90">
+                    Gestion complète de la simulation électorale - {{ election.name if election else 'Aucune élection active' }}
+                </p>
+            </div>
+            <div class="col-md-4 text-center text-md-end">
+                <div class="bg-white text-danger rounded-3 p-3 d-inline-block">
+                    <div class="fw-bold mb-1">Session administrateur</div>
+                    <div class="fs-4 fw-bold">{{ current_user.email }}</div>
+                    <small class="text-muted">Dernière connexion : {{ current_user.last_login|time_ago if current_user.last_login else 'Jamais' }}</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Alertes système -->
+    {% if alerts %}
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="alert alert-danger d-flex align-items-center justify-content-between">
+                <div>
+                    <i class="ri-alarm-warning-line me-2"></i>
+                    <strong>{{ alerts|length }} alerte(s) système</strong>
+                </div>
+                <button class="btn btn-outline-danger btn-sm" data-bs-toggle="collapse" data-bs-target="#alertsList">
+                    Voir les détails
+                </button>
+            </div>
+            
+            <div class="collapse" id="alertsList">
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                        {% for alert in alerts %}
+                        <div class="d-flex align-items-start mb-2">
+                            <i class="ri-{{ 'error-warning-line' if alert.level == 'critical' else 'information-line' }} text-{{ 'danger' if alert.level == 'critical' else 'warning' }} me-2 mt-1"></i>
+                            <div>
+                                <h6 class="fw-bold mb-1">{{ alert.title }}</h6>
+                                <p class="text-muted small mb-0">{{ alert.message }}</p>
+                                <small class="text-muted">{{ alert.time|time_ago }}</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <!-- Statistiques principales -->
+    <div class="row g-4 mb-4">
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm stat-card-admin h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-muted text-uppercase small">Utilisateurs totaux</h6>
+                            <h2 class="fw-bold display-6">{{ stats.total_users }}</h2>
+                        </div>
+                        <div class="bg-danger bg-opacity-10 rounded-circle p-3">
+                            <i class="ri-group-line text-danger fs-2"></i>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted small">Électeurs</span>
+                        <span class="fw-semibold">{{ stats.total_voters }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted small">Candidats</span>
+                        <span class="fw-semibold">{{ stats.total_candidates }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted small">Administrateurs</span>
+                        <span class="fw-semibold">{{ stats.total_users - stats.total_voters - stats.total_candidates }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm stat-card-admin h-100" style="border-left-color: var(--success);">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-muted text-uppercase small">Votes exprimés</h6>
+                            <h2 class="fw-bold display-6">{{ stats.votes_cast }}</h2>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                            <i class="bi bi-check2-square text-success fs-2"></i>
+                        </div>
+                    </div>
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted small">Taux de participation</span>
+                            <span class="fw-semibold">
+                                {% if stats.total_voters > 0 %}
+                                    {{ (stats.votes_cast / stats.total_voters * 100)|round(1) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="system-health">
+                            <div class="system-health-bar bg-success" 
+                                 style="width: 0%"
+                                 data-target-width="{% if stats.total_voters > 0 %}{{ (stats.votes_cast / stats.total_voters * 100)|round(1) }}%{% else %}0%{% endif %}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <small class="text-muted">{{ stats.total_voters }} électeurs inscrits</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm stat-card-admin h-100" style="border-left-color: var(--warning);">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-muted text-uppercase small">Candidatures</h6>
+                            <h2 class="fw-bold display-6">{{ stats.total_candidates }}</h2>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                            <i class="ri-user-star-line text-warning fs-2"></i>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted small">Approuvés</span>
+                        <span class="fw-semibold">{{ stats.approved_candidates }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted small">En attente</span>
+                        <span class="fw-semibold">{{ stats.pending_candidates }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted small">Rejetés</span>
+                        <span class="fw-semibold">{{ stats.total_candidates - stats.approved_candidates - stats.pending_candidates }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-xl-3 col-md-6">
+            <div class="card border-0 shadow-sm stat-card-admin h-100" style="border-left-color: var(--info);">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-muted text-uppercase small">Élection active</h6>
+                            <h2 class="fw-bold display-6">{{ stats.active_elections }}</h2>
+                        </div>
+                        <div class="bg-info bg-opacity-10 rounded-circle p-3">
+                            <i class="ri-government-line text-info fs-2"></i>
+                        </div>
+                    </div>
+                    {% if election %}
+                    <div class="mb-2">
+                        <h6 class="fw-semibold mb-1">{{ election.name }}</h6>
+                        <p class="text-muted small mb-2">{{ election.description|truncate(60) }}</p>
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted small">Statut</span>
+                            <span class="badge bg-{{ 'success' if election.is_voting_open else 'warning' }}">
+                                {{ 'En cours' if election.is_voting_open else 'Programmé' }}
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between mt-2">
+                            <span class="text-muted small">Temps restant</span>
+                            <span class="fw-semibold">{{ election.time_remaining }}</span>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="text-center py-3">
+                        <i class="ri-error-warning-line display-4 text-muted mb-3"></i>
+                        <p class="text-muted mb-0">Aucune élection configurée</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Contenu principal -->
+    <div class="row g-4">
+        <!-- Colonne de gauche -->
+        <div class="col-lg-8">
+            <!-- Graphiques et visualisations -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-bar-chart-line me-2 text-primary"></i>
+                        Activité en temps réel
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <canvas id="activityChart" height="250"></canvas>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3">Connexions aujourd'hui</h6>
+                                <div class="display-4 fw-bold text-primary">{{ daily_logins|default(0) }}</div>
+                                <small class="text-muted">Utilisateurs actifs</small>
+                            </div>
+                            <div class="mb-4">
+                                <h6 class="fw-bold mb-3">Votes aujourd'hui</h6>
+                                <div class="display-4 fw-bold text-success">{{ daily_votes|default(0) }}</div>
+                                <small class="text-muted">Nouveaux votes</small>
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-3">Inscriptions aujourd'hui</h6>
+                                <div class="display-4 fw-bold text-warning">{{ daily_registrations|default(0) }}</div>
+                                <small class="text-muted">Nouveaux utilisateurs</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Actions rapides -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-zap-line me-2 text-warning"></i>
+                        Actions administratives rapides
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin_users') }}" 
+                               class="card border-0 shadow-sm quick-action-admin text-decoration-none">
+                                <div class="card-body text-center p-3">
+                                    <i class="ri-group-line display-5 text-primary mb-2"></i>
+                                    <h6 class="fw-bold mb-1">Gérer utilisateurs</h6>
+                                    <p class="text-muted small mb-0">Voir/modifier tous les comptes</p>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin_candidates') }}" 
+                               class="card border-0 shadow-sm quick-action-admin text-decoration-none">
+                                <div class="card-body text-center p-3">
+                                    <i class="ri-user-star-line display-5 text-success mb-2"></i>
+                                    <h6 class="fw-bold mb-1">Gérer candidats</h6>
+                                    <p class="text-muted small mb-0">Approuver/rejeter candidatures</p>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin_announcements') }}" 
+                               class="card border-0 shadow-sm quick-action-admin text-decoration-none">
+                                <div class="card-body text-center p-3">
+                                    <i class="ri-megaphone-line display-5 text-warning mb-2"></i>
+                                    <h6 class="fw-bold mb-1">Annonces</h6>
+                                    <p class="text-muted small mb-0">Créer/modifier annonces</p>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin_election') }}" 
+                               class="card border-0 shadow-sm quick-action-admin text-decoration-none">
+                                <div class="card-body text-center p-3">
+                                    <i class="ri-settings-line display-5 text-info mb-2"></i>
+                                    <h6 class="fw-bold mb-1">Paramètres</h6>
+                                    <p class="text-muted small mb-0">Configurer l'élection</p>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <a href="{{ url_for('admin_results') }}" 
+                               class="card border-0 shadow-sm quick-action-admin text-decoration-none">
+                                <div class="card-body text-center p-3">
+                                    <i class="ri-bar-chart-line display-5 text-danger mb-2"></i>
+                                    <h6 class="fw-bold mb-1">Résultats</h6>
+                                    <p class="text-muted small mb-0">Voir résultats détaillés</p>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#backupModal"
+                               class="card border-0 shadow-sm quick-action-admin text-decoration-none">
+                                <div class="card-body text-center p-3">
+                                    <i class="ri-save-line display-5 text-secondary mb-2"></i>
+                                    <h6 class="fw-bold mb-1">Sauvegarde</h6>
+                                    <p class="text-muted small mb-0">Sauvegarder données</p>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#auditModal"
+                               class="card border-0 shadow-sm quick-action-admin text-decoration-none">
+                                <div class="card-body text-center p-3">
+                                    <i class="ri-shield-check-line display-5 text-primary mb-2"></i>
+                                    <h6 class="fw-bold mb-1">Audit</h6>
+                                    <p class="text-muted small mb-0">Vérifier intégrité</p>
+                                </div>
+                            </a>
+                        </div>
+                        
+                        <div class="col-md-3">
+                            <a href="#" data-bs-toggle="modal" data-bs-target="#reportModal"
+                               class="card border-0 shadow-sm quick-action-admin text-decoration-none">
+                                <div class="card-body text-center p-3">
+                                    <i class="ri-file-chart-line display-5 text-success mb-2"></i>
+                                    <h6 class="fw-bold mb-1">Rapports</h6>
+                                    <p class="text-muted small mb-0">Générer rapports</p>
+                                </div>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dernières activités système -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-history-line me-2 text-primary"></i>
+                        Journal d'activités système
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="activity-log p-3">
+                        {% if activities %}
+                            {% for activity in activities %}
+                            <div class="activity-item-admin">
+                                <div class="d-flex justify-content-between align-items-start">
+                                    <div class="flex-grow-1">
+                                        <h6 class="fw-bold mb-1">{{ activity.action }}</h6>
+                                        <p class="text-muted small mb-1">{{ activity.details }}</p>
+                                        <small class="text-muted">
+                                            <i class="ri-user-line me-1"></i>
+                                            {{ activity.user_email if activity.user_email else 'Système' }} • 
+                                            {{ activity.created_at|time_ago }}
+                                        </small>
+                                    </div>
+                                    <div class="ms-3">
+                                        <span class="badge bg-{{ 'primary' if activity.resource_type == 'user' else 'success' if activity.resource_type == 'candidate' else 'warning' }}">
+                                            {{ activity.resource_type|upper }}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="text-center py-4">
+                                <i class="ri-inbox-line fs-1 text-muted mb-3"></i>
+                                <p class="text-muted mb-0">Aucune activité récente</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Colonne de droite -->
+        <div class="col-lg-4">
+            <!-- Santé du système -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-heart-pulse-line me-2 text-danger"></i>
+                        Santé du système
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold">Base de données</span>
+                            <span class="badge bg-success">En ligne</span>
+                        </div>
+                        <div class="system-health">
+                            <div class="system-health-bar bg-success" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold">Serveur web</span>
+                            <span class="badge bg-success">Stable</span>
+                        </div>
+                        <div class="system-health">
+                            <div class="system-health-bar bg-success" style="width: 95%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold">Stockage</span>
+                            <span class="badge bg-warning">72% utilisé</span>
+                        </div>
+                        <div class="system-health">
+                            <div class="system-health-bar bg-warning" style="width: 72%"></div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-semibold">Sécurité</span>
+                            <span class="badge bg-success">À jour</span>
+                        </div>
+                        <div class="system-health">
+                            <div class="system-health-bar bg-success" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    
+                    <hr class="my-3">
+                    
+                    <div class="text-center">
+                        <h6 class="fw-bold mb-3">Performance globale</h6>
+                        <div class="display-4 fw-bold text-success mb-2">94%</div>
+                        <small class="text-muted">Score de santé système</small>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Élection active -->
+            {% if election %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-calendar-event-line me-2 text-primary"></i>
+                        Élection active
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <h6 class="fw-bold mb-2">{{ election.name }}</h6>
+                    
+                    <div class="mb-3">
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="ri-time-line text-primary me-2"></i>
+                            <div>
+                                <div class="fw-semibold">Période</div>
+                                <div class="text-muted small">
+                                    {{ election.voting_start|date_format }}<br>
+                                    au {{ election.voting_end|date_format }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex align-items-center mb-2">
+                            <i class="ri-bar-chart-line text-primary me-2"></i>
+                            <div>
+                                <div class="fw-semibold">Participation</div>
+                                <div class="text-muted small">
+                                    {{ election.total_votes_cast }} votes<br>
+                                    {{ election.participation_rate|round(1) }}% des inscrits
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex align-items-center">
+                            <i class="ri-settings-line text-primary me-2"></i>
+                            <div>
+                                <div class="fw-semibold">Configuration</div>
+                                <div class="text-muted small">
+                                    {{ election.max_candidates }} candidats max<br>
+                                    Mode: {{ 'Test' if election.is_test_mode else 'Production' }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('admin_election') }}" class="btn btn-outline-primary">
+                            <i class="ri-settings-line me-2"></i>
+                            Modifier configuration
+                        </a>
+                        <a href="{{ url_for('admin_results') }}" class="btn btn-outline-success">
+                            <i class="ri-bar-chart-line me-2"></i>
+                            Voir résultats
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <!-- Alertes importantes -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-alarm-warning-line me-2 text-warning"></i>
+                        Alertes importantes
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="list-group list-group-flush">
+                        {% if stats.pending_candidates > 0 %}
+                        <a href="{{ url_for('admin_candidates') }}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-warning bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-user-star-line text-warning"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">{{ stats.pending_candidates }} candidatures en attente</h6>
+                                    <small class="text-muted">À approuver ou rejeter</small>
+                                </div>
+                            </div>
+                        </a>
+                        {% endif %}
+                        
+                        {% if stats.total_voters - stats.votes_cast > 100 %}
+                        <a href="{{ url_for('admin_users') }}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-info bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-group-line text-info"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">{{ stats.total_voters - stats.votes_cast }} électeurs n'ont pas voté</h6>
+                                    <small class="text-muted">Taux de participation bas</small>
+                                </div>
+                            </div>
+                        </a>
+                        {% endif %}
+                        
+                        {% if not election %}
+                        <a href="{{ url_for('admin_election') }}" 
+                           class="list-group-item list-group-item-action">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-danger bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-error-warning-line text-danger"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Aucune élection configurée</h6>
+                                    <small class="text-muted">Configurer une élection</small>
+                                </div>
+                            </div>
+                        </a>
+                        {% endif %}
+                        
+                        {% if not alerts %}
+                        <div class="list-group-item">
+                            <div class="d-flex align-items-center">
+                                <div class="bg-success bg-opacity-10 rounded-circle p-2 me-3">
+                                    <i class="ri-check-double-line text-success"></i>
+                                </div>
+                                <div>
+                                    <h6 class="fw-bold mb-1">Aucune alerte critique</h6>
+                                    <small class="text-muted">Système fonctionnel</small>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de sauvegarde -->
+<div class="modal fade" id="backupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-save-line me-2"></i>
+                    Sauvegarde système
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <h6 class="fw-bold mb-3">Sauvegarde manuelle</h6>
+                    <p class="text-muted small mb-3">
+                        Créez une sauvegarde complète de la base de données et des fichiers.
+                    </p>
+                    <button class="btn btn-primary w-100" id="manualBackupBtn">
+                        <i class="ri-save-line me-2"></i>
+                        Créer une sauvegarde
+                    </button>
+                </div>
+                
+                <div class="mb-4">
+                    <h6 class="fw-bold mb-3">Restaurer une sauvegarde</h6>
+                    <p class="text-muted small mb-3">
+                        Téléchargez une sauvegarde précédente pour restaurer le système.
+                    </p>
+                    <div class="input-group">
+                        <input type="file" class="form-control" id="backupFile" accept=".zip,.sql">
+                        <button class="btn btn-outline-primary" type="button" id="restoreBackupBtn">
+                            Restaurer
+                        </button>
+                    </div>
+                </div>
+                
+                <div>
+                    <h6 class="fw-bold mb-3">Dernières sauvegardes</h6>
+                    <div class="list-group list-group-flush">
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Aujourd'hui, 14:30</span>
+                                <span class="badge bg-success">Complète</span>
+                            </div>
+                        </div>
+                        <div class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <span class="text-muted">Hier, 02:00</span>
+                                <span class="badge bg-success">Automatique</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal d'audit -->
+<div class="modal fade" id="auditModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-shield-check-line me-2"></i>
+                    Audit de sécurité
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <i class="ri-shield-keyhole-line display-4 text-success mb-3"></i>
+                                <h6 class="fw-bold mb-2">Vérification d'intégrité</h6>
+                                <p class="text-muted small mb-3">
+                                    Vérifie l'intégrité des données et la cohérence du système.
+                                </p>
+                                <button class="btn btn-outline-success w-100">
+                                    <i class="ri-check-double-line me-2"></i>
+                                    Lancer la vérification
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <i class="ri-file-chart-line display-4 text-primary mb-3"></i>
+                                <h6 class="fw-bold mb-2">Logs d'audit</h6>
+                                <p class="text-muted small mb-3">
+                                    Consultez les logs détaillés de toutes les actions administratives.
+                                </p>
+                                <button class="btn btn-outline-primary w-100">
+                                    <i class="ri-file-list-line me-2"></i>
+                                    Voir les logs
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <i class="ri-alarm-warning-line display-4 text-warning mb-3"></i>
+                                <h6 class="fw-bold mb-2">Détection d'anomalies</h6>
+                                <p class="text-muted small mb-3">
+                                    Détecte les activités suspectes et les tentatives de fraude.
+                                </p>
+                                <button class="btn btn-outline-warning w-100">
+                                    <i class="ri-search-line me-2"></i>
+                                    Analyser
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center">
+                                <i class="ri-shield-flash-line display-4 text-danger mb-3"></i>
+                                <h6 class="fw-bold mb-2">Test de pénétration</h6>
+                                <p class="text-muted small mb-3">
+                                    Testez la sécurité du système contre les attaques courantes.
+                                </p>
+                                <button class="btn btn-outline-danger w-100">
+                                    <i class="ri-bug-line me-2"></i>
+                                    Tester la sécurité
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de rapports -->
+<div class="modal fade" id="reportModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header border-0">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-file-chart-line me-2"></i>
+                    Génération de rapports
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-4">
+                    <h6 class="fw-bold mb-3">Rapports disponibles</h6>
+                    <div class="list-group list-group-flush">
+                        <a href="#" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold mb-1">Rapport électoral complet</h6>
+                                    <small class="text-muted">PDF, Excel, CSV</small>
+                                </div>
+                                <i class="ri-arrow-right-line"></i>
+                            </div>
+                        </a>
+                        
+                        <a href="#" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold mb-1">Statistiques utilisateurs</h6>
+                                    <small class="text-muted">PDF, Excel</small>
+                                </div>
+                                <i class="ri-arrow-right-line"></i>
+                            </div>
+                        </a>
+                        
+                        <a href="#" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold mb-1">Audit de sécurité</h6>
+                                    <small class="text-muted">PDF</small>
+                                </div>
+                                <i class="ri-arrow-right-line"></i>
+                            </div>
+                        </a>
+                        
+                        <a href="#" class="list-group-item list-group-item-action">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h6 class="fw-bold mb-1">Rapport de performance</h6>
+                                    <small class="text-muted">PDF, Excel</small>
+                                </div>
+                                <i class="ri-arrow-right-line"></i>
+                            </div>
+                        </a>
+                    </div>
+                </div>
+                
+                <div>
+                    <h6 class="fw-bold mb-3">Options d'export</h6>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-outline-primary flex-fill">
+                            <i class="ri-file-pdf-line me-2"></i>PDF
+                        </button>
+                        <button class="btn btn-outline-success flex-fill">
+                            <i class="ri-file-excel-line me-2"></i>Excel
+                        </button>
+                        <button class="btn btn-outline-info flex-fill">
+                            <i class="ri-file-text-line me-2"></i>CSV
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialiser le graphique d'activité
+    const activityChartCanvas = document.getElementById('activityChart');
+    if (activityChartCanvas) {
+        const ctx = activityChartCanvas.getContext('2d');
+        if (typeof Chart !== 'undefined') {
+            new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: ['00h', '04h', '08h', '12h', '16h', '20h', '00h'],
+                datasets: [{
+                    label: 'Connexions',
+                    data: [12, 8, 45, 78, 56, 34, 18],
+                    borderColor: '#0066b3',
+                    backgroundColor: 'rgba(0, 102, 179, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }, {
+                    label: 'Votes',
+                    data: [5, 3, 23, 67, 45, 28, 12],
+                    borderColor: '#12ad2b',
+                    backgroundColor: 'rgba(18, 173, 43, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Heure'
+                        }
+                    }
+                }
+            }
+            });
+        }
+    }
+    
+    // Animation des cartes de statistiques
+    document.querySelectorAll('.stat-card-admin').forEach((card, index) => {
+        setTimeout(() => {
+            card.classList.add('animate__animated', 'animate__fadeInUp');
+        }, index * 100);
+    });
+    
+    // Animation des barres de santé
+    document.querySelectorAll('.system-health-bar').forEach(bar => {
+        const width = bar.dataset.targetWidth || bar.style.width;
+        bar.style.width = '0%';
+        
+        setTimeout(() => {
+            bar.style.width = width;
+        }, 500);
+    });
+    
+    // Gestion de la sauvegarde manuelle
+    const manualBackupBtn = document.getElementById('manualBackupBtn');
+    if (manualBackupBtn) {
+        manualBackupBtn.addEventListener('click', function() {
+            this.disabled = true;
+            this.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Sauvegarde en cours...
+            `;
+            
+            // Simuler la sauvegarde
+            setTimeout(() => {
+                showToast('Sauvegarde créée avec succès!', 'success');
+                this.disabled = false;
+                this.innerHTML = `
+                    <i class="ri-save-line me-2"></i>
+                    Créer une sauvegarde
+                `;
+                
+                // Ajouter à la liste des sauvegardes
+                const backupList = document.querySelector('.list-group');
+                if (backupList) {
+                    const newBackup = document.createElement('div');
+                    newBackup.className = 'list-group-item';
+                    newBackup.innerHTML = `
+                        <div class="d-flex justify-content-between">
+                            <span class="text-muted">À l'instant</span>
+                            <span class="badge bg-success">Manuelle</span>
+                        </div>
+                    `;
+                    backupList.insertBefore(newBackup, backupList.firstChild);
+                }
+            }, 2000);
+        });
+    }
+    
+    // Restauration de sauvegarde
+    const restoreBackupBtn = document.getElementById('restoreBackupBtn');
+    if (restoreBackupBtn) {
+        restoreBackupBtn.addEventListener('click', function() {
+            const fileInput = document.getElementById('backupFile');
+            if (!fileInput.files.length) {
+                showToast('Veuillez sélectionner un fichier de sauvegarde', 'warning');
+                return;
+            }
+            
+            if (!confirm('Êtes-vous sûr de vouloir restaurer cette sauvegarde ? Cette action remplacera toutes les données actuelles.')) {
+                return;
+            }
+            
+            this.disabled = true;
+            this.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Restauration...
+            `;
+            
+            // Simuler la restauration
+            setTimeout(() => {
+                showToast('Restauration réussie! Le système va redémarrer.', 'success');
+                this.disabled = false;
+                this.innerHTML = 'Restaurer';
+                
+                // Rediriger après 3 secondes
+                setTimeout(() => {
+                    window.location.reload();
+                }, 3000);
+            }, 3000);
+        });
+    }
+    
+    // Mises à jour en temps réel
+    function updateRealTimeStats() {
+        // Mettre à jour les compteurs (simulation)
+        const counters = {
+            'daily_logins': document.querySelector('.display-4.text-primary'),
+            'daily_votes': document.querySelector('.display-4.text-success'),
+            'daily_registrations': document.querySelector('.display-4.text-warning')
+        };
+        
+        Object.keys(counters).forEach(key => {
+            if (counters[key]) {
+                const current = parseInt(counters[key].textContent);
+                const increment = Math.floor(Math.random() * 3);
+                animateCounter(counters[key], current, current + increment);
+            }
+        });
+        
+        // Mettre à jour le taux de participation
+        const participationElement = document.querySelector('.display-4.fw-bold.text-success.mb-2');
+        if (participationElement) {
+            const current = parseFloat(participationElement.textContent.replace('%', ''));
+            const newValue = Math.min(100, current + (Math.random() * 0.5 - 0.25));
+            animateCounter(participationElement, current, newValue, '%');
+        }
+    }
+    
+    // Mettre à jour toutes les 30 secondes
+    setInterval(updateRealTimeStats, 30000);
+    
+    // Fonction pour animer les compteurs
+    function animateCounter(element, start, end, suffix = '') {
+        const duration = 1000;
+        const steps = 60;
+        const step = (end - start) / steps;
+        let current = start;
+        
+        const timer = setInterval(() => {
+            current += step;
+            if ((step > 0 && current >= end) || (step < 0 && current <= end)) {
+                current = end;
+                clearInterval(timer);
+            }
+            element.textContent = suffix.includes('%') 
+                ? current.toFixed(1) + suffix 
+                : Math.round(current) + suffix;
+        }, duration / steps);
+    }
+    
+    // Vérification automatique de la santé du système
+    function checkSystemHealth() {
+        fetch('/api/admin/system/health')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status !== 'healthy') {
+                    showToast('Alerte système : ' + data.message, 'warning');
+                }
+            })
+            .catch(error => {
+                console.error('Erreur de vérification système:', error);
+                showToast('Impossible de vérifier la santé du système', 'error');
+            });
+    }
+    
+    // Vérifier toutes les minutes
+    setInterval(checkSystemHealth, 60000);
+    
+    // Chargement initial
+    checkSystemHealth();
+    
+    // Affichage des alertes critiques
+    const criticalAlerts = document.querySelectorAll('.critical-alert');
+    criticalAlerts.forEach(alert => {
+        alert.addEventListener('click', function() {
+            showModal('Alerte critique', this.dataset.message, 'danger');
+        });
+    });
+    
+    // Fonction utilitaire pour afficher un modal
+    function showModal(title, content, type = 'info') {
+        const modalId = 'alertModal-' + Date.now();
+        const modalHTML = `
+            <div class="modal fade" id="${modalId}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header border-0 bg-${type} text-white">
+                            <h5 class="modal-title fw-bold">
+                                <i class="ri-alert-line me-2"></i>
+                                ${title}
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${content}
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                Fermer
+                            </button>
+                            <button type="button" class="btn btn-${type}">
+                                <i class="ri-settings-line me-2"></i>
+                                Configurer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        const modal = new bootstrap.Modal(document.getElementById(modalId));
+        modal.show();
+        
+        // Supprimer le modal après fermeture
+        document.getElementById(modalId).addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+    }
+});
+</script>
+{% endblock %}

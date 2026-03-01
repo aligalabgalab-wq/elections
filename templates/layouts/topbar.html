@@ -1,0 +1,107 @@
+<!-- templates/layouts/topbar.html -->
+<header class="app-topbar">
+    <div class="app-topbar__left">
+        <button class="btn btn-sm btn-outline-secondary app-topbar__burger"
+                type="button"
+                data-app-sidebar-toggle
+                aria-label="Ouvrir/fermer le menu">
+            <i class="ri-menu-line"></i>
+        </button>
+
+        <div class="app-topbar__title">
+            <div class="app-topbar__eyebrow">
+                {% if current_user.role == 'admin' %}
+                    Commission électorale (simulée)
+                {% elif current_user.role == 'candidate' %}
+                    Espace candidat
+                {% elif current_user.role == 'voter' %}
+                    Espace électeur
+                {% else %}
+                    Plateforme
+                {% endif %}
+            </div>
+            <div class="app-topbar__headline">
+                {% if page_title %}
+                    {{ page_title }}
+                {% else %}
+                    {{ config.get('APP_NAME', 'Élection Nationale') }}
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="app-topbar__right">
+        <div class="app-topbar__pill">
+            <i class="ri-time-line"></i>
+            <span>{{ now.strftime('%d/%m/%Y %H:%M') if now else '' }}</span>
+        </div>
+
+        <button class="btn btn-sm btn-outline-secondary position-relative"
+                type="button"
+                data-bs-toggle="tooltip"
+                data-bs-placement="bottom"
+                title="Notifications">
+            <i class="ri-notification-3-line"></i>
+            <span class="app-dot" aria-hidden="true"></span>
+        </button>
+
+        <div class="dropdown">
+            <button class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-2"
+                    type="button"
+                    data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                {% set avatar_url = None %}
+                {% if current_user.role == 'candidate' and candidate %}
+                    {% set avatar_url = candidate_photo_url(candidate) %}
+                {% elif current_user.role == 'voter' and voter %}
+                    {% set avatar_url = voter_avatar_url(voter) %}
+                {% endif %}
+
+                <span class="app-avatar" aria-hidden="true">
+                    {% if avatar_url %}
+                        <img src="{{ avatar_url }}" alt="" class="app-avatar__img" loading="lazy">
+                    {% else %}
+                        {% if current_user.role == 'admin' %}
+                            <i class="ri-shield-user-line"></i>
+                        {% elif current_user.role == 'candidate' %}
+                            <i class="ri-award-line"></i>
+                        {% elif current_user.role == 'voter' %}
+                            <i class="ri-user-3-line"></i>
+                        {% else %}
+                            <i class="ri-user-line"></i>
+                        {% endif %}
+                    {% endif %}
+                </span>
+                <span class="d-none d-md-inline">
+                    {% if current_user.role == 'voter' and voter %}
+                        {{ voter.full_name|truncate(18) }}
+                    {% elif current_user.role == 'candidate' and candidate %}
+                        {{ candidate.full_name|truncate(18) }}
+                    {% elif current_user.role == 'admin' %}
+                        Administrateur
+                    {% else %}
+                        {{ current_user.email|truncate(18) }}
+                    {% endif %}
+                </span>
+                <i class="ri-arrow-down-s-line opacity-75"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow border-0">
+                {% if current_user.role == 'voter' %}
+                    <li><a class="dropdown-item" href="{{ url_for('voter_profile') }}"><i class="ri-user-settings-line me-2"></i>Profil</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('voter_results') }}"><i class="ri-bar-chart-line me-2"></i>Résultats</a></li>
+                {% elif current_user.role == 'candidate' %}
+                    <li><a class="dropdown-item" href="{{ url_for('candidate_profile') }}"><i class="ri-user-star-line me-2"></i>Profil</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('candidate_statistics') }}"><i class="ri-line-chart-line me-2"></i>Statistiques</a></li>
+                {% elif current_user.role == 'admin' %}
+                    <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}"><i class="ri-dashboard-2-line me-2"></i>Dashboard</a></li>
+                    <li><a class="dropdown-item" href="{{ url_for('admin_election') }}"><i class="ri-settings-3-line me-2"></i>Élection</a></li>
+                {% endif %}
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" href="{{ url_for('faq') }}"><i class="ri-question-line me-2"></i>Aide / FAQ</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('about') }}"><i class="ri-information-line me-2"></i>À propos</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="ri-logout-box-r-line me-2"></i>Déconnexion</a></li>
+            </ul>
+        </div>
+    </div>
+</header>

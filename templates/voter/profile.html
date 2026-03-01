@@ -1,0 +1,665 @@
+<!-- templates/voter/profile.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Mon profil - Électeur{% endblock %}
+
+{% block styles %}
+<style>
+    .profile-header {
+        background: linear-gradient(135deg, #0066b3 0%, #004d8c 100%);
+        border-radius: 1rem;
+        padding: 2rem;
+        color: white;
+        position: relative;
+        overflow: hidden;
+        margin-bottom: 2rem;
+    }
+    
+    .profile-header::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: url('/static/images/ui/pattern.svg');
+        opacity: 0.1;
+    }
+    
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        border: 4px solid white;
+        background: linear-gradient(135deg, #0066b3 0%, #004d8c 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        color: white;
+        overflow: hidden;
+    }
+
+    .profile-avatar__img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+    
+    .info-card {
+        background: white;
+        border-radius: 0.75rem;
+        padding: 1.5rem;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+    }
+    
+    .info-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 15px rgba(0, 0, 0, 0.15);
+    }
+    
+    .info-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        font-weight: 500;
+        margin-bottom: 0.25rem;
+    }
+    
+    .info-value {
+        font-size: 1.125rem;
+        font-weight: 600;
+        color: #212529;
+    }
+    
+    .document-card {
+        border: 2px dashed #dee2e6;
+        border-radius: 0.75rem;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+    }
+    
+    .document-card:hover {
+        border-color: #0066b3;
+        background-color: rgba(0, 102, 179, 0.05);
+    }
+    
+    .timeline {
+        position: relative;
+        padding-left: 2rem;
+    }
+    
+    .timeline::before {
+        content: '';
+        position: absolute;
+        left: 0.75rem;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: #e9ecef;
+    }
+    
+    .timeline-item {
+        position: relative;
+        margin-bottom: 1.5rem;
+    }
+    
+    .timeline-marker {
+        position: absolute;
+        left: -2rem;
+        top: 0;
+        width: 1.5rem;
+        height: 1.5rem;
+        border-radius: 50%;
+        border: 3px solid white;
+        background-color: #e9ecef;
+        box-shadow: 0 0 0 3px #e9ecef;
+    }
+    
+    .timeline-item.completed .timeline-marker {
+        background-color: #198754;
+        box-shadow: 0 0 0 3px #d1e7dd;
+    }
+    
+    .timeline-item.current .timeline-marker {
+        background-color: #0066b3;
+        box-shadow: 0 0 0 3px rgba(0, 102, 179, 0.2);
+        animation: pulse 2s infinite;
+    }
+    
+    .timeline-content {
+        background: white;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    
+    .qr-code {
+        width: 150px;
+        height: 150px;
+        margin: 0 auto;
+        background: #f8f9fa;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+    }
+
+    .qr-code img {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        border-radius: 0.5rem;
+        image-rendering: pixelated;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Profile Header -->
+<div class="profile-header">
+    <div class="row align-items-center">
+        <div class="col-md-3 text-center text-md-start mb-4 mb-md-0">
+            {% set avatar_url = voter_avatar_url(voter) %}
+            <div class="profile-avatar mx-auto mx-md-0">
+                {% if avatar_url %}
+                    <img src="{{ avatar_url }}" alt="Photo de profil" class="profile-avatar__img" loading="lazy">
+                {% else %}
+                    <i class="ri-user-line"></i>
+                {% endif %}
+            </div>
+            <button class="btn btn-sm btn-outline-light mt-3"
+                    type="button"
+                    data-bs-toggle="modal"
+                    data-bs-target="#avatarModal">
+                <i class="ri-camera-line me-1"></i>
+                Photo
+            </button>
+        </div>
+        
+        <div class="col-md-6 text-center text-md-start">
+            <h1 class="h2 mb-2">{{ voter.full_name }}</h1>
+            <p class="mb-0 opacity-75">
+                <i class="ri-map-pin-line me-1"></i>{{ voter.place_of_birth }} • 
+                <i class="ri-cake-line me-1"></i>{{ voter.age }} ans • 
+                <i class="ri-user-line me-1"></i>Électeur
+            </p>
+            <div class="mt-3">
+                <span class="badge bg-white text-primary fs-6 px-3 py-2 me-2">
+                    <i class="bi bi-check2-square me-1"></i>
+                    {% if voter.has_voted %}
+                        A voté
+                    {% else %}
+                        N'a pas voté
+                    {% endif %}
+                </span>
+                <span class="badge {{ 'bg-success' if voter.is_eligible else 'bg-warning' }} fs-6 px-3 py-2">
+                    <i class="ri-checkbox-circle-line me-1"></i>
+                    {{ 'Éligible' if voter.is_eligible else 'En vérification' }}
+                </span>
+            </div>
+        </div>
+        
+        <div class="col-md-3 text-center text-md-end">
+            <div class="bg-white text-primary rounded-3 p-3 d-inline-block">
+                <div class="small text-muted">Numéro électeur</div>
+                <div class="fw-bold fs-4">{{ voter.cni_masked }}</div>
+                <small class="text-muted">CNI: {{ voter.cni_number[-4:] }}</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Left Column: Personal Information -->
+    <div class="col-lg-8">
+        <!-- Personal Information -->
+        <div class="info-card">
+            <h4 class="h5 mb-4">
+                <i class="ri-user-line me-2 text-primary"></i>
+                Informations personnelles
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Prénom</div>
+                    <div class="info-value">{{ voter.first_name }}</div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Nom</div>
+                    <div class="info-value">{{ voter.last_name }}</div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Date de naissance</div>
+                    <div class="info-value">{{ voter.date_of_birth|date_format }}</div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Lieu de naissance</div>
+                    <div class="info-value">{{ voter.place_of_birth }}</div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Genre</div>
+                    <div class="info-value">
+                        {% if voter.gender == 'M' %}
+                            Masculin
+                        {% elif voter.gender == 'F' %}
+                            Féminin
+                        {% elif voter.gender == 'O' %}
+                            Autre
+                        {% else %}
+                            Non spécifié
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Téléphone</div>
+                    <div class="info-value">{{ voter.phone_number or 'Non renseigné' }}</div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Email</div>
+                    <div class="info-value">{{ current_user.email }}</div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Date d'inscription</div>
+                    <div class="info-value">{{ voter.created_at|datetime_format }}</div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Voting Information -->
+        <div class="info-card">
+            <h4 class="h5 mb-4">
+                <i class="bi bi-check2-square me-2 text-primary"></i>
+                Informations de vote
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Statut du vote</div>
+                    <div class="info-value">
+                        {% if voter.has_voted %}
+                            <span class="badge bg-success">A voté</span>
+                        {% else %}
+                            <span class="badge bg-warning">N'a pas voté</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if voter.has_voted %}
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Date du vote</div>
+                    <div class="info-value">{{ voter.voted_at|datetime_format }}</div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Candidat choisi</div>
+                    <div class="info-value">
+                        {% if voter.voted_for %}
+                            {{ voter.voted_for.full_name }}
+                        {% else %}
+                            Non disponible
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Numéro de confirmation</div>
+                    <div class="info-value">
+                        <small class="text-muted">Vote-#{{ voter.id }}{{ voter.voted_at.strftime('%Y%m%d%H%M') if voter.voted_at else '' }}</small>
+                    </div>
+                </div>
+                {% endif %}
+                
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Éligibilité</div>
+                    <div class="info-value">
+                        <span class="badge {{ 'bg-success' if voter.is_eligible else 'bg-warning' }}">
+                            {{ 'Éligible' if voter.is_eligible else 'En vérification' }}
+                        </span>
+                    </div>
+                </div>
+                
+                {% if voter.eligibility_checked_at %}
+                <div class="col-md-6 mb-3">
+                    <div class="info-label">Date de vérification</div>
+                    <div class="info-value">{{ voter.eligibility_checked_at|datetime_format }}</div>
+                </div>
+                {% endif %}
+                
+                {% if voter.eligibility_reason %}
+                <div class="col-12 mb-3">
+                    <div class="info-label">Commentaire sur l'éligibilité</div>
+                    <div class="info-value">{{ voter.eligibility_reason }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- Documents -->
+        <div class="info-card">
+            <h4 class="h5 mb-4">
+                <i class="ri-folder-line me-2 text-primary"></i>
+                Documents
+            </h4>
+            
+            <div class="row">
+                <div class="col-md-6 mb-4">
+                    <div class="document-card">
+                        <i class="ri-id-card-line display-4 text-muted mb-3"></i>
+                        <h6 class="fw-semibold mb-2">Carte Nationale d'Identité</h6>
+                        <p class="text-muted small mb-3">
+                            {% if voter.cni_image_front %}
+                                Document téléchargé
+                            {% else %}
+                                Aucun document téléchargé
+                            {% endif %}
+                        </p>
+                        {% if voter.cni_image_front %}
+                        <button class="btn btn-sm btn-outline-primary">
+                            <i class="ri-eye-line me-1"></i>Voir le document
+                        </button>
+                        {% else %}
+                        <button class="btn btn-sm btn-outline-secondary" disabled>
+                            <i class="ri-upload-line me-1"></i>Télécharger
+                        </button>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="col-md-6 mb-4">
+                    <div class="document-card">
+                        <i class="ri-file-text-line display-4 text-muted mb-3"></i>
+                        <h6 class="fw-semibold mb-2">Autres documents</h6>
+                        <p class="text-muted small mb-3">
+                            Documents supplémentaires facultatifs
+                        </p>
+                        <button class="btn btn-sm btn-outline-secondary" disabled>
+                            <i class="ri-upload-line me-1"></i>Télécharger
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Right Column: Timeline & Actions -->
+    <div class="col-lg-4">
+        <!-- Election Timeline -->
+        <div class="info-card">
+            <h4 class="h5 mb-4">
+                <i class="ri-calendar-line me-2 text-primary"></i>
+                Progression électorale
+            </h4>
+            
+            <div class="timeline">
+                <div class="timeline-item {{ 'completed' if voter.created_at else '' }}">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h6 class="fw-semibold mb-1">Inscription</h6>
+                        <p class="small text-muted mb-0">
+                            {% if voter.created_at %}
+                                Complétée le {{ voter.created_at|date_format }}
+                            {% else %}
+                                En attente
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item {{ 'completed' if voter.is_eligible else 'current' if not voter.has_voted else '' }}">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h6 class="fw-semibold mb-1">Vérification d'éligibilité</h6>
+                        <p class="small text-muted mb-0">
+                            {% if voter.is_eligible %}
+                                Approuvée
+                            {% else %}
+                                En cours de vérification
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item {{ 'completed' if voter.has_voted else 'current' if election and election.is_voting_open else '' }}">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h6 class="fw-semibold mb-1">Vote</h6>
+                        <p class="small text-muted mb-0">
+                            {% if voter.has_voted %}
+                                Effectué le {{ voter.voted_at|date_format }}
+                            {% elif election and election.is_voting_open %}
+                                En cours
+                            {% else %}
+                                En attente
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+                
+                <div class="timeline-item">
+                    <div class="timeline-marker"></div>
+                    <div class="timeline-content">
+                        <h6 class="fw-semibold mb-1">Résultats</h6>
+                        <p class="small text-muted mb-0">
+                            {% if election and election.results_announcement %}
+                                Annonce le {{ election.results_announcement|date_format }}
+                            {% else %}
+                                À venir
+                            {% endif %}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Quick Actions -->
+        <div class="info-card">
+            <h4 class="h5 mb-4">
+                <i class="ri-flashlight-line me-2 text-primary"></i>
+                Actions rapides
+            </h4>
+            
+            <div class="d-grid gap-3">
+                {% if election and election.is_voting_open and voter.is_eligible and not voter.has_voted %}
+                <a href="{{ url_for('voter_vote') }}" class="btn btn-primary">
+                    <i class="bi bi-check2-square me-2"></i>
+                    Voter maintenant
+                </a>
+                {% endif %}
+                
+                <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#editProfileModal">
+                    <i class="ri-edit-line me-2"></i>
+                    Modifier mon profil
+                </button>
+                
+                <a href="{{ url_for('voter_results') }}" class="btn btn-outline-success">
+                    <i class="ri-bar-chart-line me-2"></i>
+                    Voir les résultats
+                </a>
+                
+                <button class="btn btn-outline-info" data-bs-toggle="modal" data-bs-target="#qrcodeModal">
+                    <i class="ri-qr-code-line me-2"></i>
+                    Voir mon QR Code
+                </button>
+                
+                <a href="{{ url_for('logout') }}" class="btn btn-outline-danger">
+                    <i class="ri-logout-box-line me-2"></i>
+                    Déconnexion
+                </a>
+            </div>
+        </div>
+        
+        <!-- Voter ID Card -->
+        <div class="info-card">
+            <h4 class="h5 mb-4">
+                <i class="ri-id-card-line me-2 text-primary"></i>
+                Carte d'électeur
+            </h4>
+            
+            <div class="text-center">
+                <div class="border rounded-3 p-4 mb-3">
+                    <div class="fw-bold text-primary mb-2">SIMULATION ÉLECTORALE</div>
+                    <div class="small text-muted mb-3">Carte d'électeur numérique</div>
+                    
+                    <div class="mb-3">
+                        <div class="small text-muted">Nom complet</div>
+                        <div class="fw-semibold">{{ voter.full_name }}</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="small text-muted">Numéro d'électeur</div>
+                        <div class="fw-bold">{{ voter.cni_masked }}</div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <div class="small text-muted">Circonscription</div>
+                        <div>{{ voter.place_of_birth }}</div>
+                    </div>
+                    
+                    <div class="text-muted small">
+                        Valide pour l'élection {{ election.year if election else '2025' }}
+                    </div>
+                </div>
+                
+                <a class="btn btn-sm btn-outline-primary w-100"
+                   href="{{ url_for('voter_card') }}"
+                   target="_blank"
+                   rel="noopener">
+                    <i class="bi bi-printer me-1"></i>
+                    Imprimer / Télécharger (PDF)
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Avatar Modal -->
+<div class="modal fade" id="avatarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-image-edit-line me-2"></i>
+                    Photo de profil
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('update_voter_avatar') }}" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Choisir une image</label>
+                        <input class="form-control" type="file" name="avatar" accept="image/*" required>
+                        <div class="form-text">
+                            Formats acceptés : PNG, JPG, JPEG, GIF, WEBP. L’image sera optimisée automatiquement.
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ri-save-line me-2"></i>
+                        Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Profile Modal -->
+<div class="modal fade" id="editProfileModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-edit-line me-2"></i>
+                    Modifier mon profil
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('update_voter_profile') }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Téléphone</label>
+                        <input type="tel" class="form-control" name="phone" 
+                               value="{{ voter.phone_number or '' }}">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Mot de passe actuel</label>
+                        <input type="password" class="form-control" name="current_password">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Nouveau mot de passe</label>
+                        <input type="password" class="form-control" name="new_password">
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Confirmer le nouveau mot de passe</label>
+                        <input type="password" class="form-control" name="confirm_password">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ri-save-line me-2"></i>
+                        Enregistrer
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- QR Code Modal -->
+<div class="modal fade" id="qrcodeModal" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="ri-qr-code-line me-2"></i>
+                    Mon QR Code électoral
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center">
+                <div class="qr-code mb-3">
+                    {% if qr_data_uri %}
+                        <img src="{{ qr_data_uri }}" alt="QR Code électoral" loading="lazy">
+                    {% else %}
+                        <i class="ri-qr-code-line display-4"></i>
+                    {% endif %}
+                </div>
+                <p class="small text-muted mb-0">
+                    Ce QR Code contient votre identifiant électoral unique.<br>
+                    Scannez-le pour vérifier votre carte (simulation).
+                </p>
+            </div>
+            <div class="modal-footer justify-content-center">
+                <a class="btn btn-outline-primary" href="{{ url_for('voter_card_qr_png') }}">
+                    <i class="ri-download-line me-2"></i>
+                    Télécharger
+                </a>
+                <a class="btn btn-outline-secondary" href="{{ url_for('voter_card') }}" target="_blank" rel="noopener">
+                    <i class="ri-printer-line me-2"></i>
+                    Imprimer
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

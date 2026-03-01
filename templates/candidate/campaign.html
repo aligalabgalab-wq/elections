@@ -1,0 +1,729 @@
+<!-- templates/candidate/campaign.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Gestion de campagne - Candidat{% endblock %}
+
+{% block styles %}
+<style>
+    .campaign-section {
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .program-editor {
+        min-height: 300px;
+        border: 1px solid #dee2e6;
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-md);
+    }
+    
+    .image-upload-area {
+        border: 2px dashed #dee2e6;
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-xl);
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .image-upload-area:hover {
+        border-color: var(--primary);
+        background-color: rgba(0, 102, 179, 0.05);
+    }
+    
+    .image-preview {
+        max-width: 300px;
+        max-height: 300px;
+        object-fit: contain;
+        border-radius: var(--border-radius-md);
+    }
+    
+    .social-link-input {
+        border-left: 3px solid var(--primary);
+    }
+    
+    .campaign-preview-card {
+        border: 2px solid var(--success);
+        box-shadow: var(--shadow-lg);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- En-tête -->
+    <div class="text-center mb-5">
+        <h1 class="display-5 fw-bold text-success mb-3">
+            <i class="ri-megaphone-line me-2"></i>
+            Gestion de campagne
+        </h1>
+        <p class="lead text-muted">
+            Personnalisez votre campagne électorale et présentez votre programme aux électeurs
+        </p>
+        {% if not candidate.is_approved %}
+        <div class="alert alert-warning">
+            <i class="ri-time-line me-2"></i>
+            Votre candidature est en attente d'approbation. Vous pouvez déjà préparer votre campagne.
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Formulaire de campagne -->
+    <form method="POST" action="{{ url_for('candidate_campaign') }}" enctype="multipart/form-data" id="campaignForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="remove_profile_image" id="remove_profile_image" value="0">
+        
+        <!-- Informations de base -->
+        <div class="campaign-section">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0 fw-bold">
+                        <i class="ri-information-line me-2 text-primary"></i>
+                        Informations de base
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Nom du parti</label>
+                            <input type="text" class="form-control" 
+                                   name="party_name" 
+                                   value="{{ candidate.party_name or '' }}"
+                                   required>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">Acronyme du parti</label>
+                            <input type="text" class="form-control" 
+                                   name="party_acronym" 
+                                   value="{{ candidate.party_acronym or '' }}"
+                                   maxlength="10">
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Slogan de campagne</label>
+                        <input type="text" class="form-control" 
+                               name="campaign_slogan" 
+                               value="{{ candidate.campaign_slogan or '' }}"
+                               placeholder="Votre slogan percutant..."
+                               maxlength="200">
+                        <small class="text-muted">Maximum 200 caractères</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Programme politique -->
+        <div class="campaign-section">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0 fw-bold">
+                        <i class="ri-book-line me-2 text-success"></i>
+                        Programme politique
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Votre programme détaillé</label>
+                        <textarea class="form-control program-editor" 
+                                  name="political_program" 
+                                  rows="15"
+                                  required>{{ candidate.political_program or '' }}</textarea>
+                        <small class="text-muted">
+                            Présentez vos propositions dans les domaines clés : Économie, Éducation, Santé, etc.
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Biographie</label>
+                        <textarea class="form-control" 
+                                  name="biography" 
+                                  rows="8">{{ candidate.biography or '' }}</textarea>
+                        <small class="text-muted">
+                            Présentez votre parcours, vos expériences et vos motivations.
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Images de campagne -->
+        <div class="campaign-section">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0 fw-bold">
+                        <i class="ri-image-line me-2 text-warning"></i>
+                        Images de campagne
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label fw-semibold">Photo de profil</label>
+                            <div class="image-upload-area" id="profileImageUpload">
+                                <i class="ri-upload-cloud-line display-4 text-muted mb-3"></i>
+                                <p class="text-muted mb-2">Cliquez pour télécharger ou glissez-déposez</p>
+                                <p class="text-muted small mb-0">Format JPG, PNG • Max 2MB</p>
+                                <input type="file" class="d-none" 
+                                       id="profile_image" 
+                                       name="profile_image"
+                                       accept="image/*">
+                            </div>
+                            
+                            {% set photo_url = candidate_photo_url(candidate) %}
+                            {% if photo_url %}
+                            <div class="mt-3 text-center" id="profileImagePreview">
+                                <img src="{{ photo_url }}" 
+                                     alt="Photo de profil actuelle"
+                                     class="image-preview mb-2"
+                                     loading="lazy"
+                                     onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-avatar.svg') }}';">
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-danger" id="removeProfileImage">
+                                        <i class="ri-delete-bin-line me-1"></i> Supprimer
+                                    </button>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="mt-3 text-center" id="profileImagePreview" style="display: none;">
+                                <img src="" alt="Aperçu" class="image-preview mb-2">
+                                <div>
+                                    <button type="button" class="btn btn-sm btn-danger" id="removeProfileImage">
+                                        <i class="ri-delete-bin-line me-1"></i> Supprimer
+                                    </button>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Images supplémentaires</label>
+                            <div class="image-upload-area" id="additionalImagesUpload">
+                                <i class="ri-gallery-upload-line display-4 text-muted mb-3"></i>
+                                <p class="text-muted mb-2">Photos de campagne, événements...</p>
+                                <p class="text-muted small mb-0">Maximum 5 images • 2MB chacune</p>
+                                <input type="file" class="d-none" 
+                                       id="additional_images" 
+                                       name="additional_images"
+                                       accept="image/*" multiple>
+                            </div>
+                            
+                            <div class="mt-3" id="additionalImagesPreview"></div>
+
+                            {% if gallery_images and gallery_images|length > 0 %}
+                            <div class="mt-4">
+                                <div class="d-flex align-items-center justify-content-between mb-2">
+                                    <div class="fw-semibold small text-muted">Images enregistrées</div>
+                                    <div class="small text-muted">({{ gallery_images|length }} / 5)</div>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    {% for img in gallery_images %}
+                                        <div class="position-relative border rounded overflow-hidden bg-light"
+                                             style="width: 116px; height: 116px;">
+                                            <img src="{{ img.url }}"
+                                                 alt="Image de campagne"
+                                                 loading="lazy"
+                                                 style="width: 100%; height: 100%; object-fit: cover;"
+                                                 onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-avatar.svg') }}';">
+                                            <form method="POST"
+                                                  action="{{ url_for('candidate_campaign_gallery_delete') }}"
+                                                  class="position-absolute top-0 end-0 m-1">
+                                                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                                                <input type="hidden" name="filename" value="{{ img.filename }}">
+                                                <button type="submit"
+                                                        class="btn btn-sm btn-danger py-0 px-1"
+                                                        title="Supprimer"
+                                                        data-bs-toggle="tooltip">
+                                                    <i class="ri-delete-bin-line"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                                <div class="text-muted small mt-2">
+                                    Astuce : cliquez sur “Enregistrer les modifications” après avoir ajouté des images.
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Liens et médias -->
+        <div class="campaign-section">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0 fw-bold">
+                        <i class="ri-share-line me-2 text-info"></i>
+                        Liens et médias
+                    </h4>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="ri-global-line me-1"></i>
+                                Site web officiel
+                            </label>
+                            <input type="url" class="form-control social-link-input" 
+                                   name="website_url" 
+                                   value="{{ candidate.website_url or '' }}"
+                                   placeholder="https://votresite.dj">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="ri-facebook-fill me-1 text-primary"></i>
+                                Facebook
+                            </label>
+                            <input type="url" class="form-control social-link-input" 
+                                   name="facebook_url" 
+                                   value="{{ candidate.facebook_url or '' }}"
+                                   placeholder="https://facebook.com/votrepseudo">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="ri-twitter-fill me-1 text-info"></i>
+                                Twitter / X
+                            </label>
+                            <input type="url" class="form-control social-link-input" 
+                                   name="twitter_url" 
+                                   value="{{ candidate.twitter_url or '' }}"
+                                   placeholder="https://twitter.com/votrepseudo">
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="ri-youtube-fill me-1 text-danger"></i>
+                                Vidéo de campagne
+                            </label>
+                            <input type="url" class="form-control social-link-input" 
+                                   name="campaign_video_url" 
+                                   value="{{ candidate.campaign_video_url or '' }}"
+                                   placeholder="https://youtube.com/watch?v=...">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Boutons d'action -->
+        <div class="campaign-section">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="fw-bold mb-1">Prêt à publier vos modifications ?</h5>
+                            <p class="text-muted small mb-0">
+                                Votre campagne sera visible par les électeurs une fois approuvée.
+                            </p>
+                        </div>
+                        <div class="d-flex gap-3">
+                            <button type="button" class="btn btn-outline-primary" id="previewCampaignBtn">
+                                <i class="ri-eye-line me-2"></i>
+                                Prévisualiser
+                            </button>
+                            <button type="submit" class="btn btn-success">
+                                <i class="ri-save-line me-2"></i>
+                                Enregistrer les modifications
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Modal de prévisualisation -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header border-0 bg-success text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-eye-line me-2"></i>
+                    Prévisualisation de votre campagne
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="campaign-preview-card card">
+                    <div class="card-body">
+                        <div class="text-center mb-4">
+                            <div id="previewProfileImage" class="rounded-circle bg-primary d-inline-flex align-items-center justify-content-center mb-3"
+                                 style="width: 150px; height: 150px;">
+                                <i class="ri-user-line text-white fs-1"></i>
+                            </div>
+                            <h3 id="previewFullName" class="fw-bold mb-2">{{ candidate.full_name }}</h3>
+                            <p id="previewParty" class="text-primary fw-semibold mb-3">
+                                {{ candidate.party_name }}
+                                {% if candidate.party_acronym %}
+                                    ({{ candidate.party_acronym }})
+                                {% endif %}
+                            </p>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5 class="fw-bold mb-3">
+                                <i class="ri-double-quotes-l me-2 text-success"></i>
+                                Slogan de campagne
+                            </h5>
+                            <div id="previewSlogan" class="alert alert-success">
+                                {{ candidate.campaign_slogan or "Votre slogan apparaîtra ici" }}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <h5 class="fw-bold mb-3">
+                                <i class="ri-book-line me-2 text-primary"></i>
+                                Programme politique
+                            </h5>
+                            <div id="previewProgram" class="bg-light p-3 rounded" 
+                                 style="max-height: 300px; overflow-y: auto;">
+                                {{ candidate.political_program or "Votre programme apparaîtra ici"|safe }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+                <button type="button" class="btn btn-success" onclick="document.getElementById('campaignForm').submit()">
+                    <i class="ri-check-line me-2"></i>
+                    Confirmer et publier
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Gestion de l'upload d'images
+    const profileImageUpload = document.getElementById('profileImageUpload');
+    const profileImageInput = document.getElementById('profile_image');
+    const profileImagePreview = document.getElementById('profileImagePreview');
+    const removeProfileImageBtn = document.getElementById('removeProfileImage');
+    
+    if (profileImageUpload) {
+        profileImageUpload.addEventListener('click', function() {
+            profileImageInput.click();
+        });
+        
+        // Drag and drop
+        profileImageUpload.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('border-primary', 'bg-primary-bg-subtle');
+        });
+        
+        profileImageUpload.addEventListener('dragleave', function() {
+            this.classList.remove('border-primary', 'bg-primary-bg-subtle');
+        });
+        
+        profileImageUpload.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('border-primary', 'bg-primary-bg-subtle');
+            
+            if (e.dataTransfer.files.length) {
+                profileImageInput.files = e.dataTransfer.files;
+                handleImageUpload(e.dataTransfer.files[0], 'profile');
+            }
+        });
+    }
+    
+    if (profileImageInput) {
+        profileImageInput.addEventListener('change', function() {
+            if (this.files.length) {
+                const removeFlag = document.getElementById('remove_profile_image');
+                if (removeFlag) removeFlag.value = '0';
+                handleImageUpload(this.files[0], 'profile');
+            }
+        });
+    }
+    
+    // Gestion des images supplémentaires
+    const additionalImagesUpload = document.getElementById('additionalImagesUpload');
+    const additionalImagesInput = document.getElementById('additional_images');
+    const additionalImagesPreview = document.getElementById('additionalImagesPreview');
+    
+    if (additionalImagesUpload) {
+        additionalImagesUpload.addEventListener('click', function() {
+            additionalImagesInput.click();
+        });
+    }
+    
+    if (additionalImagesInput) {
+        additionalImagesInput.addEventListener('change', function() {
+            if (this.files.length) {
+                handleMultipleImagesUpload(this.files);
+            }
+        });
+    }
+    
+    // Fonction pour gérer l'upload d'une image unique
+    function handleImageUpload(file, type) {
+        // Vérifier la taille
+        if (file.size > 2 * 1024 * 1024) {
+            showToast('L\'image ne doit pas dépasser 2MB', 'error');
+            return;
+        }
+        
+        // Vérifier le type
+        if (!file.type.startsWith('image/')) {
+            showToast('Veuillez sélectionner une image', 'error');
+            return;
+        }
+        
+        // Afficher la prévisualisation
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            if (type === 'profile') {
+                const img = profileImagePreview.querySelector('img');
+                if (img) {
+                    img.src = e.target.result;
+                } else {
+                    profileImagePreview.innerHTML = `
+                        <img src="${e.target.result}" alt="Aperçu" class="image-preview mb-2">
+                        <div>
+                            <button type="button" class="btn btn-sm btn-danger" id="removeProfileImage">
+                                <i class="ri-delete-bin-line me-1"></i> Supprimer
+                            </button>
+                        </div>
+                    `;
+                    attachRemoveListeners();
+                }
+                profileImagePreview.style.display = 'block';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    // Fonction pour gérer l'upload de plusieurs images
+    function handleMultipleImagesUpload(files) {
+        const maxFiles = 5;
+        const maxSize = 2 * 1024 * 1024;
+        
+        if (files.length > maxFiles) {
+            showToast(`Maximum ${maxFiles} images autorisées`, 'warning');
+            return;
+        }
+        
+        additionalImagesPreview.innerHTML = '';
+        
+        Array.from(files).slice(0, maxFiles).forEach((file, index) => {
+            // Vérifier la taille
+            if (file.size > maxSize) {
+                showToast(`L'image ${file.name} dépasse 2MB`, 'error');
+                return;
+            }
+            
+            // Vérifier le type
+            if (!file.type.startsWith('image/')) {
+                showToast(`Le fichier ${file.name} n'est pas une image`, 'error');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const imageContainer = document.createElement('div');
+                imageContainer.className = 'mb-2';
+                imageContainer.innerHTML = `
+                    <div class="d-flex align-items-center justify-content-between border rounded p-2">
+                        <div class="d-flex align-items-center">
+                            <img src="${e.target.result}" 
+                                 alt="Aperçu" 
+                                 style="width: 50px; height: 50px; object-fit: cover; border-radius: 4px; margin-right: 10px;">
+                            <div>
+                                <div class="fw-semibold small">${file.name}</div>
+                                <div class="text-muted small">${(file.size / 1024).toFixed(1)} KB</div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-danger remove-image" data-index="${index}">
+                            <i class="ri-delete-bin-line"></i>
+                        </button>
+                    </div>
+                `;
+                additionalImagesPreview.appendChild(imageContainer);
+                
+                // Attacher l'événement de suppression
+                imageContainer.querySelector('.remove-image').addEventListener('click', function() {
+                    this.closest('.mb-2').remove();
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+    }
+    
+    // Attacher les listeners de suppression
+    function attachRemoveListeners() {
+        const removeBtn = document.getElementById('removeProfileImage');
+        if (removeBtn) {
+            removeBtn.addEventListener('click', function() {
+                const removeFlag = document.getElementById('remove_profile_image');
+                if (removeFlag) removeFlag.value = '1';
+                profileImagePreview.style.display = 'none';
+                profileImagePreview.innerHTML = '';
+                profileImageInput.value = '';
+            });
+        }
+    }
+    
+    // Initialiser les listeners de suppression
+    attachRemoveListeners();
+    
+    // Prévisualisation de la campagne
+    const previewCampaignBtn = document.getElementById('previewCampaignBtn');
+    if (previewCampaignBtn) {
+        previewCampaignBtn.addEventListener('click', function() {
+            // Récupérer les données du formulaire
+            const formData = new FormData(document.getElementById('campaignForm'));
+            
+            // Mettre à jour la prévisualisation
+            document.getElementById('previewSlogan').textContent = 
+                formData.get('campaign_slogan') || "Votre slogan apparaîtra ici";
+            
+            document.getElementById('previewParty').textContent = 
+                `${formData.get('party_name') || ''} ${formData.get('party_acronym') ? '(' + formData.get('party_acronym') + ')' : ''}`.trim();
+            
+            document.getElementById('previewProgram').textContent = 
+                formData.get('political_program') || "Votre programme apparaîtra ici";
+            
+            // Mettre à jour l'image de profil si une nouvelle est sélectionnée
+            const profileImageFile = formData.get('profile_image');
+            if (profileImageFile && profileImageFile.size > 0) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('previewProfileImage').innerHTML = 
+                        `<img src="${e.target.result}" class="rounded-circle" style="width: 150px; height: 150px; object-fit: cover;">`;
+                };
+                reader.readAsDataURL(profileImageFile);
+            }
+            
+            // Afficher le modal
+            const previewModal = new bootstrap.Modal(document.getElementById('previewModal'));
+            previewModal.show();
+        });
+    }
+    
+    // Validation du formulaire
+    const campaignForm = document.getElementById('campaignForm');
+    if (campaignForm) {
+        campaignForm.addEventListener('submit', function(e) {
+            // Validation basique
+            const partyName = this.querySelector('[name="party_name"]').value;
+            const program = this.querySelector('[name="political_program"]').value;
+            
+            if (!partyName.trim()) {
+                e.preventDefault();
+                showToast('Le nom du parti est obligatoire', 'error');
+                return;
+            }
+            
+            if (!program.trim() || program.length < 100) {
+                e.preventDefault();
+                showToast('Le programme politique doit contenir au moins 100 caractères', 'error');
+                return;
+            }
+            
+            // Confirmation
+            if (!confirm('Êtes-vous sûr de vouloir enregistrer les modifications de votre campagne ?')) {
+                e.preventDefault();
+                return;
+            }
+            
+            // Afficher l'indicateur de chargement
+            const submitBtn = this.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Enregistrement...
+            `;
+        });
+    }
+    
+    // Éditeur de texte enrichi (simple)
+    const programEditor = document.querySelector('.program-editor');
+    if (programEditor) {
+        programEditor.addEventListener('input', function() {
+            // Mettre à jour le compteur de caractères
+            const charCount = this.value.length;
+            const charCountElement = document.getElementById('charCount') || 
+                                     createCharCountElement();
+            
+            charCountElement.textContent = `${charCount} caractères`;
+            
+            if (charCount < 100) {
+                charCountElement.classList.remove('text-success');
+                charCountElement.classList.add('text-danger');
+            } else {
+                charCountElement.classList.remove('text-danger');
+                charCountElement.classList.add('text-success');
+            }
+        });
+        
+        function createCharCountElement() {
+            const div = document.createElement('div');
+            div.id = 'charCount';
+            div.className = 'small mt-1';
+            programEditor.parentElement.appendChild(div);
+            return div;
+        }
+        
+        // Initialiser le compteur
+        programEditor.dispatchEvent(new Event('input'));
+    }
+    
+    // Auto-sauvegarde
+    let autoSaveTimer;
+    const autoSaveIndicator = document.getElementById('autoSaveIndicator') ||
+                              createAutoSaveIndicator();
+    
+    campaignForm.addEventListener('input', function() {
+        clearTimeout(autoSaveTimer);
+        
+        autoSaveTimer = setTimeout(() => {
+            autoSaveDraft();
+        }, 3000); // Auto-sauvegarde après 3 secondes d'inactivité
+    });
+    
+    function createAutoSaveIndicator() {
+        const div = document.createElement('div');
+        div.id = 'autoSaveIndicator';
+        div.className = 'position-fixed bottom-0 end-0 m-3';
+        div.style.zIndex = '1000';
+        document.body.appendChild(div);
+        return div;
+    }
+    
+    function autoSaveDraft() {
+        autoSaveIndicator.innerHTML = `
+            <div class="alert alert-info alert-dismissible fade show" role="alert">
+                <i class="ri-save-line me-2"></i>
+                <span class="auto-save-text">Sauvegarde automatique...</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `;
+        
+        // Simuler la sauvegarde
+        setTimeout(() => {
+            const alert = autoSaveIndicator.querySelector('.alert');
+            if (alert) {
+                alert.querySelector('.auto-save-text').textContent = 'Sauvegardé à ' + 
+                    new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                alert.classList.remove('alert-info');
+                alert.classList.add('alert-success');
+                
+                setTimeout(() => {
+                    alert.remove();
+                }, 2000);
+            }
+        }, 1000);
+    }
+});
+</script>
+{% endblock %}

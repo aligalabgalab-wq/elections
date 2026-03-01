@@ -1,0 +1,772 @@
+<!-- templates/candidate/statistics.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Statistiques de campagne - Candidat{% endblock %}
+
+{% block styles %}
+<style>
+    .stats-header {
+        background: linear-gradient(135deg, var(--success) 0%, #0d8c1f 100%);
+        color: white;
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .stat-card-lg {
+        border-left: 4px solid var(--success);
+        transition: all 0.3s ease;
+    }
+    
+    .stat-card-lg:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .progress-lg {
+        height: 15px;
+        border-radius: var(--border-radius-sm);
+    }
+    
+    .region-badge {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: var(--border-radius-sm);
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    
+    .timeline-chart {
+        height: 200px;
+        position: relative;
+        margin: var(--spacing-md) 0;
+    }
+    
+    .timeline-bar {
+        position: absolute;
+        bottom: 0;
+        background-color: var(--success);
+        border-radius: var(--border-radius-sm) var(--border-radius-sm) 0 0;
+        transition: height 0.5s ease;
+    }
+    
+    .comparison-card {
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    
+    .comparison-card.better {
+        border-color: var(--success);
+    }
+    
+    .comparison-card.worse {
+        border-color: var(--danger);
+    }
+    
+    .heatmap-cell {
+        width: 30px;
+        height: 30px;
+        border-radius: var(--border-radius-sm);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        font-weight: bold;
+        cursor: pointer;
+        transition: transform 0.2s ease;
+    }
+    
+    .heatmap-cell:hover {
+        transform: scale(1.2);
+    }
+    
+    .export-section {
+        border-top: 2px solid var(--light);
+        padding-top: var(--spacing-lg);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- En-tête des statistiques -->
+    <div class="stats-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-6 fw-bold mb-3">
+                    <i class="ri-bar-chart-line me-2"></i>
+                    Statistiques de campagne
+                </h1>
+                <p class="lead mb-0 opacity-90">
+                    Analysez vos performances et suivez l'évolution de votre campagne
+                </p>
+            </div>
+            <div class="col-md-4 text-center text-md-end">
+                <div class="bg-white text-success rounded-3 p-3 d-inline-block">
+                    <div class="fw-bold mb-1">Classement actuel</div>
+                    <div class="display-4 fw-bold">
+                        {% if ranking %}
+                            {{ ranking }}<sup>{{ 'er' if ranking == 1 else 'ème' }}</sup>
+                        {% else %}
+                            -
+                        {% endif %}
+                    </div>
+                    <small class="text-muted">sur {{ total_candidates }} candidats</small>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Statistiques principales -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm stat-card-lg h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-muted text-uppercase small">Votes totaux</h6>
+                            <h2 class="fw-bold display-5">{{ candidate.vote_count }}</h2>
+                        </div>
+                        <div class="bg-success bg-opacity-10 rounded-circle p-3">
+                            <i class="bi bi-check2-square text-success fs-2"></i>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted small">Part des votes</span>
+                            <span class="fw-semibold">
+                                {% if total_votes and total_votes > 0 %}
+                                    {{ (candidate.vote_count / total_votes * 100)|round(1) }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div class="progress progress-lg">
+                            <div class="progress-bar bg-success" 
+                                 style="width: {% if total_votes and total_votes > 0 %}{{ (candidate.vote_count / total_votes * 100)|round(1) }}%{% else %}0%{% endif %}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <small class="text-muted">{{ total_votes }} votes exprimés au total</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm stat-card-lg h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-muted text-uppercase small">Tendance quotidienne</h6>
+                            <h2 class="fw-bold display-5">{{ daily_average|default(0) }}</h2>
+                        </div>
+                        <div class="bg-primary bg-opacity-10 rounded-circle p-3">
+                            <i class="ri-trending-up-line text-primary fs-2"></i>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted small">Évolution</span>
+                            <span class="fw-semibold {{ 'text-success' if daily_change >= 0 else 'text-danger' }}">
+                                {{ daily_change|default(0) }}%
+                            </span>
+                        </div>
+                        <div class="progress progress-lg">
+                            <div class="progress-bar bg-{{ 'success' if daily_change >= 0 else 'danger' }}" 
+                                 style="width: {{ daily_change|abs }}%">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <small class="text-muted">Moyenne quotidienne de votes</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card border-0 shadow-sm stat-card-lg h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h6 class="text-muted text-uppercase small">Objectif atteint</h6>
+                            <h2 class="fw-bold display-5">
+                                {% if target_votes and target_votes > 0 %}
+                                    {{ (candidate.vote_count / target_votes * 100)|round }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </h2>
+                        </div>
+                        <div class="bg-warning bg-opacity-10 rounded-circle p-3">
+                            <i class="ri-target-line text-warning fs-2"></i>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-1">
+                            <span class="text-muted small">Progression</span>
+                            <span class="fw-semibold">
+                                {{ candidate.vote_count }} / {{ target_votes|default(1000) }}
+                            </span>
+                        </div>
+                        <div class="progress progress-lg">
+                            <div class="progress-bar bg-warning" 
+                                 style="width: {% if target_votes and target_votes > 0 %}{{ (candidate.vote_count / target_votes * 100)|round }}%{% else %}0%{% endif %}">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="text-center">
+                        <small class="text-muted">{{ target_votes|default(1000) - candidate.vote_count }} votes restants</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Graphiques et visualisations -->
+    <div class="row g-4 mb-4">
+        <!-- Évolution des votes -->
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-line-chart-line me-2 text-primary"></i>
+                        Évolution des votes
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="votesChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Répartition par région -->
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-map-pin-line me-2 text-success"></i>
+                        Répartition par région
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="regionChart" height="250"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Données détaillées -->
+    <div class="row g-4 mb-4">
+        <!-- Comparaison avec les concurrents -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-user-star-line me-2 text-warning"></i>
+                        Comparaison avec les concurrents
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Candidat</th>
+                                    <th>Votes</th>
+                                    <th>Part</th>
+                                    <th>Différence</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for competitor in competitors %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if competitor.id == candidate.id %}
+                                            <span class="badge bg-success me-2">VOUS</span>
+                                            {% endif %}
+                                            {{ competitor.full_name }}
+                                        </div>
+                                    </td>
+                                    <td class="fw-semibold">{{ competitor.vote_count }}</td>
+                                    <td>
+                                        {% if total_votes and total_votes > 0 %}
+                                            {{ (competitor.vote_count / total_votes * 100)|round(1) }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% set diff = candidate.vote_count - competitor.vote_count %}
+                                        <span class="badge bg-{{ 'success' if diff > 0 else 'danger' if diff < 0 else 'secondary' }}">
+                                            {{ '+' if diff > 0 }}{{ diff }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Statistiques temporelles -->
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-time-line me-2 text-info"></i>
+                        Répartition horaire
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="timeline-chart" id="hourlyChart">
+                        <!-- Généré par JavaScript -->
+                    </div>
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            Heure de pointe : <strong>{{ peak_hour|default('14h-16h') }}</strong> 
+                            avec {{ peak_votes|default(0) }} votes
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Cartes de performance -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-award-line me-2 text-warning"></i>
+                        Points forts
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        {% for strength in strengths %}
+                        <li class="mb-3 d-flex align-items-start">
+                            <i class="ri-checkbox-circle-line text-success me-2 mt-1"></i>
+                            <div>
+                                <h6 class="fw-bold mb-1">{{ strength.title }}</h6>
+                                <p class="text-muted small mb-0">{{ strength.description }}</p>
+                            </div>
+                        </li>
+                        {% else %}
+                        <li class="text-center py-3">
+                            <i class="ri-information-line display-4 text-muted mb-3"></i>
+                            <p class="text-muted">Analyse en cours...</p>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card border-0 shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-lightbulb-flash-line me-2 text-primary"></i>
+                        Recommandations
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        {% for recommendation in recommendations %}
+                        <li class="mb-3 d-flex align-items-start">
+                            <i class="ri-flashlight-line text-warning me-2 mt-1"></i>
+                            <div>
+                                <h6 class="fw-bold mb-1">{{ recommendation.title }}</h6>
+                                <p class="text-muted small mb-0">{{ recommendation.description }}</p>
+                            </div>
+                        </li>
+                        {% else %}
+                        <li class="text-center py-3">
+                            <i class="ri-information-line display-4 text-muted mb-3"></i>
+                            <p class="text-muted">Recommandations en cours d'analyse...</p>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Export des données -->
+    <div class="export-section">
+        <div class="card border-0 shadow-sm">
+            <div class="card-header bg-white">
+                <h5 class="mb-0 fw-bold">
+                    <i class="ri-download-line me-2 text-success"></i>
+                    Export des données
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-outline-primary w-100" data-export="pdf">
+                            <i class="ri-file-pdf-line me-2"></i>
+                            Exporter en PDF
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-outline-success w-100" data-export="excel">
+                            <i class="ri-file-excel-line me-2"></i>
+                            Exporter en Excel
+                        </button>
+                    </div>
+                    <div class="col-md-4 mb-3">
+                        <button class="btn btn-outline-info w-100" data-export="csv">
+                            <i class="ri-file-text-line me-2"></i>
+                            Exporter en CSV
+                        </button>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <small class="text-muted">
+                        <i class="ri-information-line me-1"></i>
+                        Les données sont mises à jour en temps réel. Dernière mise à jour : {{ last_update|time_ago }}
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Graphique d'évolution des votes
+    const votesChartCanvas = document.getElementById('votesChart');
+    if (votesChartCanvas) {
+        const ctx = votesChartCanvas.getContext('2d');
+        
+        // Données simulées (dans une vraie app, ce serait des données réelles)
+        const dates = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+        const votesData = [12, 19, 15, 25, 22, 30, 28];
+        
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: dates,
+                datasets: [{
+                    label: 'Votes par jour',
+                    data: votesData,
+                    borderColor: '#12ad2b',
+                    backgroundColor: 'rgba(18, 173, 43, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: '#12ad2b',
+                    pointBorderColor: '#ffffff',
+                    pointBorderWidth: 2,
+                    pointRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `${context.dataset.label}: ${context.raw} votes`;
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Nombre de votes'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value;
+                            }
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Jour'
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Graphique de répartition par région
+    const regionChartCanvas = document.getElementById('regionChart');
+    if (regionChartCanvas) {
+        const ctx = regionChartCanvas.getContext('2d');
+        
+        // Données simulées
+        const regions = ['Djibouti-Ville', 'Ali-Sabieh', 'Dikhil', 'Obock', 'Tadjourah'];
+        const regionVotes = [45, 20, 15, 10, 10];
+        const colors = ['#0066b3', '#12ad2b', '#d21034', '#ffc107', '#17a2b8'];
+        
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                labels: regions,
+                datasets: [{
+                    data: regionVotes,
+                    backgroundColor: colors,
+                    borderWidth: 2,
+                    borderColor: '#ffffff'
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            padding: 20,
+                            usePointStyle: true
+                        }
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const percentage = ((context.raw / total) * 100).toFixed(1);
+                                return `${context.label}: ${context.raw} votes (${percentage}%)`;
+                            }
+                        }
+                    }
+                },
+                cutout: '60%'
+            }
+        });
+    }
+    
+    // Graphique horaire
+    const hourlyChart = document.getElementById('hourlyChart');
+    if (hourlyChart) {
+        // Données simulées
+        const hours = ['00h', '04h', '08h', '12h', '16h', '20h'];
+        const hourlyVotes = [5, 8, 25, 45, 35, 15];
+        const maxVotes = Math.max(...hourlyVotes);
+        
+        hourlyChart.innerHTML = '';
+        
+        hours.forEach((hour, index) => {
+            const percentage = (hourlyVotes[index] / maxVotes) * 100;
+            const bar = document.createElement('div');
+            bar.className = 'timeline-bar';
+            bar.style.left = `${(index * (100 / hours.length))}%`;
+            bar.style.width = `${(100 / hours.length) - 2}%`;
+            bar.style.height = `${percentage}%`;
+            bar.style.backgroundColor = hourlyVotes[index] === maxVotes ? '#12ad2b' : '#0066b3';
+            bar.title = `${hour}: ${hourlyVotes[index]} votes`;
+            
+            const label = document.createElement('div');
+            label.className = 'text-center small mt-1';
+            label.style.position = 'absolute';
+            label.style.left = `${(index * (100 / hours.length))}%`;
+            label.style.width = `${(100 / hours.length)}%`;
+            label.style.bottom = '-20px';
+            label.textContent = hour;
+            
+            hourlyChart.appendChild(bar);
+            hourlyChart.appendChild(label);
+            
+            // Animation
+            setTimeout(() => {
+                bar.style.height = `${percentage}%`;
+            }, index * 100);
+        });
+    }
+    
+    // Export des données
+    document.querySelectorAll('[data-export]').forEach(button => {
+        button.addEventListener('click', function() {
+            const format = this.dataset.export;
+            
+            confirmAction(
+                'Exporter les statistiques',
+                `Voulez-vous exporter vos statistiques au format ${format.toUpperCase()} ?`
+            ).then((result) => {
+                if (result.isConfirmed) {
+                    // Simuler l'export
+                    this.disabled = true;
+                    this.innerHTML = `
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Génération...
+                    `;
+                    
+                    setTimeout(() => {
+                        showToast(`Export ${format.toUpperCase()} généré avec succès`, 'success');
+                        this.disabled = false;
+                        this.innerHTML = `
+                            <i class="ri-file-${format}-line me-2"></i>
+                            Exporter en ${format.toUpperCase()}
+                        `;
+                        
+                        // Téléchargement simulé
+                        const link = document.createElement('a');
+                        link.href = '#';
+                        link.download = `statistiques-campagne.${format}`;
+                        link.click();
+                    }, 2000);
+                }
+            });
+        });
+    });
+    
+    // Mises à jour en temps réel
+    function updateRealTimeStats() {
+        // Simuler des mises à jour
+        const voteCountElement = document.querySelector('.display-5');
+        if (voteCountElement) {
+            const currentVotes = parseInt(voteCountElement.textContent);
+            const newVotes = currentVotes + Math.floor(Math.random() * 3);
+            
+            animateCounter(voteCountElement, currentVotes, newVotes);
+        }
+        
+        // Mettre à jour le classement
+        const rankingElement = document.querySelector('.display-4.fw-bold');
+        if (rankingElement && Math.random() > 0.8) {
+            const currentRank = parseInt(rankingElement.textContent);
+            if (currentRank > 1) {
+                animateCounter(rankingElement, currentRank, currentRank - 1);
+            }
+        }
+    }
+    
+    // Mettre à jour toutes les 30 secondes
+    setInterval(updateRealTimeStats, 30000);
+    
+    // Fonction pour animer les compteurs
+    function animateCounter(element, start, end) {
+        const duration = 1000;
+        const steps = 60;
+        const step = (end - start) / steps;
+        let current = start;
+        
+        const timer = setInterval(() => {
+            current += step;
+            if ((step > 0 && current >= end) || (step < 0 && current <= end)) {
+                current = end;
+                clearInterval(timer);
+            }
+            element.textContent = Math.round(current);
+        }, duration / steps);
+    }
+    
+    // Confirmation avec SweetAlert2
+    function confirmAction(title, text, confirmText = 'Confirmer') {
+        return Swal.fire({
+            title: title,
+            text: text,
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#0066b3',
+            cancelButtonColor: '#6c757d',
+            confirmButtonText: confirmText,
+            cancelButtonText: 'Annuler'
+        });
+    }
+    
+    // Analyse des tendances
+    const trendAnalysisBtn = document.getElementById('trendAnalysisBtn');
+    if (trendAnalysisBtn) {
+        trendAnalysisBtn.addEventListener('click', function() {
+            showModal(
+                'Analyse des tendances',
+                `
+                <div class="trend-analysis">
+                    <h6 class="fw-bold mb-3">Points clés de performance</h6>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Taux de croissance</span>
+                            <span class="fw-bold text-success">+{{ daily_change|default(0) }}%</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-success" style="width: {{ daily_change|abs }}%"></div>
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Engagement des électeurs</span>
+                            <span class="fw-bold text-primary">Élevé</span>
+                        </div>
+                        <div class="progress" style="height: 8px;">
+                            <div class="progress-bar bg-primary" style="width: 75%"></div>
+                        </div>
+                    </div>
+                    <div class="alert alert-info mt-3">
+                        <i class="ri-lightbulb-line me-2"></i>
+                        <strong>Recommandation :</strong> Concentrez vos efforts sur les régions où votre score est inférieur à 15%.
+                    </div>
+                </div>
+                `,
+                'info'
+            );
+        });
+    }
+    
+    // Fonction utilitaire pour afficher un modal
+    function showModal(title, content, type = 'info') {
+        const modalId = 'analysisModal-' + Date.now();
+        const modalHTML = `
+            <div class="modal fade" id="${modalId}" tabindex="-1">
+                <div class="modal-dialog">
+                    <div class="modal-content">
+                        <div class="modal-header border-0 bg-${type} text-white">
+                            <h5 class="modal-title fw-bold">
+                                <i class="ri-bar-chart-line me-2"></i>
+                                ${title}
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${content}
+                        </div>
+                        <div class="modal-footer border-0">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                Fermer
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        document.body.insertAdjacentHTML('beforeend', modalHTML);
+        const modal = new bootstrap.Modal(document.getElementById(modalId));
+        modal.show();
+        
+        // Supprimer le modal après fermeture
+        document.getElementById(modalId).addEventListener('hidden.bs.modal', function() {
+            this.remove();
+        });
+    }
+    
+    // Initialiser les tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
+    tooltipTriggerList.map(function(tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+});
+</script>
+{% endblock %}

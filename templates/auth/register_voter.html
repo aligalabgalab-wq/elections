@@ -1,0 +1,363 @@
+<!-- templates/auth/register_voter.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Inscription Électeur - Simulation Électorale{% endblock %}
+
+{% block styles %}
+<style>
+    .registration-card {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+    .step-indicator {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 30px;
+        position: relative;
+    }
+    .step-indicator::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 0;
+        right: 0;
+        height: 2px;
+        background-color: #e9ecef;
+        z-index: 1;
+    }
+    .step {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        flex: 1;
+    }
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background-color: #e9ecef;
+        color: #6c757d;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 10px;
+        font-weight: bold;
+    }
+    .step.active .step-number {
+        background-color: #0066b3;
+        color: white;
+    }
+    .step-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    .step.active .step-label {
+        color: #0066b3;
+        font-weight: 500;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-lg-10">
+        <!-- Header -->
+        <div class="text-center mb-5">
+            <i class="ri-user-line display-4 text-primary mb-3"></i>
+            <h1 class="h2 mb-3">Inscription comme Électeur</h1>
+            <p class="text-muted">
+                Remplissez ce formulaire pour participer à la simulation électorale en tant qu'électeur.
+            </p>
+        </div>
+        
+        <!-- Step indicator -->
+        <div class="step-indicator">
+            <div class="step active">
+                <div class="step-number">1</div>
+                <div class="step-label">Informations<br>personnelles</div>
+            </div>
+            <div class="step">
+                <div class="step-number">2</div>
+                <div class="step-label">Compte<br>utilisateur</div>
+            </div>
+            <div class="step">
+                <div class="step-number">3</div>
+                <div class="step-label">Confirmation</div>
+            </div>
+        </div>
+        
+        <!-- Registration Form -->
+        <div class="card shadow-lg border-0 registration-card">
+            <div class="card-body p-4 p-md-5">
+                <form method="POST" action="{{ url_for('register_voter') }}">
+                    <h4 class="mb-4">
+                        <i class="ri-user-fill me-2 text-primary"></i>
+                        Informations Personnelles
+                    </h4>
+                    
+                    <div class="row">
+                        <!-- First Name -->
+                        <div class="col-md-6 mb-4">
+                            <label for="first_name" class="form-label fw-semibold">
+                                <i class="ri-user-line me-1"></i>
+                                Prénom <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control py-3" 
+                                   id="first_name" name="first_name" 
+                                   placeholder="Votre prénom"
+                                   required>
+                        </div>
+                        
+                        <!-- Last Name -->
+                        <div class="col-md-6 mb-4">
+                            <label for="last_name" class="form-label fw-semibold">
+                                <i class="ri-user-line me-1"></i>
+                                Nom <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control py-3" 
+                                   id="last_name" name="last_name" 
+                                   placeholder="Votre nom"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Date of Birth -->
+                        <div class="col-md-6 mb-4">
+                            <label for="date_of_birth" class="form-label fw-semibold">
+                                <i class="ri-calendar-line me-1"></i>
+                                Date de naissance <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control py-3" 
+                                   id="date_of_birth" name="date_of_birth" 
+                                   required
+                                   max="{{ now.strftime('%Y-%m-%d') }}">
+                            <small class="text-muted">Vous devez avoir au moins {{ config.get('MIN_VOTER_AGE', 18) }} ans</small>
+                        </div>
+                        
+                        <!-- Gender -->
+                        <div class="col-md-6 mb-4">
+                            <label for="gender" class="form-label fw-semibold">
+                                <i class="ri-user-settings-line me-1"></i>
+                                Genre
+                            </label>
+                            <select class="form-select py-3" id="gender" name="gender">
+                                <option value="">Sélectionner...</option>
+                                <option value="M">Masculin</option>
+                                <option value="F">Féminin</option>
+                                <option value="O">Autre</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- CNI Number -->
+                        <div class="col-md-6 mb-4">
+                            <label for="cni_number" class="form-label fw-semibold">
+                                <i class="ri-id-card-line me-1"></i>
+                                Numéro CNI <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control py-3" 
+                                   id="cni_number" name="cni_number" 
+                                   placeholder="12345678901234"
+                                   pattern="[0-9]{14}"
+                                   title="14 chiffres requis"
+                                   required>
+                            <small class="text-muted">Format: 14 chiffres (ex: 12345678901234)</small>
+                        </div>
+                        
+                        <!-- Place of Birth -->
+                        <div class="col-md-6 mb-4">
+                            <label for="place_of_birth" class="form-label fw-semibold">
+                                <i class="ri-map-pin-line me-1"></i>
+                                Lieu de naissance <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select py-3" id="place_of_birth" name="place_of_birth" required>
+                                <option value="">Sélectionner une région...</option>
+                                <option value="Djibouti-Ville">Djibouti-Ville</option>
+                                <option value="Ali-Sabieh">Ali-Sabieh</option>
+                                <option value="Dikhil">Dikhil</option>
+                                <option value="Obock">Obock</option>
+                                <option value="Tadjourah">Tadjourah</option>
+                                <option value="Arta">Arta</option>
+                                <option value="Ali-Addeh">Ali-Addeh</option>
+                                <option value="Hol-Hol">Hol-Hol</option>
+                                <option value="As-Eyla">As-Eyla</option>
+                                <option value="Yoboki">Yoboki</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Phone -->
+                        <div class="col-md-6 mb-4">
+                            <label for="phone" class="form-label fw-semibold">
+                                <i class="ri-phone-line me-1"></i>
+                                Téléphone
+                            </label>
+                            <input type="tel" class="form-control py-3" 
+                                   id="phone" name="phone" 
+                                   placeholder="+253 77 00 00 00">
+                        </div>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <h4 class="mb-4">
+                        <i class="ri-mail-fill me-2 text-primary"></i>
+                        Compte Utilisateur
+                    </h4>
+                    
+                    <div class="row">
+                        <!-- Email -->
+                        <div class="col-md-6 mb-4">
+                            <label for="email" class="form-label fw-semibold">
+                                <i class="ri-mail-line me-1"></i>
+                                Adresse Email <span class="text-danger">*</span>
+                            </label>
+                            <input type="email" class="form-control py-3" 
+                                   id="email" name="email" 
+                                   placeholder="votre.email@domaine.dj"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <!-- Password -->
+                        <div class="col-md-6 mb-4">
+                            <label for="password" class="form-label fw-semibold">
+                                <i class="ri-lock-line me-1"></i>
+                                Mot de passe <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control py-3" 
+                                       id="password" name="password" 
+                                       placeholder="••••••••"
+                                       minlength="8"
+                                       required>
+                                <button class="btn btn-outline-secondary toggle-password" type="button">
+                                    <i class="ri-eye-line"></i>
+                                </button>
+                            </div>
+                            <small class="text-muted">Minimum 8 caractères</small>
+                        </div>
+                        
+                        <!-- Confirm Password -->
+                        <div class="col-md-6 mb-4">
+                            <label for="confirm_password" class="form-label fw-semibold">
+                                <i class="ri-lock-line me-1"></i>
+                                Confirmer le mot de passe <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="password" class="form-control py-3" 
+                                       id="confirm_password" name="confirm_password" 
+                                       placeholder="••••••••"
+                                       minlength="8"
+                                       required>
+                                <button class="btn btn-outline-secondary toggle-password" type="button">
+                                    <i class="ri-eye-line"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Terms and Conditions -->
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="terms" name="terms" required>
+                            <label class="form-check-label" for="terms">
+                                J'accepte les 
+                                <a href="{{ url_for('terms') }}" class="text-decoration-none" target="_blank" rel="noopener">Conditions d'utilisation</a> 
+                                et la 
+                                <a href="{{ url_for('privacy') }}" class="text-decoration-none" target="_blank" rel="noopener">Politique de confidentialité</a>
+                                <span class="text-danger">*</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <!-- Eligibility Warning -->
+                    <div class="alert alert-warning mb-4">
+                        <div class="d-flex">
+                            <i class="ri-alert-line me-2 fs-4"></i>
+                            <div>
+                                <h6 class="alert-heading mb-2">Conditions d'éligibilité</h6>
+                                <p class="mb-0 small">
+                                    Pour être électeur, vous devez être citoyen djiboutien, 
+                                    avoir au moins {{ config.get('MIN_VOTER_AGE', 18) }} ans et posséder une CNI valide. 
+                                    Toute fausse déclaration entraînera la radiation.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit buttons -->
+                    <div class="d-flex justify-content-between">
+                        <a href="{{ url_for('index') }}" class="btn btn-outline-secondary btn-lg px-4">
+                            <i class="ri-arrow-left-line me-2"></i>Annuler
+                        </a>
+                        <button type="submit" class="btn btn-primary btn-lg px-5">
+                            <i class="ri-check-line me-2"></i>S'inscrire
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Password toggle
+    document.querySelectorAll('.toggle-password').forEach(function(button) {
+        button.addEventListener('click', function() {
+            const input = this.parentElement.querySelector('input');
+            const icon = this.querySelector('i');
+            
+            if (input.type === 'password') {
+                input.type = 'text';
+                icon.classList.remove('ri-eye-line');
+                icon.classList.add('ri-eye-off-line');
+            } else {
+                input.type = 'password';
+                icon.classList.remove('ri-eye-off-line');
+                icon.classList.add('ri-eye-line');
+            }
+        });
+    });
+    
+    // Password validation
+    const password = document.getElementById('password');
+    const confirmPassword = document.getElementById('confirm_password');
+    
+    function validatePassword() {
+        if (password.value !== confirmPassword.value) {
+            confirmPassword.setCustomValidity('Les mots de passe ne correspondent pas');
+        } else {
+            confirmPassword.setCustomValidity('');
+        }
+    }
+    
+    password.addEventListener('change', validatePassword);
+    confirmPassword.addEventListener('keyup', validatePassword);
+    
+    // Age validation
+    const dobInput = document.getElementById('date_of_birth');
+    
+    const minAge = {{ config.get('MIN_VOTER_AGE', 18) }};
+
+    dobInput.addEventListener('change', function() {
+        const dob = new Date(this.value);
+        const today = new Date();
+        const age = today.getFullYear() - dob.getFullYear();
+        
+        if (age < minAge) {
+            this.setCustomValidity(`Vous devez avoir au moins ${minAge} ans`);
+        } else {
+            this.setCustomValidity('');
+        }
+    });
+});
+</script>
+{% endblock %}

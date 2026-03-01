@@ -1,0 +1,172 @@
+<!-- templates/layouts/sidebar.html -->
+<aside class="app-sidebar" aria-label="Menu principal">
+    <div class="app-sidebar__brand">
+        <a class="app-brand" href="{{ url_for('index') }}">
+            <span class="app-brand__mark" aria-hidden="true">
+                <i class="ri-shield-check-line"></i>
+            </span>
+            <span class="app-brand__text">
+                <span class="app-brand__title">{{ config.get('APP_NAME', 'Élection Nationale') }}</span>
+                <span class="app-brand__subtitle">{{ config.get('APP_TAGLINE', 'Simulation • Djibouti') }}</span>
+            </span>
+        </a>
+
+        <button class="btn btn-sm btn-outline-light app-sidebar__toggle"
+                type="button"
+                data-app-sidebar-toggle
+                aria-label="Réduire/agrandir le menu">
+            <i class="ri-layout-left-line"></i>
+        </button>
+    </div>
+
+    <nav class="app-sidebar__nav">
+        <div class="app-sidebar__section">Général</div>
+        <a class="app-nav-link {% if request.endpoint in ['index'] %}is-active{% endif %}"
+           href="{{ url_for('index') }}">
+            <i class="ri-home-5-line"></i>
+            <span>Accueil</span>
+        </a>
+        <a class="app-nav-link {% if request.endpoint in ['candidates_list'] %}is-active{% endif %}"
+           href="{{ url_for('candidates_list') }}">
+            <i class="ri-team-line"></i>
+            <span>Candidats</span>
+        </a>
+        <a class="app-nav-link {% if request.endpoint in ['about'] %}is-active{% endif %}"
+           href="{{ url_for('about') }}">
+            <i class="ri-information-line"></i>
+            <span>À propos</span>
+        </a>
+        <a class="app-nav-link {% if request.endpoint in ['contact'] %}is-active{% endif %}"
+           href="{{ url_for('contact') }}">
+            <i class="ri-mail-line"></i>
+            <span>Contact</span>
+        </a>
+        <a class="app-nav-link {% if request.endpoint in ['faq'] %}is-active{% endif %}"
+           href="{{ url_for('faq') }}">
+            <i class="ri-question-line"></i>
+            <span>Aide / FAQ</span>
+        </a>
+
+        {% if current_user.is_authenticated %}
+            <div class="app-sidebar__spacer"></div>
+
+            {% if current_user.role == 'voter' %}
+                <div class="app-sidebar__section">Espace Électeur</div>
+                <a class="app-nav-link {% if request.endpoint in ['voter_dashboard'] %}is-active{% endif %}"
+                   href="{{ url_for('voter_dashboard') }}">
+                    <i class="ri-dashboard-2-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a class="app-nav-link {% if request.endpoint in ['voter_vote'] %}is-active{% endif %}"
+                   href="{{ url_for('voter_vote') }}">
+                    <i class="ri-vote-line"></i>
+                    <span>Voter</span>
+                    {% if election and election.is_voting_open %}
+                        <span class="app-pill app-pill--success">Ouvert</span>
+                    {% else %}
+                        <span class="app-pill">Fermé</span>
+                    {% endif %}
+                </a>
+                <a class="app-nav-link {% if request.endpoint in ['voter_results'] %}is-active{% endif %}"
+                   href="{{ url_for('voter_results') }}">
+                    <i class="ri-bar-chart-line"></i>
+                    <span>Résultats</span>
+                </a>
+                <a class="app-nav-link {% if request.endpoint in ['voter_profile'] %}is-active{% endif %}"
+                   href="{{ url_for('voter_profile') }}">
+                    <i class="ri-user-settings-line"></i>
+                    <span>Profil</span>
+                </a>
+
+            {% elif current_user.role == 'candidate' %}
+                <div class="app-sidebar__section">Espace Candidat</div>
+                <a class="app-nav-link {% if request.endpoint in ['candidate_dashboard'] %}is-active{% endif %}"
+                   href="{{ url_for('candidate_dashboard') }}">
+                    <i class="ri-dashboard-2-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a class="app-nav-link {% if request.endpoint in ['candidate_campaign'] %}is-active{% endif %}"
+                   href="{{ url_for('candidate_campaign') }}">
+                    <i class="ri-megaphone-line"></i>
+                    <span>Campagne</span>
+                </a>
+                <a class="app-nav-link {% if request.endpoint in ['candidate_statistics'] %}is-active{% endif %}"
+                   href="{{ url_for('candidate_statistics') }}">
+                    <i class="ri-line-chart-line"></i>
+                    <span>Statistiques</span>
+                </a>
+                <a class="app-nav-link {% if request.endpoint in ['candidate_profile'] %}is-active{% endif %}"
+                   href="{{ url_for('candidate_profile') }}">
+                    <i class="ri-user-star-line"></i>
+                    <span>Profil</span>
+                </a>
+
+            {% elif current_user.role == 'admin' %}
+                <div class="app-sidebar__section">Commission (Simulée)</div>
+                <a class="app-nav-link {% if request.endpoint in ['admin_dashboard'] %}is-active{% endif %}"
+                   href="{{ url_for('admin_dashboard') }}">
+                    <i class="ri-dashboard-2-line"></i>
+                    <span>Dashboard</span>
+                </a>
+                <a class="app-nav-link {% if request.endpoint in ['admin_users'] %}is-active{% endif %}"
+                   href="{{ url_for('admin_users') }}">
+                    <i class="ri-user-3-line"></i>
+                    <span>Utilisateurs</span>
+                </a>
+                <a class="app-nav-link {% if request.endpoint in ['admin_candidates'] %}is-active{% endif %}"
+                   href="{{ url_for('admin_candidates') }}">
+                    <i class="ri-user-star-line"></i>
+                    <span>Candidats</span>
+                </a>
+                <a class="app-nav-link {% if request.endpoint in ['admin_announcements'] %}is-active{% endif %}"
+                   href="{{ url_for('admin_announcements') }}">
+                    <i class="ri-notification-3-line"></i>
+                    <span>Annonces</span>
+                </a>
+                <a class="app-nav-link {% if request.endpoint in ['admin_election'] %}is-active{% endif %}"
+                   href="{{ url_for('admin_election') }}">
+                    <i class="ri-settings-3-line"></i>
+                    <span>Élection</span>
+                </a>
+                <a class="app-nav-link {% if request.endpoint in ['admin_results'] %}is-active{% endif %}"
+                   href="{{ url_for('admin_results') }}">
+                    <i class="ri-bar-chart-box-line"></i>
+                    <span>Résultats</span>
+                </a>
+            {% endif %}
+        {% endif %}
+    </nav>
+
+    <div class="app-sidebar__footer">
+        {% if election %}
+            {% if election.is_voting_open %}
+                <span class="app-status app-status--success">
+                    <span class="app-status__dot"></span>
+                    Vote ouvert
+                </span>
+            {% elif election.is_registration_open %}
+                <span class="app-status app-status--warning">
+                    <span class="app-status__dot"></span>
+                    Inscriptions ouvertes
+                </span>
+            {% else %}
+                <span class="app-status">
+                    <span class="app-status__dot"></span>
+                    Vote fermé
+                </span>
+            {% endif %}
+        {% else %}
+            <span class="app-status">
+                <span class="app-status__dot"></span>
+                Élection non configurée
+            </span>
+        {% endif %}
+
+        <div class="app-sidebar__meta">
+            <span class="text-muted small">v1.0.0</span>
+            {% if config.get('DEBUG') %}
+                <span class="badge bg-warning text-dark">Dev</span>
+            {% endif %}
+        </div>
+    </div>
+</aside>

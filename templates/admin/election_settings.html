@@ -1,0 +1,1038 @@
+<!-- templates/admin/election_settings.html -->
+{% extends "layouts/base.html" %}
+
+{% block title %}Paramètres de l'élection - Administration{% endblock %}
+
+{% block styles %}
+<style>
+    .election-settings-header {
+        background: linear-gradient(135deg, var(--danger) 0%, #a50c28 100%);
+        color: white;
+        border-radius: var(--border-radius-lg);
+        padding: var(--spacing-xl);
+        margin-bottom: var(--spacing-xl);
+    }
+    
+    .phase-card {
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-lg);
+        margin-bottom: var(--spacing-lg);
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .phase-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+    }
+    
+    .phase-card.registration::before {
+        background-color: var(--primary);
+    }
+    
+    .phase-card.voting::before {
+        background-color: var(--success);
+    }
+    
+    .phase-card.results::before {
+        background-color: var(--warning);
+    }
+    
+    .phase-card.completed::before {
+        background-color: var(--secondary);
+    }
+    
+    .phase-card:hover {
+        transform: translateY(-3px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .phase-status {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        margin-bottom: 10px;
+    }
+    
+    .status-active {
+        background-color: rgba(18, 173, 43, 0.1);
+        color: var(--success);
+    }
+    
+    .status-upcoming {
+        background-color: rgba(255, 193, 7, 0.1);
+        color: var(--warning);
+    }
+    
+    .status-completed {
+        background-color: rgba(108, 117, 125, 0.1);
+        color: var(--secondary);
+    }
+    
+    .datetime-input-group {
+        position: relative;
+    }
+    
+    .datetime-input-group .form-control {
+        padding-left: 45px;
+    }
+    
+    .datetime-input-group i {
+        position: absolute;
+        left: 15px;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--primary);
+        z-index: 10;
+    }
+    
+    .settings-card {
+        border-left: 4px solid var(--danger);
+        transition: all 0.3s ease;
+    }
+    
+    .settings-card:hover {
+        box-shadow: var(--shadow-md);
+    }
+    
+    .danger-zone {
+        border: 2px solid var(--danger);
+        border-radius: var(--border-radius-md);
+        padding: var(--spacing-lg);
+        background-color: rgba(210, 16, 52, 0.05);
+    }
+    
+    .countdown-timer {
+        font-family: monospace;
+        font-size: 2rem;
+        font-weight: bold;
+        text-align: center;
+        color: var(--danger);
+        padding: var(--spacing-md);
+        background-color: rgba(210, 16, 52, 0.1);
+        border-radius: var(--border-radius-md);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- En-tête -->
+    <div class="election-settings-header">
+        <div class="row align-items-center">
+            <div class="col-md-8">
+                <h1 class="display-6 fw-bold mb-3">
+                    <i class="ri-settings-3-line me-2"></i>
+                    Paramètres de l'élection
+                </h1>
+                <p class="lead mb-0 opacity-90">
+                    Configurez les paramètres de la simulation électorale
+                </p>
+            </div>
+            <div class="col-md-4 text-center text-md-end">
+                <div class="badge bg-white text-danger fs-5 px-3 py-2">
+                    <i class="ri-time-line me-2"></i>
+                    {% if election and election.is_voting_open %}
+                        Vote en cours
+                    {% elif election and election.is_registration_open %}
+                        Inscriptions ouvertes
+                    {% else %}
+                        Configuration
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Phase actuelle et timer -->
+    <div class="row mb-4">
+        <div class="col-lg-8">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-time-line me-2 text-primary"></i>
+                        Phase actuelle
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <div class="phase-card 
+                                {% if election and election.is_registration_open %}registration
+                                {% elif election and election.is_voting_open %}voting
+                                {% elif election and election.status == 'closed' %}results
+                                {% else %}completed{% endif %}">
+                                
+                                <div class="phase-status status-active mb-3">
+                                    <i class="ri-play-circle-line me-2"></i>
+                                    {% if election and election.is_registration_open %}
+                                        PHASE D'INSCRIPTION
+                                    {% elif election and election.is_voting_open %}
+                                        PHASE DE VOTE
+                                    {% elif election and election.status == 'closed' %}
+                                        PUBLICATION DES RÉSULTATS
+                                    {% else %}
+                                        CONFIGURATION
+                                    {% endif %}
+                                </div>
+                                
+                                <h3 class="fw-bold mb-2">
+                                    {% if election and election.is_registration_open %}
+                                        Inscriptions des électeurs et candidats
+                                    {% elif election and election.is_voting_open %}
+                                        Vote électronique en cours
+                                    {% elif election and election.status == 'closed' %}
+                                        Résultats et analyse
+                                    {% else %}
+                                        Configuration initiale
+                                    {% endif %}
+                                </h3>
+                                
+                                <p class="text-muted mb-0">
+                                    {% if election and election.is_registration_open %}
+                                        Les électeurs et candidats peuvent s'inscrire jusqu'à la fermeture des inscriptions.
+                                    {% elif election and election.is_voting_open %}
+                                        Les électeurs éligibles peuvent voter pour leurs candidats préférés.
+                                    {% elif election and election.status == 'closed' %}
+                                        Les résultats sont disponibles et peuvent être analysés.
+                                    {% else %}
+                                        Configurez les paramètres avant d'ouvrir l'élection.
+                                    {% endif %}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <div class="col-md-6">
+                            <div class="countdown-timer" id="electionTimer">
+                                {% if election and election.is_registration_open and election.registration_end %}
+                                    <!-- Calculer le temps restant pour les inscriptions -->
+                                    {% set diff = election.registration_end - now %}
+                                    {% set days = diff.days %}
+                                    {% set hours = diff.seconds // 3600 %}
+                                    {% set minutes = (diff.seconds % 3600) // 60 %}
+                                    {{ days }}j {{ hours }}h {{ minutes }}min
+                                {% elif election and election.is_voting_open and election.voting_end %}
+                                    <!-- Calculer le temps restant pour le vote -->
+                                    {% set diff = election.voting_end - now %}
+                                    {% set days = diff.days %}
+                                    {% set hours = diff.seconds // 3600 %}
+                                    {% set minutes = (diff.seconds % 3600) // 60 %}
+                                    {{ days }}j {{ hours }}h {{ minutes }}min
+                                {% else %}
+                                    00j 00h 00min
+                                {% endif %}
+                            </div>
+                            
+                            <div class="text-center mt-3">
+                                <small class="text-muted">
+                                    {% if election and election.is_registration_open %}
+                                        Temps restant avant la fermeture des inscriptions
+                                    {% elif election and election.is_voting_open %}
+                                        Temps restant avant la fermeture du vote
+                                    {% else %}
+                                        Élection non démarrée
+                                    {% endif %}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-lg-4">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0 fw-bold">
+                        <i class="ri-dashboard-line me-2 text-success"></i>
+                        Actions rapides
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-3">
+                        {% if election and election.status == 'planned' %}
+                        <button class="btn btn-success" id="openRegistrationBtn">
+                            <i class="ri-door-open-line me-2"></i>
+                            Ouvrir les inscriptions
+                        </button>
+                        {% endif %}
+                        
+                        {% if election and election.is_registration_open %}
+                        <button class="btn btn-warning" id="closeRegistrationBtn">
+                            <i class="ri-door-closed-line me-2"></i>
+                            Fermer les inscriptions
+                        </button>
+                        {% endif %}
+                        
+                        {% if election and election.status == 'registration_closed' %}
+                        <button class="btn btn-success" id="openVotingBtn">
+                            <i class="bi bi-check2-square me-2"></i>
+                            Ouvrir le vote
+                        </button>
+                        {% endif %}
+                        
+                        {% if election and election.is_voting_open %}
+                        <button class="btn btn-danger" id="closeVotingBtn">
+                            <i class="ri-stop-circle-line me-2"></i>
+                            Fermer le vote
+                        </button>
+                        {% endif %}
+                        
+                        {% if election and election.status == 'closed' %}
+                        <button class="btn btn-primary" id="publishResultsBtn">
+                            <i class="ri-bar-chart-line me-2"></i>
+                            Publier les résultats
+                        </button>
+                        {% endif %}
+                        
+                        <button class="btn btn-outline-secondary" id="refreshStatusBtn">
+                            <i class="ri-refresh-line me-2"></i>
+                            Actualiser le statut
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Formulaire de configuration -->
+    <div class="card border-0 shadow-sm settings-card mb-4">
+        <div class="card-header bg-white">
+            <h4 class="mb-0 fw-bold">
+                <i class="ri-tools-line me-2 text-danger"></i>
+                Configuration de l'élection
+            </h4>
+        </div>
+        <div class="card-body">
+            <form id="electionSettingsForm">
+                <input type="hidden" name="election_id" value="{{ election.id if election else '' }}">
+                
+                <div class="row">
+                    <div class="col-md-6 mb-4">
+                        <label class="form-label fw-semibold">Nom de l'élection *</label>
+                        <input type="text" class="form-control" 
+                               name="name"
+                               value="{{ election.name if election else '' }}"
+                               placeholder="Simulation Électorale Djiboutienne"
+                               required>
+                    </div>
+                    
+                    <div class="col-md-6 mb-4">
+                        <label class="form-label fw-semibold">Année *</label>
+                        <input type="number" class="form-control" 
+                               name="year"
+                               value="{{ election.year if election else '2025' }}"
+                               min="2024" max="2030" required>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="form-label fw-semibold">Description</label>
+                    <textarea class="form-control" 
+                              name="description"
+                              rows="3"
+                              placeholder="Description de la simulation électorale...">{{ election.description if election else '' }}</textarea>
+                </div>
+                
+                <!-- Dates des phases -->
+                <h5 class="fw-bold mb-4 border-bottom pb-2">
+                    <i class="ri-calendar-event-line me-2 text-primary"></i>
+                    Calendrier électoral
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Ouverture des inscriptions *</label>
+                        <div class="datetime-input-group">
+                            <i class="ri-calendar-2-line"></i>
+                            <input type="datetime-local" class="form-control" 
+                                   name="registration_start"
+                                   value="{{ election.registration_start.strftime('%Y-%m-%dT%H:%M') if election and election.registration_start else '' }}"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Fermeture des inscriptions *</label>
+                        <div class="datetime-input-group">
+                            <i class="ri-calendar-close-line"></i>
+                            <input type="datetime-local" class="form-control" 
+                                   name="registration_end"
+                                   value="{{ election.registration_end.strftime('%Y-%m-%dT%H:%M') if election and election.registration_end else '' }}"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Ouverture du vote *</label>
+                        <div class="datetime-input-group">
+                            <i class="bi bi-check2-square"></i>
+                            <input type="datetime-local" class="form-control" 
+                                   name="voting_start"
+                                   value="{{ election.voting_start.strftime('%Y-%m-%dT%H:%M') if election and election.voting_start else '' }}"
+                                   required>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">Fermeture du vote *</label>
+                        <div class="datetime-input-group">
+                            <i class="ri-stop-circle-line"></i>
+                            <input type="datetime-local" class="form-control" 
+                                   name="voting_end"
+                                   value="{{ election.voting_end.strftime('%Y-%m-%dT%H:%M') if election and election.voting_end else '' }}"
+                                   required>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Paramètres techniques -->
+                <h5 class="fw-bold mb-4 border-bottom pb-2">
+                    <i class="ri-server-line me-2 text-success"></i>
+                    Paramètres techniques
+                </h5>
+                
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">
+                            Nombre maximum de candidats *
+                        </label>
+                        <input type="number" class="form-control" 
+                               name="max_candidates"
+                               value="{{ election.max_candidates if election else 10 }}"
+                               min="2" max="50" required>
+                        <small class="text-muted">Entre 2 et 50 candidats maximum</small>
+                    </div>
+                    
+                    <div class="col-md-6 mb-3">
+                        <label class="form-label fw-semibold">
+                            Mode de simulation
+                        </label>
+                        <select class="form-select" name="is_test_mode">
+                            <option value="true" {% if election and election.is_test_mode %}selected{% endif %}>
+                                Mode test (pédagogique)
+                            </option>
+                            <option value="false" {% if election and not election.is_test_mode %}selected{% endif %}>
+                                Mode réel (strict)
+                            </option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" 
+                               name="auto_approve_candidates"
+                               id="autoApproveCandidates"
+                               {% if election and election.auto_approve_candidates %}checked{% endif %}>
+                        <label class="form-check-label fw-semibold" for="autoApproveCandidates">
+                            Approuver automatiquement les candidats éligibles
+                        </label>
+                        <small class="text-muted d-block">
+                            Si désactivé, chaque candidat devra être approuvé manuellement.
+                        </small>
+                    </div>
+                </div>
+                
+                <!-- Validation -->
+                <div class="alert alert-warning mb-4">
+                    <i class="ri-alert-line me-2"></i>
+                    <strong>Validation des dates :</strong> 
+                    Vérifiez que les dates suivent l'ordre chronologique correct :<br>
+                    Inscriptions → Vote → Résultats
+                </div>
+                
+                <div class="text-end">
+                    <button type="button" class="btn btn-secondary me-2" id="validateDatesBtn">
+                        <i class="ri-check-double-line me-2"></i>
+                        Valider les dates
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ri-save-line me-2"></i>
+                        Enregistrer les paramètres
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Zone de sécurité -->
+    <div class="danger-zone mb-4">
+        <h4 class="fw-bold text-danger mb-4">
+            <i class="ri-error-warning-line me-2"></i>
+            Zone de sécurité
+        </h4>
+        
+        <div class="row g-4">
+            <div class="col-md-6">
+                <div class="card border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="ri-restart-line me-2"></i>
+                            Réinitialiser l'élection
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Réinitialise tous les votes et statistiques. Conserve les utilisateurs et candidats.
+                        </p>
+                        <button class="btn btn-outline-danger w-100" id="resetElectionBtn">
+                            <i class="ri-restart-line me-2"></i>
+                            Réinitialiser l'élection
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="card border-danger">
+                    <div class="card-header bg-danger text-white">
+                        <h5 class="mb-0">
+                            <i class="ri-delete-bin-line me-2"></i>
+                            Effacer toutes les données
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="text-muted mb-3">
+                            Supprime toutes les données : votes, candidats, électeurs. Action irréversible.
+                        </p>
+                        <button class="btn btn-outline-danger w-100" id="clearAllDataBtn">
+                            <i class="ri-delete-bin-line me-2"></i>
+                            Tout effacer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Journal d'audit -->
+    <div class="card border-0 shadow-sm">
+        <div class="card-header bg-white">
+            <h4 class="mb-0 fw-bold">
+                <i class="ri-history-line me-2 text-secondary"></i>
+                Journal des modifications
+            </h4>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Action</th>
+                            <th>Utilisateur</th>
+                            <th>Détails</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if audit_logs %}
+                            {% for log in audit_logs[:5] %}
+                            <tr>
+                                <td class="small">{{ log.created_at|datetime_format }}</td>
+                                <td>
+                                    <span class="badge bg-info">{{ log.action }}</span>
+                                </td>
+                                <td>
+                                    <i class="ri-user-line me-1"></i>
+                                    {{ log.user.email if log.user else 'Système' }}
+                                </td>
+                                <td class="small">{{ log.details|truncate(50) }}</td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4" class="text-center py-3 text-muted">
+                                    <i class="ri-inbox-line fs-1 mb-2 d-block"></i>
+                                    Aucune modification enregistrée
+                                </td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            
+            {% if audit_logs and audit_logs|length > 5 %}
+            <div class="text-center mt-3">
+                <a href="#" class="btn btn-outline-secondary btn-sm">
+                    Voir tout le journal
+                    <i class="ri-arrow-right-line ms-1"></i>
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de validation des dates -->
+<div class="modal fade" id="validateDatesModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title fw-bold">
+                    <i class="ri-check-double-line me-2"></i>
+                    Validation des dates
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="validationResults">
+                    <!-- Rempli par JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmation des actions -->
+<div class="modal fade" id="confirmationModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title fw-bold" id="confirmationModalTitle"></h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="confirmationModalBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
+                <button type="button" class="btn btn-danger" id="confirmActionBtn">Confirmer</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Timer de l'élection
+    function updateElectionTimer() {
+        const timerElement = document.getElementById('electionTimer');
+        if (!timerElement) return;
+        
+        const currentText = timerElement.textContent.trim();
+        const parts = currentText.split(' ');
+        
+        if (parts.length === 3 && parts[0].endsWith('j')) {
+            let days = parseInt(parts[0]);
+            let hours = parseInt(parts[1]);
+            let minutes = parseInt(parts[2]);
+            
+            // Décrémenter le timer
+            minutes--;
+            if (minutes < 0) {
+                minutes = 59;
+                hours--;
+                if (hours < 0) {
+                    hours = 23;
+                    days--;
+                }
+            }
+            
+            // Mettre à jour l'affichage
+            timerElement.textContent = `${days}j ${hours}h ${minutes}min`;
+            
+            // Changer la couleur si temps restant faible
+            if (days === 0 && hours < 24) {
+                timerElement.classList.add('text-danger');
+                timerElement.classList.remove('text-warning');
+            } else if (days === 0) {
+                timerElement.classList.add('text-warning');
+                timerElement.classList.remove('text-danger');
+            }
+        }
+    }
+    
+    // Mettre à jour le timer toutes les minutes
+    setInterval(updateElectionTimer, 60000);
+    
+    // Formulaire de configuration
+    const electionSettingsForm = document.getElementById('electionSettingsForm');
+    if (electionSettingsForm) {
+        electionSettingsForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            saveElectionSettings();
+        });
+    }
+    
+    function saveElectionSettings() {
+        const formData = new FormData(electionSettingsForm);
+        
+        // Validation
+        const registrationStart = new Date(formData.get('registration_start'));
+        const registrationEnd = new Date(formData.get('registration_end'));
+        const votingStart = new Date(formData.get('voting_start'));
+        const votingEnd = new Date(formData.get('voting_end'));
+        
+        if (registrationStart >= registrationEnd) {
+            showToast('La fermeture des inscriptions doit être après l\'ouverture', 'error');
+            return;
+        }
+        
+        if (votingStart >= votingEnd) {
+            showToast('La fermeture du vote doit être après l\'ouverture', 'error');
+            return;
+        }
+        
+        if (registrationEnd >= votingStart) {
+            showToast('Le vote doit commencer après la fermeture des inscriptions', 'error');
+            return;
+        }
+        
+        // Afficher l'indicateur de chargement
+        const submitBtn = electionSettingsForm.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = `
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                Enregistrement...
+            `;
+        }
+        
+        // Simuler l'enregistrement
+        setTimeout(() => {
+            showToast('Paramètres enregistrés avec succès', 'success');
+            
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = `
+                    <i class="ri-save-line me-2"></i>
+                    Enregistrer les paramètres
+                `;
+            }
+            
+            // Recharger la page après 1 seconde
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        }, 2000);
+    }
+    
+    // Validation des dates
+    const validateDatesBtn = document.getElementById('validateDatesBtn');
+    if (validateDatesBtn) {
+        validateDatesBtn.addEventListener('click', function() {
+            validateDates();
+        });
+    }
+    
+    function validateDates() {
+        const registrationStart = new Date(document.querySelector('[name="registration_start"]').value);
+        const registrationEnd = new Date(document.querySelector('[name="registration_end"]').value);
+        const votingStart = new Date(document.querySelector('[name="voting_start"]').value);
+        const votingEnd = new Date(document.querySelector('[name="voting_end"]').value);
+        
+        const now = new Date();
+        let validationResults = '';
+        let allValid = true;
+        
+        // Validation 1: Dates dans le futur
+        if (registrationStart < now) {
+            validationResults += `
+                <div class="alert alert-warning">
+                    <i class="ri-alert-line me-2"></i>
+                    <strong>Ouverture des inscriptions :</strong> Doit être dans le futur
+                </div>
+            `;
+            allValid = false;
+        }
+        
+        // Validation 2: Chronologie des inscriptions
+        if (registrationStart >= registrationEnd) {
+            validationResults += `
+                <div class="alert alert-danger">
+                    <i class="ri-close-circle-line me-2"></i>
+                    <strong>Inscriptions :</strong> La fermeture doit être après l'ouverture
+                </div>
+            `;
+            allValid = false;
+        }
+        
+        // Validation 3: Chronologie du vote
+        if (votingStart >= votingEnd) {
+            validationResults += `
+                <div class="alert alert-danger">
+                    <i class="ri-close-circle-line me-2"></i>
+                    <strong>Vote :</strong> La fermeture doit être après l'ouverture
+                </div>
+            `;
+            allValid = false;
+        }
+        
+        // Validation 4: Période entre inscriptions et vote
+        if (registrationEnd >= votingStart) {
+            validationResults += `
+                <div class="alert alert-danger">
+                    <i class="ri-close-circle-line me-2"></i>
+                    <strong>Transition :</strong> Le vote doit commencer après la fermeture des inscriptions
+                </div>
+            `;
+            allValid = false;
+        }
+        
+        // Validation 5: Durée minimale des phases
+        const inscriptionDuration = (registrationEnd - registrationStart) / (1000 * 60 * 60 * 24);
+        const votingDuration = (votingEnd - votingStart) / (1000 * 60 * 60 * 24);
+        
+        if (inscriptionDuration < 1) {
+            validationResults += `
+                <div class="alert alert-warning">
+                    <i class="ri-alert-line me-2"></i>
+                    <strong>Inscriptions :</strong> Durée minimale recommandée : 7 jours
+                </div>
+            `;
+        }
+        
+        if (votingDuration < 1) {
+            validationResults += `
+                <div class="alert alert-warning">
+                    <i class="ri-alert-line me-2"></i>
+                    <strong>Vote :</strong> Durée minimale recommandée : 3 jours
+                </div>
+            `;
+        }
+        
+        // Message de succès
+        if (allValid) {
+            validationResults += `
+                <div class="alert alert-success">
+                    <i class="ri-checkbox-circle-line me-2"></i>
+                    <strong>Validation réussie !</strong> Toutes les dates sont correctement configurées.
+                </div>
+            `;
+        } else {
+            validationResults += `
+                <div class="alert alert-info mt-3">
+                    <i class="ri-information-line me-2"></i>
+                    Corrigez les erreurs avant d'enregistrer les paramètres.
+                </div>
+            `;
+        }
+        
+        document.getElementById('validationResults').innerHTML = validationResults;
+        const modal = new bootstrap.Modal(document.getElementById('validateDatesModal'));
+        modal.show();
+    }
+    
+    // Actions rapides
+    document.getElementById('openRegistrationBtn')?.addEventListener('click', function() {
+        showConfirmation(
+            'Ouvrir les inscriptions',
+            'Voulez-vous ouvrir la phase d\'inscription ? Les électeurs et candidats pourront s\'inscrire.',
+            'openRegistration'
+        );
+    });
+    
+    document.getElementById('closeRegistrationBtn')?.addEventListener('click', function() {
+        showConfirmation(
+            'Fermer les inscriptions',
+            'Voulez-vous fermer la phase d\'inscription ? Aucune nouvelle inscription ne sera possible.',
+            'closeRegistration'
+        );
+    });
+    
+    document.getElementById('openVotingBtn')?.addEventListener('click', function() {
+        showConfirmation(
+            'Ouvrir le vote',
+            'Voulez-vous ouvrir la phase de vote ? Les électeurs éligibles pourront voter.',
+            'openVoting'
+        );
+    });
+    
+    document.getElementById('closeVotingBtn')?.addEventListener('click', function() {
+        showConfirmation(
+            'Fermer le vote',
+            'Voulez-vous fermer la phase de vote ? Aucun vote supplémentaire ne sera accepté.',
+            'closeVoting'
+        );
+    });
+    
+    document.getElementById('publishResultsBtn')?.addEventListener('click', function() {
+        showConfirmation(
+            'Publier les résultats',
+            'Voulez-vous publier les résultats officiels ? Ils seront visibles par tous les utilisateurs.',
+            'publishResults'
+        );
+    });
+    
+    document.getElementById('refreshStatusBtn')?.addEventListener('click', function() {
+        showToast('Statut actualisé', 'info');
+        setTimeout(() => {
+            window.location.reload();
+        }, 500);
+    });
+    
+    // Actions de sécurité
+    document.getElementById('resetElectionBtn')?.addEventListener('click', function() {
+        showConfirmation(
+            'Réinitialiser l\'élection',
+            'ATTENTION : Cette action va réinitialiser tous les votes et statistiques. Les utilisateurs et candidats seront conservés. Cette action est irréversible.',
+            'resetElection',
+            'warning'
+        );
+    });
+    
+    document.getElementById('clearAllDataBtn')?.addEventListener('click', function() {
+        showConfirmation(
+            'Effacer toutes les données',
+            'ATTENTION : Cette action va supprimer TOUTES les données (votes, candidats, électeurs). Cette action est définitive et irréversible.',
+            'clearAllData',
+            'danger'
+        );
+    });
+    
+    function showConfirmation(title, message, action, type = 'warning') {
+        const modalTitle = document.getElementById('confirmationModalTitle');
+        const modalBody = document.getElementById('confirmationModalBody');
+        const confirmBtn = document.getElementById('confirmActionBtn');
+        
+        if (modalTitle && modalBody && confirmBtn) {
+            modalTitle.textContent = title;
+            modalBody.innerHTML = `
+                <div class="alert alert-${type}">
+                    <i class="ri-alert-line me-2"></i>
+                    ${message}
+                </div>
+                <div class="text-center">
+                    <i class="ri-question-line display-1 text-${type} mb-3"></i>
+                    <p class="fw-bold">Confirmez-vous cette action ?</p>
+                </div>
+            `;
+            
+            // Configurer le bouton de confirmation
+            confirmBtn.onclick = function() {
+                executeAction(action);
+                const modal = bootstrap.Modal.getInstance(document.getElementById('confirmationModal'));
+                modal.hide();
+            };
+            
+            const modal = new bootstrap.Modal(document.getElementById('confirmationModal'));
+            modal.show();
+        }
+    }
+    
+    function executeAction(action) {
+        let message = '';
+        let icon = 'success';
+        
+        switch(action) {
+            case 'openRegistration':
+                message = 'Inscriptions ouvertes avec succès';
+                break;
+            case 'closeRegistration':
+                message = 'Inscriptions fermées avec succès';
+                break;
+            case 'openVoting':
+                message = 'Vote ouvert avec succès';
+                break;
+            case 'closeVoting':
+                message = 'Vote fermé avec succès';
+                break;
+            case 'publishResults':
+                message = 'Résultats publiés avec succès';
+                break;
+            case 'resetElection':
+                message = 'Élection réinitialisée avec succès';
+                icon = 'warning';
+                break;
+            case 'clearAllData':
+                message = 'Toutes les données ont été effacées';
+                icon = 'error';
+                break;
+        }
+        
+        showToast(message, icon);
+        
+        // Recharger la page après 2 secondes
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
+    }
+    
+    // Sauvegarde automatique
+    let autoSaveTimeout;
+    const formInputs = document.querySelectorAll('#electionSettingsForm input, #electionSettingsForm select, #electionSettingsForm textarea');
+    
+    formInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            clearTimeout(autoSaveTimeout);
+            autoSaveTimeout = setTimeout(() => {
+                showToast('Sauvegarde automatique...', 'info', 2000);
+            }, 3000);
+        });
+    });
+    
+    // Prévisualisation des dates
+    const dateInputs = document.querySelectorAll('input[type="datetime-local"]');
+    dateInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            updateDatePreview();
+        });
+    });
+    
+    function updateDatePreview() {
+        const dates = {};
+        dateInputs.forEach(input => {
+            const name = input.name;
+            const value = input.value;
+            if (value) {
+                const date = new Date(value);
+                dates[name] = date.toLocaleDateString('fr-FR', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            }
+        });
+        
+        // Mettre à jour un élément de prévisualisation si nécessaire
+        const previewElement = document.getElementById('datesPreview');
+        if (previewElement) {
+            let previewHTML = '';
+            if (dates.registration_start && dates.registration_end) {
+                previewHTML += `<p><strong>Inscriptions :</strong> ${dates.registration_start} → ${dates.registration_end}</p>`;
+            }
+            if (dates.voting_start && dates.voting_end) {
+                previewHTML += `<p><strong>Vote :</strong> ${dates.voting_start} → ${dates.voting_end}</p>`;
+            }
+            previewElement.innerHTML = previewHTML;
+        }
+    }
+    
+    // Initialiser la prévisualisation
+    updateDatePreview();
+    
+    // Mise à jour en temps réel du statut
+    function checkElectionStatus() {
+        // Simuler une vérification périodique
+        fetch('/api/election/status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.status_changed) {
+                    showToast('Le statut de l\'élection a changé', 'info');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                }
+            })
+            .catch(error => console.error('Erreur:', error));
+    }
+    
+    // Vérifier toutes les minutes
+    setInterval(checkElectionStatus, 60000);
+});
+</script>
+{% endblock %}
