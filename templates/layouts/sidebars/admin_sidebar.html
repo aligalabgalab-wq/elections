@@ -1,0 +1,37 @@
+<div class="app-sidebar__spacer"></div>
+<div class="app-sidebar__section">Espace Admin</div>
+<a class="app-nav-link {% if request.endpoint in ['admin_dashboard'] %}is-active{% endif %}"
+    href="{{ url_for('admin_dashboard') }}">
+    <i class="ri-dashboard-2-line"></i>
+    <span>Tableau de bord</span>
+</a>
+<a class="app-nav-link {% if request.endpoint in ['admin_users'] %}is-active{% endif %}"
+    href="{{ url_for('admin_users') }}">
+    <i class="ri-user-settings-line"></i>
+    <span>Gérer les électeurs</span>
+</a>
+<a class="app-nav-link {% if request.endpoint in ['admin_candidates'] %}is-active{% endif %}"
+    href="{{ url_for('admin_candidates') }}">
+    <i class="ri-user-star-line"></i>
+    <span>Gérer les candidats</span>
+</a>
+<a class="app-nav-link {% if request.endpoint in ['admin_candidates'] %}is-active{% endif %}"
+    href="{{ url_for('admin_candidates') }}">
+    <i class="ri-verified-badge-line"></i>
+    <span>Validation candidats</span>
+</a>
+<a class="app-nav-link {% if request.endpoint in ['admin_election'] %}is-active{% endif %}"
+    href="{{ url_for('admin_election') }}">
+    <i class="ri-settings-3-line"></i>
+    <span>Paramètres élection</span>
+</a>
+<a class="app-nav-link {% if request.endpoint in ['admin_results'] %}is-active{% endif %}"
+    href="{{ url_for('admin_results') }}">
+    <i class="ri-bar-chart-box-line"></i>
+    <span>Résultats</span>
+</a>
+<a class="app-nav-link {% if request.endpoint in ['admin_announcements'] %}is-active{% endif %}"
+    href="{{ url_for('admin_announcements') }}">
+    <i class="ri-notification-3-line"></i>
+    <span>Annonces</span>
+</a>

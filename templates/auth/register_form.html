@@ -1,0 +1,32 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Inscription{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card shadow border-0">
+                <div class="card-body p-5 text-center">
+                    {% if user_type == 'voter' %}
+                    <h2 class="fw-bold mb-3">Inscription Électeur</h2>
+                    <p class="text-muted mb-4">Le formulaire électeur complet s'ouvre à l'étape suivante.</p>
+                    <a href="{{ url_for('register_voter') }}" class="btn btn-warning">Continuer</a>
+                    {% elif user_type == 'candidate' %}
+                    <h2 class="fw-bold mb-3">Inscription Candidat</h2>
+                    <p class="text-muted mb-4">Le formulaire de candidature complet s'ouvre à l'étape suivante.</p>
+                    <a href="{{ url_for('register_candidate') }}" class="btn btn-success">Continuer</a>
+                    {% elif user_type == 'admin' %}
+                    <h2 class="fw-bold mb-3">Inscription Administrateur</h2>
+                    <p class="text-muted mb-4">La création d'un administrateur est autorisée une seule fois.</p>
+                    <a href="{{ url_for('register_admin') }}" class="btn btn-danger">Créer l'administrateur</a>
+                    {% else %}
+                    <h2 class="fw-bold mb-3">Type d'inscription invalide</h2>
+                    <a href="{{ url_for('register') }}" class="btn btn-primary">Retour au choix</a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -125,6 +125,7 @@
 
 {% block content %}
 <div class="container-fluid">
+    {% set phase = election.phase if election else 'preparation' %}
     <!-- En-tête -->
     <div class="election-settings-header">
         <div class="row align-items-center">
@@ -140,13 +141,7 @@
             <div class="col-md-4 text-center text-md-end">
                 <div class="badge bg-white text-danger fs-5 px-3 py-2">
                     <i class="ri-time-line me-2"></i>
-                    {% if election and election.is_voting_open %}
-                        Vote en cours
-                    {% elif election and election.is_registration_open %}
-                        Inscriptions ouvertes
-                    {% else %}
-                        Configuration
-                    {% endif %}
+                    {{ election.phase_label if election else "Préparation des élections" }}
                 </div>
             </div>
         </div>
@@ -166,45 +161,41 @@
                     <div class="row align-items-center">
                         <div class="col-md-6">
                             <div class="phase-card 
-                                {% if election and election.is_registration_open %}registration
-                                {% elif election and election.is_voting_open %}voting
-                                {% elif election and election.status == 'closed' %}results
+                                {% if phase == 'candidatures_ouvertes' %}registration
+                                {% elif phase == 'campagne_electorale' %}voting
+                                {% elif phase in ['depouillement', 'proclamation_vainqueur'] %}results
                                 {% else %}completed{% endif %}">
                                 
                                 <div class="phase-status status-active mb-3">
                                     <i class="ri-play-circle-line me-2"></i>
-                                    {% if election and election.is_registration_open %}
-                                        PHASE D'INSCRIPTION
-                                    {% elif election and election.is_voting_open %}
-                                        PHASE DE VOTE
-                                    {% elif election and election.status == 'closed' %}
-                                        PUBLICATION DES RÉSULTATS
-                                    {% else %}
-                                        CONFIGURATION
-                                    {% endif %}
+                                    {{ election.phase_label|upper if election else "PRÉPARATION DES ÉLECTIONS" }}
                                 </div>
                                 
                                 <h3 class="fw-bold mb-2">
-                                    {% if election and election.is_registration_open %}
-                                        Inscriptions des électeurs et candidats
-                                    {% elif election and election.is_voting_open %}
-                                        Vote électronique en cours
-                                    {% elif election and election.status == 'closed' %}
-                                        Résultats et analyse
+                                    {% if phase == 'preparation' %}
+                                        Préparation des élections
+                                    {% elif phase == 'candidatures_ouvertes' %}
+                                        Candidatures ouvertes
+                                    {% elif phase == 'campagne_electorale' %}
+                                        Campagne électorale
+                                    {% elif phase == 'depouillement' %}
+                                        Dépouillement des votes
                                     {% else %}
-                                        Configuration initiale
+                                        Proclamation du vainqueur
                                     {% endif %}
                                 </h3>
                                 
                                 <p class="text-muted mb-0">
-                                    {% if election and election.is_registration_open %}
-                                        Les électeurs et candidats peuvent s'inscrire jusqu'à la fermeture des inscriptions.
-                                    {% elif election and election.is_voting_open %}
-                                        Les électeurs éligibles peuvent voter pour leurs candidats préférés.
-                                    {% elif election and election.status == 'closed' %}
-                                        Les résultats sont disponibles et peuvent être analysés.
+                                    {% if phase == 'preparation' %}
+                                        État initial. Transition déclenchée par le décret officiel de lancement.
+                                    {% elif phase == 'candidatures_ouvertes' %}
+                                        Dépôt des candidatures en cours.
+                                    {% elif phase == 'campagne_electorale' %}
+                                        Débats et campagne avant le jour du vote.
+                                    {% elif phase == 'depouillement' %}
+                                        Comptage et consolidation des votes.
                                     {% else %}
-                                        Configurez les paramètres avant d'ouvrir l'élection.
+                                        Résultats officiels publiés et vainqueur proclamé.
                                     {% endif %}
                                 </p>
                             </div>
@@ -212,16 +203,16 @@
                         
                         <div class="col-md-6">
                             <div class="countdown-timer" id="electionTimer">
-                                {% if election and election.is_registration_open and election.registration_end %}
+                                {% if election and phase == 'candidatures_ouvertes' and election.registration_end %}
                                     <!-- Calculer le temps restant pour les inscriptions -->
                                     {% set diff = election.registration_end - now %}
                                     {% set days = diff.days %}
                                     {% set hours = diff.seconds // 3600 %}
                                     {% set minutes = (diff.seconds % 3600) // 60 %}
                                     {{ days }}j {{ hours }}h {{ minutes }}min
-                                {% elif election and election.is_voting_open and election.voting_end %}
+                                {% elif election and phase == 'campagne_electorale' and election.voting_start %}
                                     <!-- Calculer le temps restant pour le vote -->
-                                    {% set diff = election.voting_end - now %}
+                                    {% set diff = election.voting_start - now %}
                                     {% set days = diff.days %}
                                     {% set hours = diff.seconds // 3600 %}
                                     {% set minutes = (diff.seconds % 3600) // 60 %}
@@ -233,10 +224,10 @@
                             
                             <div class="text-center mt-3">
                                 <small class="text-muted">
-                                    {% if election and election.is_registration_open %}
-                                        Temps restant avant la fermeture des inscriptions
-                                    {% elif election and election.is_voting_open %}
-                                        Temps restant avant la fermeture du vote
+                                    {% if election and phase == 'candidatures_ouvertes' %}
+                                        Temps restant avant la fin des candidatures
+                                    {% elif election and phase == 'campagne_electorale' %}
+                                        Temps restant avant le jour du vote
                                     {% else %}
                                         Élection non démarrée
                                     {% endif %}
@@ -258,38 +249,31 @@
                 </div>
                 <div class="card-body">
                     <div class="d-grid gap-3">
-                        {% if election and election.status == 'planned' %}
+                        {% if election and phase == 'preparation' %}
                         <button class="btn btn-success" id="openRegistrationBtn">
                             <i class="ri-door-open-line me-2"></i>
-                            Ouvrir les inscriptions
+                            Décret officiel (ouvrir candidatures)
                         </button>
                         {% endif %}
                         
-                        {% if election and election.is_registration_open %}
+                        {% if election and phase == 'candidatures_ouvertes' %}
                         <button class="btn btn-warning" id="closeRegistrationBtn">
                             <i class="ri-door-closed-line me-2"></i>
-                            Fermer les inscriptions
+                            Fin du dépôt des candidatures
                         </button>
                         {% endif %}
                         
-                        {% if election and election.status == 'registration_closed' %}
+                        {% if election and phase == 'campagne_electorale' %}
                         <button class="btn btn-success" id="openVotingBtn">
                             <i class="bi bi-check2-square me-2"></i>
-                            Ouvrir le vote
+                            Jour du vote → Dépouillement
                         </button>
                         {% endif %}
                         
-                        {% if election and election.is_voting_open %}
-                        <button class="btn btn-danger" id="closeVotingBtn">
-                            <i class="ri-stop-circle-line me-2"></i>
-                            Fermer le vote
-                        </button>
-                        {% endif %}
-                        
-                        {% if election and election.status == 'closed' %}
+                        {% if election and phase == 'depouillement' %}
                         <button class="btn btn-primary" id="publishResultsBtn">
                             <i class="ri-bar-chart-line me-2"></i>
-                            Publier les résultats
+                            Résultats officiels → Proclamation
                         </button>
                         {% endif %}
                         
@@ -665,6 +649,29 @@ document.addEventListener('DOMContentLoaded', function() {
             saveElectionSettings();
         });
     }
+
+    async function postForm(url, payload) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams(payload)
+        });
+
+        let data = {};
+        try {
+            data = await response.json();
+        } catch (e) {
+            data = { success: false, message: 'Réponse serveur invalide' };
+        }
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || `Erreur HTTP ${response.status}`);
+        }
+        return data;
+    }
     
     function saveElectionSettings() {
         const formData = new FormData(electionSettingsForm);
@@ -700,23 +707,24 @@ document.addEventListener('DOMContentLoaded', function() {
             `;
         }
         
-        // Simuler l'enregistrement
-        setTimeout(() => {
-            showToast('Paramètres enregistrés avec succès', 'success');
-            
-            if (submitBtn) {
-                submitBtn.disabled = false;
-                submitBtn.innerHTML = `
-                    <i class="ri-save-line me-2"></i>
-                    Enregistrer les paramètres
-                `;
-            }
-            
-            // Recharger la page après 1 seconde
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        }, 2000);
+        const payload = Object.fromEntries(formData.entries());
+        postForm('/admin/election/save', payload)
+            .then((data) => {
+                showToast(data.message || 'Paramètres enregistrés avec succès', 'success');
+                setTimeout(() => window.location.reload(), 500);
+            })
+            .catch((error) => {
+                showToast(error.message || "Échec de l'enregistrement", 'danger');
+            })
+            .finally(() => {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `
+                        <i class="ri-save-line me-2"></i>
+                        Enregistrer les paramètres
+                    `;
+                }
+            });
     }
     
     // Validation des dates
@@ -828,24 +836,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Actions rapides
     document.getElementById('openRegistrationBtn')?.addEventListener('click', function() {
         showConfirmation(
-            'Ouvrir les inscriptions',
-            'Voulez-vous ouvrir la phase d\'inscription ? Les électeurs et candidats pourront s\'inscrire.',
+            'Décret officiel',
+            'Passer de Préparation à Candidatures ouvertes ?',
             'openRegistration'
         );
     });
     
     document.getElementById('closeRegistrationBtn')?.addEventListener('click', function() {
         showConfirmation(
-            'Fermer les inscriptions',
-            'Voulez-vous fermer la phase d\'inscription ? Aucune nouvelle inscription ne sera possible.',
+            'Fin du dépôt',
+            'Passer de Candidatures ouvertes à Campagne électorale ?',
             'closeRegistration'
         );
     });
     
     document.getElementById('openVotingBtn')?.addEventListener('click', function() {
         showConfirmation(
-            'Ouvrir le vote',
-            'Voulez-vous ouvrir la phase de vote ? Les électeurs éligibles pourront voter.',
+            'Jour du vote',
+            'Passer de Campagne électorale à Dépouillement ?',
             'openVoting'
         );
     });
@@ -860,8 +868,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     document.getElementById('publishResultsBtn')?.addEventListener('click', function() {
         showConfirmation(
-            'Publier les résultats',
-            'Voulez-vous publier les résultats officiels ? Ils seront visibles par tous les utilisateurs.',
+            'Résultats officiels',
+            'Passer de Dépouillement à Proclamation du vainqueur ?',
             'publishResults'
         );
     });
@@ -923,41 +931,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function executeAction(action) {
-        let message = '';
-        let icon = 'success';
-        
-        switch(action) {
-            case 'openRegistration':
-                message = 'Inscriptions ouvertes avec succès';
-                break;
-            case 'closeRegistration':
-                message = 'Inscriptions fermées avec succès';
-                break;
-            case 'openVoting':
-                message = 'Vote ouvert avec succès';
-                break;
-            case 'closeVoting':
-                message = 'Vote fermé avec succès';
-                break;
-            case 'publishResults':
-                message = 'Résultats publiés avec succès';
-                break;
-            case 'resetElection':
-                message = 'Élection réinitialisée avec succès';
-                icon = 'warning';
-                break;
-            case 'clearAllData':
-                message = 'Toutes les données ont été effacées';
-                icon = 'error';
-                break;
+        const supported = ['openRegistration', 'closeRegistration', 'openVoting', 'closeVoting', 'publishResults'];
+        if (!supported.includes(action)) {
+            showToast("Action non implémentée dans ce mode", "warning");
+            return;
         }
-        
-        showToast(message, icon);
-        
-        // Recharger la page après 2 secondes
-        setTimeout(() => {
-            window.location.reload();
-        }, 2000);
+
+        postForm('/admin/election/transition', { action })
+            .then((data) => {
+                showToast(data.message || 'Transition appliquée', 'success');
+                setTimeout(() => window.location.reload(), 500);
+            })
+            .catch((error) => {
+                showToast(error.message || 'Transition refusée', 'danger');
+            });
     }
     
     // Sauvegarde automatique

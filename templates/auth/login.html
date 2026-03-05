@@ -91,17 +91,10 @@
                     <div class="text-center">
                         <p class="text-muted mb-3">Vous n'avez pas de compte ?</p>
                         
-                        <div class="d-grid gap-3">
-                            <a href="{{ url_for('register_voter') }}" 
-                               class="btn btn-outline-primary btn-lg py-3">
+                        <div class="d-grid">
+                            <a href="{{ url_for('register') }}" class="btn btn-outline-primary btn-lg py-3">
                                 <i class="ri-user-add-line me-2"></i>
-                                M'inscrire comme Électeur
-                            </a>
-                            
-                            <a href="{{ url_for('register_candidate') }}" 
-                               class="btn btn-outline-success btn-lg py-3">
-                                <i class="ri-user-star-line me-2"></i>
-                                M'inscrire comme Candidat
+                                Choisir un type de compte
                             </a>
                         </div>
                     </div>

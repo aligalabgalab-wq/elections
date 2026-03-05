@@ -1,0 +1,68 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Créer un administrateur{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-md-6 col-lg-5">
+            <div class="card shadow-sm">
+                <div class="card-body p-5">
+                    <div class="text-center mb-4">
+                        <h2 class="fw-bold">Créer un administrateur</h2>
+                        <p class="text-muted">Configuration initiale du compte administrateur</p>
+                    </div>
+
+                    <form method="POST" action="{{ url_for('register_admin') }}">
+                        <div class="mb-3">
+                            <label for="email" class="form-label">Email *</label>
+                            <input
+                                type="email"
+                                class="form-control"
+                                id="email"
+                                name="email"
+                                required
+                                value="{{ request.form.email if request.form and request.form.email else '' }}"
+                            >
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="password" class="form-label">Mot de passe *</label>
+                            <input type="password" class="form-control" id="password" name="password" minlength="8" required>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="confirm_password" class="form-label">Confirmer le mot de passe *</label>
+                            <input type="password" class="form-control" id="confirm_password" name="confirm_password" required>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="submit" class="btn btn-danger">Créer l'administrateur</button>
+                            <a href="{{ url_for('register') }}" class="btn btn-outline-secondary">Retour</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+    const form = document.querySelector('form');
+    if (!form) return;
+    const pwd = form.querySelector('#password');
+    const confirm = form.querySelector('#confirm_password');
+    if (pwd && confirm) {
+        form.addEventListener('submit', function (e) {
+            if (pwd.value !== confirm.value) {
+                e.preventDefault();
+                alert('Les mots de passe ne correspondent pas');
+            }
+        });
+    }
+})();
+</script>
+{% endblock %}

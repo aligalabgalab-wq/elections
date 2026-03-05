@@ -21,7 +21,7 @@ import ssl
 from email.message import EmailMessage
 from email.utils import formataddr
 from markupsafe import Markup, escape
-from sqlalchemy import inspect, text
+from sqlalchemy import inspect, text, or_
 from config import Config
 
 try:
@@ -254,6 +254,7 @@ class User(UserMixin, db.Model):
     # Relations
     voter_profile = db.relationship('Voter', backref='user', uselist=False, cascade='all, delete-orphan')
     candidate_profile = db.relationship('Candidate', backref='user', uselist=False, cascade='all, delete-orphan')
+    announcements = db.relationship('Announcement', backref='author', lazy='dynamic', foreign_keys='Announcement.author_id')
     
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)
@@ -589,6 +590,26 @@ class CandidateDetails(db.Model):
 
 class Election(db.Model):
     __tablename__ = 'elections'
+    PHASE_PREPARATION = "preparation"
+    PHASE_CANDIDATURES = "candidatures_ouvertes"
+    PHASE_CAMPAGNE = "campagne_electorale"
+    PHASE_DEPOUILLEMENT = "depouillement"
+    PHASE_PROCLAMATION = "proclamation_vainqueur"
+    PHASE_FLOW = [
+        PHASE_PREPARATION,
+        PHASE_CANDIDATURES,
+        PHASE_CAMPAGNE,
+        PHASE_DEPOUILLEMENT,
+        PHASE_PROCLAMATION,
+    ]
+    LEGACY_STATUS_MAP = {
+        "planned": PHASE_PREPARATION,
+        "registration_open": PHASE_CANDIDATURES,
+        "registration_closed": PHASE_CAMPAGNE,
+        "open": PHASE_CAMPAGNE,
+        "closed": PHASE_DEPOUILLEMENT,
+        "results_published": PHASE_PROCLAMATION,
+    }
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, default="Élection Nationale")
@@ -655,6 +676,74 @@ class Election(db.Model):
     @auto_approve_candidates.setter
     def auto_approve_candidates(self, value):
         self._ensure_settings().auto_approve_candidates = bool(value)
+
+    @property
+    def phase(self):
+        raw = (self.status or "").strip().lower()
+        normalized = self.LEGACY_STATUS_MAP.get(raw, raw)
+        if normalized in self.PHASE_FLOW:
+            return normalized
+        return self.PHASE_PREPARATION
+
+    @phase.setter
+    def phase(self, value):
+        target = (value or "").strip().lower()
+        if target not in self.PHASE_FLOW:
+            raise ValueError("Phase électorale invalide")
+        self.status = target
+
+    @property
+    def phase_label(self):
+        labels = {
+            self.PHASE_PREPARATION: "Préparation des élections",
+            self.PHASE_CANDIDATURES: "Candidatures ouvertes",
+            self.PHASE_CAMPAGNE: "Campagne électorale",
+            self.PHASE_DEPOUILLEMENT: "Dépouillement",
+            self.PHASE_PROCLAMATION: "Proclamation du vainqueur",
+        }
+        return labels.get(self.phase, "Préparation des élections")
+
+    def can_transition(self, action):
+        current = self.phase
+        transitions = {
+            "openRegistration": (self.PHASE_PREPARATION, self.PHASE_CANDIDATURES),
+            "closeRegistration": (self.PHASE_CANDIDATURES, self.PHASE_CAMPAGNE),
+            "openVoting": (self.PHASE_CAMPAGNE, self.PHASE_DEPOUILLEMENT),
+            "closeVoting": (self.PHASE_CAMPAGNE, self.PHASE_DEPOUILLEMENT),
+            "publishResults": (self.PHASE_DEPOUILLEMENT, self.PHASE_PROCLAMATION),
+        }
+        expected = transitions.get(action)
+        if not expected:
+            return False, "Action inconnue"
+        if current != expected[0]:
+            return False, f"Transition impossible depuis l'état « {self.phase_label} »"
+        return True, None
+
+    def apply_transition(self, action):
+        transitions = {
+            "openRegistration": self.PHASE_CANDIDATURES,
+            "closeRegistration": self.PHASE_CAMPAGNE,
+            "openVoting": self.PHASE_DEPOUILLEMENT,
+            "closeVoting": self.PHASE_DEPOUILLEMENT,
+            "publishResults": self.PHASE_PROCLAMATION,
+        }
+        ok, reason = self.can_transition(action)
+        if not ok:
+            raise ValueError(reason or "Transition refusée")
+
+        now = datetime.utcnow()
+        target = transitions[action]
+        self.phase = target
+
+        # Garder des dates cohérentes pour les propriétés existantes.
+        if action == "openRegistration":
+            self.registration_start = self.registration_start or now
+            self.registration_end = self.registration_end or (now + timedelta(days=7))
+        elif action == "closeRegistration":
+            self.registration_end = now
+        elif action in {"openVoting", "closeVoting"}:
+            self.voting_start = self.voting_start or now
+            self.voting_end = now
     
     @property
     def is_registration_open(self):
@@ -727,8 +816,11 @@ class Announcement(db.Model):
     content = db.Column(db.Text, nullable=False)
     author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     
+    audience = db.Column(db.String(20), default='all', nullable=False)
+    priority = db.Column(db.Integer, default=0, nullable=False)
     is_active = db.Column(db.Boolean, default=True)
     is_urgent = db.Column(db.Boolean, default=False)
+    expires_at = db.Column(db.DateTime, nullable=True)
     
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -765,34 +857,42 @@ class VoteLog(db.Model):
 def load_user(user_id):
     return User.query.get(int(user_id))
 
+def _ensure_announcements_schema():
+    """Ajoute les colonnes manquantes de `announcements` pour les bases existantes."""
+    inspector = inspect(db.engine)
+    if 'announcements' not in inspector.get_table_names():
+        return
+
+    existing = {c.get('name') for c in inspector.get_columns('announcements')}
+    dialect = (db.engine.dialect.name or "").lower()
+    datetime_type = "TIMESTAMP" if dialect == "postgresql" else "DATETIME"
+
+    statements = []
+    if 'audience' not in existing:
+        statements.append("ALTER TABLE announcements ADD COLUMN audience VARCHAR(20) NOT NULL DEFAULT 'all'")
+    if 'priority' not in existing:
+        statements.append("ALTER TABLE announcements ADD COLUMN priority INTEGER NOT NULL DEFAULT 0")
+    if 'expires_at' not in existing:
+        statements.append(f"ALTER TABLE announcements ADD COLUMN expires_at {datetime_type}")
+
+    if not statements:
+        return
+
+    for stmt in statements:
+        db.session.execute(text(stmt))
+    db.session.commit()
+
 def init_database():
     """Initialise la base de données en silence"""
     with app.app_context():
         try:
             db.create_all()
+            _ensure_announcements_schema()
             
-            # Créer admin si inexistant
-            admin_email = (app.config.get("ADMIN_EMAIL") or "admin@system.local").strip().lower()
-            admin_password = app.config.get("ADMIN_PASSWORD") or "changeme123"
-            existing_admin = User.query.filter_by(email=admin_email).first()
-
-            if not existing_admin:
-                admin = User(email=admin_email, role="admin", is_active=True)
-                admin.set_password(admin_password)
-                db.session.add(admin)
-                db.session.commit()
-                logger.info(f"Admin user created: {admin_email}")
-            else:
-                # S'assurer que le compte configuré reste admin/actif
-                changed = False
-                if existing_admin.role != "admin":
-                    existing_admin.role = "admin"
-                    changed = True
-                if not existing_admin.is_active:
-                    existing_admin.is_active = True
-                    changed = True
-                if changed:
-                    db.session.commit()
+            # NOTE: l'administration ne doit plus être configurée automatiquement
+            # via les variables d'environnement. Le premier compte admin est créé
+            # manuellement via la page d'inscription. Aucune logique supplémentaire
+            # n'est requise ici.
             
             # Créer élection par défaut
             if not Election.query.filter_by(year=2025).first():
@@ -804,7 +904,7 @@ def init_database():
                     registration_end=now + timedelta(days=60),
                     voting_start=now,
                     voting_end=now + timedelta(days=90),
-                    status='open'
+                    status=Election.PHASE_PREPARATION
                 )
                 db.session.add(election)
                 db.session.commit()
@@ -881,11 +981,16 @@ def inject_global_vars():
         election = Election.query.filter_by(year=2025).first()
     except Exception:
         election = None
+    try:
+        admin_exists = User.query.filter_by(role='admin').first() is not None
+    except Exception:
+        admin_exists = False
     return {
         'current_year': datetime.now().year,
         'election': election,
         'now': datetime.utcnow(),
-        'config': app.config
+        'config': app.config,
+        'admin_exists': admin_exists
     }
 
 @app.context_processor
@@ -1052,9 +1157,22 @@ def index():
         "participation_rate": round(election.participation_rate, 1) if election else 0.0,
     }
 
+    now_utc = datetime.utcnow()
+    announcements = (
+        Announcement.query.filter(
+            Announcement.is_active.is_(True),
+            or_(Announcement.audience == 'all', Announcement.audience.is_(None)),
+            or_(Announcement.expires_at.is_(None), Announcement.expires_at >= now_utc),
+        )
+        .order_by(Announcement.is_urgent.desc(), Announcement.created_at.desc())
+        .limit(8)
+        .all()
+    )
+
     return render_template(
         "visitor/index.html",
         candidates=candidates,
+        announcements=announcements,
         stats=stats,
         page_title="Accueil",
     )
@@ -1193,6 +1311,95 @@ def login():
             flash('Identifiants incorrects', 'danger')
     
     return render_template('auth/login.html', page_title="Connexion")
+
+@app.route('/register')
+def register():
+    # point d'entrée principal pour l'inscription : on montre directement
+    # les différentes options (électeur / candidat / administrateur si
+    # aucun admin n'existe encore) afin que l'utilisateur n'ait pas à
+    # remplir un champ de type de compte.
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    has_admin = User.query.filter_by(role='admin').first() is not None
+    return render_template(
+        'auth/register_choice.html',
+        admin_exists=has_admin,
+        page_title="Choisir le type d'inscription",
+    )
+
+@app.route('/register/form/<string:user_type>')
+def register_form(user_type):
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    normalized = (user_type or "").strip().lower()
+    has_admin = User.query.filter_by(role='admin').first() is not None
+    # si on tente d'aller sur la page d'administration alors qu'un admin existe déjà,
+    # on renvoie vers le choix principal (le formulaire n'est pas accessible).
+    if normalized == 'admin' and has_admin:
+        flash("Un administrateur existe déjà.", "warning")
+        return redirect(url_for('register'))
+    return render_template(
+        'auth/register_form.html',
+        user_type=normalized,
+        admin_exists=has_admin,
+        page_title="Inscription",
+    )
+
+@app.route('/register/<string:user_type>', methods=['GET', 'POST'])
+def register_with_type(user_type):
+    normalized = (user_type or "").strip().lower()
+    if normalized == "voter":
+        return register_voter()
+    if normalized == "candidate":
+        return register_candidate()
+    if normalized == "admin":
+        return register_admin()
+    flash("Type d'inscription invalide.", "danger")
+    return redirect(url_for("register"))
+
+@app.route('/register/admin', methods=['GET', 'POST'])
+def register_admin():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    has_admin = User.query.filter_by(role='admin').first() is not None
+    if has_admin:
+        flash("Un administrateur existe déjà. Cette création n'est autorisée qu'une seule fois.", "warning")
+        return redirect(url_for('register'))
+
+    if request.method == 'POST':
+        email = (request.form.get('email') or '').strip().lower()
+        password = request.form.get('password') or ''
+        confirm_password = request.form.get('confirm_password') or ''
+
+        if not email or not password or not confirm_password:
+            flash("Veuillez remplir tous les champs obligatoires.", "danger")
+            return render_template('auth/register_admin.html', page_title="Créer un administrateur")
+
+        if password != confirm_password:
+            flash('Les mots de passe ne correspondent pas.', 'danger')
+            return render_template('auth/register_admin.html', page_title="Créer un administrateur")
+
+        if len(password) < 8:
+            flash('Le mot de passe doit contenir au moins 8 caractères.', 'danger')
+            return render_template('auth/register_admin.html', page_title="Créer un administrateur")
+
+        if User.query.filter_by(email=email).first():
+            flash('Cet email est déjà utilisé.', 'danger')
+            return render_template('auth/register_admin.html', page_title="Créer un administrateur")
+
+        user = User(email=email, role='admin', is_active=True)
+        user.set_password(password)
+        db.session.add(user)
+        db.session.commit()
+
+        login_user(user)
+        user.last_login = datetime.utcnow()
+        db.session.commit()
+        flash("Compte administrateur créé avec succès.", "success")
+        return redirect(url_for('admin_dashboard'))
+
+    return render_template('auth/register_admin.html', page_title="Créer un administrateur")
 
 @app.route('/register/voter', methods=['GET', 'POST'])
 def register_voter():
@@ -1662,10 +1869,22 @@ def voter_results():
 def candidate_dashboard():
     candidate = Candidate.query.filter_by(user_id=current_user.id).first_or_404()
     election = Election.query.filter_by(year=2025).first()
+    now_utc = datetime.utcnow()
+    announcements = (
+        Announcement.query.filter(
+            Announcement.is_active.is_(True),
+            or_(Announcement.audience.in_(['all', 'candidates']), Announcement.audience.is_(None)),
+            or_(Announcement.expires_at.is_(None), Announcement.expires_at >= now_utc),
+        )
+        .order_by(Announcement.is_urgent.desc(), Announcement.created_at.desc())
+        .limit(8)
+        .all()
+    )
     
     return render_template('candidate/dashboardc.html',
                          candidate=candidate,
                          election=election,
+                         announcements=announcements,
                          page_title="Tableau de bord")
 
 @app.route('/candidate/profile')
@@ -2166,7 +2385,94 @@ def admin_election():
     election = Election.query.filter_by(year=2025).first()
     return render_template('admin/election_settings.html',
                          election=election,
+                         now=datetime.utcnow(),
                          page_title="Paramètres de l'élection")
+
+def _parse_datetime_local(value):
+    raw = (value or "").strip()
+    if not raw:
+        return None
+    for fmt in ('%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S'):
+        try:
+            return datetime.strptime(raw, fmt)
+        except Exception:
+            continue
+    return None
+
+@app.route('/admin/election/save', methods=['POST'])
+@admin_required
+def admin_election_save():
+    election = Election.query.filter_by(year=2025).first()
+    if not election:
+        election = Election(year=2025, status=Election.PHASE_PREPARATION)
+        db.session.add(election)
+
+    name = (request.form.get('name') or '').strip()
+    year_raw = (request.form.get('year') or '').strip()
+    if not name:
+        return jsonify(success=False, message="Le nom de l'élection est obligatoire"), 400
+
+    try:
+        year = int(year_raw or "2025")
+    except Exception:
+        return jsonify(success=False, message="Année invalide"), 400
+
+    registration_start = _parse_datetime_local(request.form.get('registration_start'))
+    registration_end = _parse_datetime_local(request.form.get('registration_end'))
+    voting_start = _parse_datetime_local(request.form.get('voting_start'))
+    voting_end = _parse_datetime_local(request.form.get('voting_end'))
+
+    if not all([registration_start, registration_end, voting_start, voting_end]):
+        return jsonify(success=False, message="Toutes les dates sont obligatoires"), 400
+    if registration_start >= registration_end:
+        return jsonify(success=False, message="La fermeture des candidatures doit être après l'ouverture"), 400
+    if voting_start >= voting_end:
+        return jsonify(success=False, message="La fermeture du vote doit être après l'ouverture"), 400
+    if registration_end >= voting_start:
+        return jsonify(success=False, message="Le vote doit commencer après la phase de candidature"), 400
+
+    election.name = name
+    election.year = year
+    election.description = request.form.get('description')
+    election.registration_start = registration_start
+    election.registration_end = registration_end
+    election.voting_start = voting_start
+    election.voting_end = voting_end
+    election.max_candidates = request.form.get('max_candidates') or 10
+    election.is_test_mode = (request.form.get('is_test_mode') == 'true')
+    election.auto_approve_candidates = bool(request.form.get('auto_approve_candidates'))
+
+    try:
+        db.session.commit()
+        return jsonify(success=True, message="Paramètres enregistrés avec succès")
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Erreur admin_election_save")
+        return jsonify(success=False, message=f"Impossible d'enregistrer: {e}"), 500
+
+@app.route('/admin/election/transition', methods=['POST'])
+@admin_required
+def admin_election_transition():
+    election = Election.query.filter_by(year=2025).first()
+    if not election:
+        return jsonify(success=False, message="Aucune élection configurée"), 404
+
+    action = (request.form.get('action') or '').strip()
+    try:
+        election.apply_transition(action)
+        db.session.commit()
+        return jsonify(
+            success=True,
+            message=f"Transition appliquée: {election.phase_label}",
+            phase=election.phase,
+            phase_label=election.phase_label,
+        )
+    except ValueError as e:
+        return jsonify(success=False, message=str(e)), 400
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Erreur admin_election_transition")
+        return jsonify(success=False, message=f"Transition échouée: {e}"), 500
 
 @app.route('/admin/announcements')
 @admin_required
@@ -2174,7 +2480,283 @@ def admin_announcements():
     announcements = Announcement.query.order_by(Announcement.created_at.desc()).all()
     return render_template('admin/announcements.html',
                          announcements=announcements,
+                         now=datetime.utcnow(),
                          page_title="Gestion des annonces")
+
+def _parse_checkbox(value, default=False):
+    if value is None:
+        return default
+    return str(value).strip().lower() in {'1', 'true', 'on', 'yes'}
+
+def _parse_expiration_date(raw_value):
+    value = (raw_value or "").strip()
+    if not value:
+        return None
+    try:
+        # Date incluse jusqu'à 23:59:59 UTC.
+        day = datetime.strptime(value, '%Y-%m-%d')
+        return day + timedelta(days=1) - timedelta(seconds=1)
+    except Exception:
+        return None
+
+@app.route('/candidate/announcements')
+@candidate_required
+def candidate_announcements():
+    announcements = (
+        Announcement.query.filter_by(author_id=current_user.id)
+        .order_by(Announcement.created_at.desc())
+        .all()
+    )
+    return render_template(
+        'candidate/announcements.html',
+        announcements=announcements,
+        now=datetime.utcnow(),
+        page_title="Mes annonces",
+    )
+
+@app.route('/candidate/api/announcements/<int:announcement_id>')
+@candidate_required
+def api_candidate_announcement_detail(announcement_id):
+    announcement = Announcement.query.filter_by(id=announcement_id, author_id=current_user.id).first_or_404()
+    return jsonify(
+        id=announcement.id,
+        title=announcement.title,
+        content=announcement.content,
+        audience=announcement.audience or 'all',
+        priority=int(announcement.priority or 0),
+        is_active=bool(announcement.is_active),
+        is_urgent=bool(announcement.is_urgent),
+        expires_at=(announcement.expires_at.strftime('%Y-%m-%d') if announcement.expires_at else ''),
+    )
+
+@app.route('/candidate/announcements/create', methods=['POST'])
+@candidate_required
+def candidate_create_announcement():
+    title = (request.form.get('title') or '').strip()
+    content = request.form.get('content') or ''
+    audience = (request.form.get('audience') or 'all').strip().lower()
+    priority_raw = (request.form.get('priority') or '0').strip()
+
+    if not title:
+        return jsonify(success=False, message="Le titre est obligatoire"), 400
+    if not Markup(content).striptags().strip():
+        return jsonify(success=False, message="Le contenu est obligatoire"), 400
+    if audience not in {'all', 'voters', 'candidates'}:
+        audience = 'all'
+
+    try:
+        priority = int(priority_raw)
+    except Exception:
+        priority = 0
+    priority = max(0, min(3, priority))
+
+    announcement = Announcement(
+        title=title,
+        content=content,
+        author_id=current_user.id,
+        audience=audience,
+        priority=priority,
+        is_urgent=_parse_checkbox(request.form.get('is_urgent')),
+        is_active=_parse_checkbox(request.form.get('is_active'), default=True),
+        expires_at=_parse_expiration_date(request.form.get('expires_at')),
+    )
+
+    try:
+        db.session.add(announcement)
+        db.session.commit()
+        return jsonify(success=True, message="Annonce publiée avec succès", id=announcement.id)
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Erreur candidate_create_announcement")
+        return jsonify(success=False, message=f"Erreur lors de la création: {e}"), 500
+
+@app.route('/candidate/announcements/update/<int:announcement_id>', methods=['POST'])
+@candidate_required
+def candidate_update_announcement(announcement_id):
+    announcement = Announcement.query.filter_by(id=announcement_id, author_id=current_user.id).first_or_404()
+    title = (request.form.get('title') or '').strip()
+    content = request.form.get('content') or ''
+    audience = (request.form.get('audience') or 'all').strip().lower()
+    priority_raw = (request.form.get('priority') or '0').strip()
+
+    if not title:
+        return jsonify(success=False, message="Le titre est obligatoire"), 400
+    if not Markup(content).striptags().strip():
+        return jsonify(success=False, message="Le contenu est obligatoire"), 400
+    if audience not in {'all', 'voters', 'candidates'}:
+        audience = 'all'
+
+    try:
+        priority = int(priority_raw)
+    except Exception:
+        priority = 0
+    priority = max(0, min(3, priority))
+
+    announcement.title = title
+    announcement.content = content
+    announcement.audience = audience
+    announcement.priority = priority
+    announcement.is_urgent = _parse_checkbox(request.form.get('is_urgent'))
+    announcement.is_active = _parse_checkbox(request.form.get('is_active'), default=True)
+    announcement.expires_at = _parse_expiration_date(request.form.get('expires_at'))
+
+    try:
+        db.session.commit()
+        return jsonify(success=True, message="Annonce mise à jour avec succès")
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Erreur candidate_update_announcement")
+        return jsonify(success=False, message=f"Erreur lors de la mise à jour: {e}"), 500
+
+@app.route('/candidate/announcements/toggle/<int:announcement_id>', methods=['POST'])
+@candidate_required
+def candidate_toggle_announcement(announcement_id):
+    announcement = Announcement.query.filter_by(id=announcement_id, author_id=current_user.id).first_or_404()
+    announcement.is_active = not bool(announcement.is_active)
+    try:
+        db.session.commit()
+        status = "activée" if announcement.is_active else "désactivée"
+        return jsonify(success=True, message=f"Annonce {status} avec succès")
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Erreur candidate_toggle_announcement")
+        return jsonify(success=False, message=f"Erreur lors du changement de statut: {e}"), 500
+
+@app.route('/candidate/announcements/delete/<int:announcement_id>', methods=['POST'])
+@candidate_required
+def candidate_delete_announcement(announcement_id):
+    announcement = Announcement.query.filter_by(id=announcement_id, author_id=current_user.id).first_or_404()
+    try:
+        db.session.delete(announcement)
+        db.session.commit()
+        return jsonify(success=True, message="Annonce supprimée avec succès")
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Erreur candidate_delete_announcement")
+        return jsonify(success=False, message=f"Erreur lors de la suppression: {e}"), 500
+
+@app.route('/admin/api/announcements/<int:announcement_id>')
+@admin_required
+def api_admin_announcement_detail(announcement_id):
+    announcement = Announcement.query.get_or_404(announcement_id)
+    return jsonify(
+        id=announcement.id,
+        title=announcement.title,
+        content=announcement.content,
+        audience=announcement.audience or 'all',
+        priority=int(announcement.priority or 0),
+        is_active=bool(announcement.is_active),
+        is_urgent=bool(announcement.is_urgent),
+        expires_at=(announcement.expires_at.strftime('%Y-%m-%d') if announcement.expires_at else ''),
+        created_at=_iso(announcement.created_at),
+    )
+
+@app.route('/admin/announcements/create', methods=['POST'])
+@admin_required
+def create_announcement():
+    title = (request.form.get('title') or '').strip()
+    content = request.form.get('content') or ''
+    audience = (request.form.get('audience') or 'all').strip().lower()
+    priority_raw = (request.form.get('priority') or '0').strip()
+
+    if not title:
+        return jsonify(success=False, message="Le titre est obligatoire"), 400
+    if not Markup(content).striptags().strip():
+        return jsonify(success=False, message="Le contenu est obligatoire"), 400
+
+    if audience not in {'all', 'voters', 'candidates', 'admin'}:
+        audience = 'all'
+
+    try:
+        priority = int(priority_raw)
+    except Exception:
+        priority = 0
+    priority = max(0, min(3, priority))
+
+    announcement = Announcement(
+        title=title,
+        content=content,
+        author_id=current_user.id,
+        audience=audience,
+        priority=priority,
+        is_urgent=_parse_checkbox(request.form.get('is_urgent')),
+        is_active=_parse_checkbox(request.form.get('is_active'), default=True),
+        expires_at=_parse_expiration_date(request.form.get('expires_at')),
+    )
+
+    try:
+        db.session.add(announcement)
+        db.session.commit()
+        return jsonify(success=True, message="Annonce créée avec succès", id=announcement.id)
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Erreur create_announcement")
+        return jsonify(success=False, message=f"Erreur lors de la création: {e}"), 500
+
+@app.route('/admin/announcements/update/<int:announcement_id>', methods=['POST'])
+@admin_required
+def update_announcement(announcement_id):
+    announcement = Announcement.query.get_or_404(announcement_id)
+    title = (request.form.get('title') or '').strip()
+    content = request.form.get('content') or ''
+    audience = (request.form.get('audience') or 'all').strip().lower()
+    priority_raw = (request.form.get('priority') or '0').strip()
+
+    if not title:
+        return jsonify(success=False, message="Le titre est obligatoire"), 400
+    if not Markup(content).striptags().strip():
+        return jsonify(success=False, message="Le contenu est obligatoire"), 400
+    if audience not in {'all', 'voters', 'candidates', 'admin'}:
+        audience = 'all'
+
+    try:
+        priority = int(priority_raw)
+    except Exception:
+        priority = 0
+    priority = max(0, min(3, priority))
+
+    announcement.title = title
+    announcement.content = content
+    announcement.audience = audience
+    announcement.priority = priority
+    announcement.is_urgent = _parse_checkbox(request.form.get('is_urgent'))
+    announcement.is_active = _parse_checkbox(request.form.get('is_active'), default=True)
+    announcement.expires_at = _parse_expiration_date(request.form.get('expires_at'))
+
+    try:
+        db.session.commit()
+        return jsonify(success=True, message="Annonce mise à jour avec succès")
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Erreur update_announcement")
+        return jsonify(success=False, message=f"Erreur lors de la mise à jour: {e}"), 500
+
+@app.route('/admin/announcements/toggle/<int:announcement_id>', methods=['POST'])
+@admin_required
+def toggle_announcement(announcement_id):
+    announcement = Announcement.query.get_or_404(announcement_id)
+    announcement.is_active = not bool(announcement.is_active)
+    try:
+        db.session.commit()
+        status = "activée" if announcement.is_active else "désactivée"
+        return jsonify(success=True, message=f"Annonce {status} avec succès", is_active=bool(announcement.is_active))
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Erreur toggle_announcement")
+        return jsonify(success=False, message=f"Erreur lors du changement de statut: {e}"), 500
+
+@app.route('/admin/announcements/delete/<int:announcement_id>', methods=['POST'])
+@admin_required
+def delete_announcement(announcement_id):
+    announcement = Announcement.query.get_or_404(announcement_id)
+    try:
+        db.session.delete(announcement)
+        db.session.commit()
+        return jsonify(success=True, message="Annonce supprimée avec succès")
+    except Exception as e:
+        db.session.rollback()
+        logger.exception("Erreur delete_announcement")
+        return jsonify(success=False, message=f"Erreur lors de la suppression: {e}"), 500
 
 @app.route('/admin/candidates')
 @admin_required
@@ -2214,9 +2796,10 @@ def admin_results():
     election = Election.query.filter_by(year=2025).first()
     candidates = Candidate.query.filter_by(is_approved=True).order_by(Candidate.vote_count.desc()).all()
     
-    total_votes = sum(c.vote_count for c in candidates)
+    total_votes = sum(int(c.vote_count or 0) for c in candidates)
     for candidate in candidates:
-        candidate.percentage = (candidate.vote_count / total_votes * 100) if total_votes > 0 else 0
+        votes = int(candidate.vote_count or 0)
+        candidate.percentage = (votes / total_votes * 100) if total_votes > 0 else 0
 
     # Données JSON sérialisables (utilisées dans Chart.js côté admin).
     candidates_json = [
@@ -2273,6 +2856,8 @@ def api_election_status():
     payload = {
         "exists": bool(election),
         "status": election.status if election else None,
+        "phase": election.phase if election else None,
+        "phase_label": election.phase_label if election else None,
         "is_voting_open": bool(election and election.is_voting_open),
         "is_registration_open": bool(election and election.is_registration_open),
         "updated_at": _iso(election.updated_at) if election else None,
@@ -2316,8 +2901,13 @@ def api_election_results_live():
 @app.route('/api/candidate/announcements/latest')
 @candidate_required
 def api_candidate_latest_announcement():
+    now_utc = datetime.utcnow()
     latest = (
-        Announcement.query.filter_by(is_active=True)
+        Announcement.query.filter(
+            Announcement.is_active.is_(True),
+            or_(Announcement.audience.in_(['all', 'candidates']), Announcement.audience.is_(None)),
+            or_(Announcement.expires_at.is_(None), Announcement.expires_at >= now_utc),
+        )
         .order_by(Announcement.is_urgent.desc(), Announcement.created_at.desc())
         .first()
     )
@@ -2511,3 +3101,5 @@ if __name__ == '__main__':
         port=5000,
         threaded=True
     )
+
+

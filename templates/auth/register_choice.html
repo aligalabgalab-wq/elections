@@ -1,0 +1,103 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Inscription{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-md-10 col-lg-8">
+            <div class="card shadow border-0">
+
+                <div class="card-body p-4 p-md-5">
+                    {% set col_class = 'col-md-4' if not admin_exists else 'col-md-6' %}
+                    <div class="row g-4">
+                        <div class="{{ col_class }}">
+                            <div class="card h-100 border hover-card">
+                                <div class="card-header bg-warning text-dark text-center py-3">
+                                    <i class="ri-user-line fs-1 mb-2"></i>
+                                    <h4 class="mb-0">Électeur</h4>
+                                </div>
+                                <div class="card-body text-center p-4">
+                                    <p class="text-muted mb-4">
+                                        Inscription pour voter une seule fois et suivre les résultats.
+                                    </p>
+                                    <a href="{{ url_for('register_with_type', user_type='voter') }}"
+                                        class="btn btn-warning w-100">
+                                        S'inscrire comme électeur
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="{{ col_class }}">
+                            <div class="card h-100 border hover-card">
+                                <div class="card-header bg-success text-white text-center py-3">
+                                    <i class="ri-user-star-line fs-1 mb-2"></i>
+                                    <h4 class="mb-0">Candidat</h4>
+                                </div>
+                                <div class="card-body text-center p-4">
+                                    <p class="text-muted mb-4">
+                                        Déposez votre candidature, votre programme et votre slogan.
+                                    </p>
+                                    <a href="{{ url_for('register_with_type', user_type='candidate') }}"
+                                        class="btn btn-success w-100">
+                                        S'inscrire comme candidat
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if not admin_exists %}
+                        <div class="col-md-4">
+                            <div class="card h-100 border hover-card">
+                                <div class="card-header bg-danger text-white text-center py-3">
+                                    <i class="ri-shield-user-line fs-1 mb-2"></i>
+                                    <h4 class="mb-0">Administrateur</h4>
+                                </div>
+                                <div class="card-body text-center p-4">
+                                    <div class="alert alert-warning mb-3">
+                                        Disponible une seule fois
+                                    </div>
+                                    <p class="text-muted mb-4">
+                                        Création du premier administrateur du système.
+                                    </p>
+                                    <a href="{{ url_for('register_with_type', user_type='admin') }}"
+                                        class="btn btn-danger w-100">
+                                        Créer l'administrateur
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <p class="text-muted mb-0">
+                            Vous avez déjà un compte ?
+                            <a href="{{ url_for('login') }}" class="text-primary fw-semibold">Connectez-vous</a>
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.hover-card').forEach(function (card) {
+            card.style.transition = 'transform 0.25s ease, box-shadow 0.25s ease';
+            card.addEventListener('mouseenter', function () {
+                card.style.transform = 'translateY(-4px)';
+                card.style.boxShadow = '0 10px 20px rgba(0,0,0,0.08)';
+            });
+            card.addEventListener('mouseleave', function () {
+                card.style.transform = 'none';
+                card.style.boxShadow = '';
+            });
+        });
+    });
+</script>
+{% endblock %}

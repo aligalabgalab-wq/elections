@@ -91,7 +91,8 @@ body {
     display: flex;
     flex-direction: column;
     overflow-x: hidden;
-    padding-top: 56px; /* Hauteur de la navbar fixe */
+    padding-top: 56px;
+    /* Hauteur de la navbar fixe */
 }
 
 html[data-bs-theme="dark"] body {
@@ -189,14 +190,16 @@ html[data-bs-theme="dark"] .card-header {
 }
 
 /* Forms */
-.form-control, .form-select {
+.form-control,
+.form-select {
     border-radius: var(--border-radius);
     border: 1px solid #dee2e6;
     padding: 0.5rem 0.75rem;
     transition: var(--transition);
 }
 
-.form-control:focus, .form-select:focus {
+.form-control:focus,
+.form-select:focus {
     border-color: var(--primary-color);
     box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
     outline: none;
@@ -240,7 +243,8 @@ html[data-bs-theme="dark"] .card-header {
     transition: var(--transition);
 }
 
-.nav-link:hover, .nav-link.active {
+.nav-link:hover,
+.nav-link.active {
     background-color: rgba(255, 255, 255, 0.1);
 }
 
@@ -317,6 +321,7 @@ html[data-bs-theme="dark"] .card-header {
         opacity: 0;
         transform: translateY(10px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -332,6 +337,7 @@ html[data-bs-theme="dark"] .card-header {
         opacity: 0;
         transform: translateX(-20px);
     }
+
     to {
         opacity: 1;
         transform: translateX(0);
@@ -344,19 +350,21 @@ html[data-bs-theme="dark"] .card-header {
 
 /* Responsive */
 @media (max-width: 576px) {
-    .container, .container-fluid {
+
+    .container,
+    .container-fluid {
         padding-left: 1rem;
         padding-right: 1rem;
     }
-    
+
     .display-4 {
         font-size: 2rem;
     }
-    
+
     .h1 {
         font-size: 1.75rem;
     }
-    
+
     .h2 {
         font-size: 1.5rem;
     }
@@ -364,15 +372,18 @@ html[data-bs-theme="dark"] .card-header {
 
 /* Print styles */
 @media print {
-    .navbar, .footer, .no-print {
+
+    .navbar,
+    .footer,
+    .no-print {
         display: none !important;
     }
-    
+
     body {
         padding-top: 0;
         background: white;
     }
-    
+
     .card {
         box-shadow: none;
         border: 1px solid #dee2e6;
@@ -386,6 +397,16 @@ html[data-bs-theme="dark"] .card-header {
     background-color: rgba(11, 18, 32, 0.92) !important;
     backdrop-filter: saturate(1.2) blur(10px);
     border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+#main-header.scrolled {
+    background-color: rgba(11, 18, 32, 0.98) !important;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.28);
+}
+
+#menu-icon i {
+    font-size: 1.3rem;
+    line-height: 1;
 }
 
 .nav-link {
@@ -450,23 +471,12 @@ html[data-bs-theme="dark"] .card-header {
 .hero-section {
     position: relative;
     overflow: hidden;
-    background:
-        radial-gradient(900px circle at 12% 12%, rgba(0, 102, 179, 0.20), transparent 58%),
-        radial-gradient(700px circle at 86% 20%, rgba(18, 173, 43, 0.16), transparent 55%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(255, 255, 255, 0.65));
+    background: #ffffff;
     border-bottom: 1px solid rgba(15, 23, 42, 0.08);
 }
 
 .hero-section::before {
-    content: "";
-    position: absolute;
-    inset: -120px -120px auto auto;
-    width: 520px;
-    height: 520px;
-    background: radial-gradient(circle, rgba(210, 16, 52, 0.12), transparent 60%);
-    filter: blur(2px);
-    transform: rotate(18deg);
-    pointer-events: none;
+    content: none;
 }
 
 .hero-section .title {
@@ -559,6 +569,17 @@ html[data-bs-theme="dark"] .hero-section .subtitle {
     display: inline-block;
 }
 
+.hero-section .row>.col-lg-6 {
+    flex: 0 0 auto;
+    width: 50%;
+}
+
+@media (max-width: 991.98px) {
+    .hero-section .row>.col-lg-6 {
+        width: 100%;
+    }
+}
+
 /* Section surfaces (subtle animated color blobs) */
 .section-surface {
     position: relative;
@@ -586,15 +607,22 @@ html[data-bs-theme="dark"] .hero-section .subtitle {
     animation: surfaceDrift 14s ease-in-out infinite;
 }
 
-.section-surface > .container,
-.section-surface > .container-fluid {
+.section-surface>.container,
+.section-surface>.container-fluid {
     position: relative;
     z-index: 1;
 }
 
 @keyframes surfaceDrift {
-    0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
-    50% { transform: translate3d(18px, -12px, 0) rotate(10deg); }
+
+    0%,
+    100% {
+        transform: translate3d(0, 0, 0) rotate(0deg);
+    }
+
+    50% {
+        transform: translate3d(18px, -12px, 0) rotate(10deg);
+    }
 }
 
 html[data-bs-theme="dark"] .section-surface {
@@ -635,14 +663,12 @@ html[data-bs-theme="dark"] .section-surface::before {
     border-radius: 1.25rem;
     background:
         linear-gradient(135deg, rgba(255, 255, 255, 0.96), rgba(255, 255, 255, 0.82)) padding-box,
-        conic-gradient(
-            from var(--kpi-angle),
+        conic-gradient(from var(--kpi-angle),
             rgba(255, 255, 255, 0),
             var(--kpi-accent),
             rgba(255, 255, 255, 0),
             var(--kpi-accent),
-            rgba(255, 255, 255, 0)
-        ) border-box;
+            rgba(255, 255, 255, 0)) border-box;
     box-shadow: var(--shadow-md);
     position: relative;
     overflow: hidden;
@@ -766,13 +792,16 @@ html[data-bs-theme="dark"] .section-surface::before {
 }
 
 @keyframes kpiSpin {
-    to { --kpi-angle: 360deg; }
+    to {
+        --kpi-angle: 360deg;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .kpi-card {
         animation: none;
     }
+
     .kpi-card:hover {
         transform: none;
         filter: none;
@@ -782,14 +811,12 @@ html[data-bs-theme="dark"] .section-surface::before {
 html[data-bs-theme="dark"] .kpi-card {
     background:
         linear-gradient(135deg, rgba(15, 23, 42, 0.82), rgba(15, 23, 42, 0.62)) padding-box,
-        conic-gradient(
-            from var(--kpi-angle),
+        conic-gradient(from var(--kpi-angle),
             rgba(255, 255, 255, 0),
             var(--kpi-accent),
             rgba(255, 255, 255, 0),
             var(--kpi-accent),
-            rgba(255, 255, 255, 0)
-        ) border-box;
+            rgba(255, 255, 255, 0)) border-box;
 }
 
 html[data-bs-theme="dark"] .kpi-label {
@@ -863,7 +890,9 @@ html[data-bs-theme="dark"] .candidate-card::before {
 }
 
 @keyframes candidateBorder {
-    to { background-position: 0 0, 180% 50%; }
+    to {
+        background-position: 0 0, 180% 50%;
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -927,27 +956,24 @@ html[data-bs-theme="dark"] .contact-map iframe {
 .image-wrapper {
     display: inline-block;
     position: relative;
-    padding: 10px;
+    padding: 8px;
     border-radius: 9999px;
-    background: rgba(255, 255, 255, 0.78);
-    border: 1px solid rgba(15, 23, 42, 0.10);
-    box-shadow: var(--shadow-lg);
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    box-shadow: var(--shadow-md);
 }
 
 .image-wrapper::before {
     content: "";
     position: absolute;
-    inset: -22px;
+    inset: -12px;
     border-radius: 9999px;
-    background:
-        radial-gradient(closest-side at 28% 25%, rgba(0, 102, 179, 0.30), transparent 62%),
-        radial-gradient(closest-side at 82% 32%, rgba(18, 173, 43, 0.22), transparent 64%),
-        radial-gradient(closest-side at 55% 90%, rgba(210, 16, 52, 0.16), transparent 66%);
-    filter: blur(18px);
-    opacity: 0.75;
+    background: radial-gradient(closest-side, rgba(15, 23, 42, 0.10), transparent 70%);
+    filter: blur(10px);
+    opacity: 0.5;
     z-index: 0;
     pointer-events: none;
-    animation: heroHalo 8s ease-in-out infinite;
+    animation: none;
 }
 
 html[data-bs-theme="dark"] .image-wrapper {
@@ -962,33 +988,162 @@ html[data-bs-theme="dark"] .image-wrapper {
 .hero-image {
     position: relative;
     z-index: 1;
-    box-shadow: var(--shadow-xl);
-    animation: softFloat 6s ease-in-out infinite;
+    width: min(360px, 72vw);
+    height: min(360px, 72vw);
+    object-fit: cover;
+    box-shadow: var(--shadow-md);
+    animation: none;
     transition: filter var(--transition), box-shadow var(--transition);
-    filter: saturate(1.02) contrast(1.02);
+    filter: none;
 }
 
 .hero-visual:hover .hero-image {
-    filter: saturate(1.08) contrast(1.04);
-    box-shadow: var(--shadow-xl);
+    filter: none;
+    box-shadow: var(--shadow-lg);
 }
 
 @keyframes softFloat {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-10px); }
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-10px);
+    }
 }
 
 @keyframes heroHalo {
-    0%, 100% { opacity: 0.62; transform: translateY(0); }
-    50% { opacity: 0.86; transform: translateY(-6px); }
+
+    0%,
+    100% {
+        opacity: 0.62;
+        transform: translateY(0);
+    }
+
+    50% {
+        opacity: 0.86;
+        transform: translateY(-6px);
+    }
 }
 
 @media (prefers-reduced-motion: reduce) {
     .image-wrapper::before {
         animation: none;
     }
+
     .hero-image {
         animation: none;
+    }
+}
+
+.home-white-section {
+    background-color: #ffffff !important;
+}
+
+.home-candidate-card .card-img-top {
+    height: 15rem;
+    object-fit: cover;
+}
+
+.home-candidate-card .card-body {
+    padding: 1.4rem;
+}
+
+.home-candidate-card .card-title {
+    font-size: 1.22rem;
+}
+
+.home-candidate-card p,
+.home-candidate-card li {
+    font-size: 1rem;
+}
+
+.home-theme-card,
+.home-action-card {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    padding: 1.75rem;
+    min-height: 100%;
+}
+
+.home-theme-card h5,
+.home-action-card h5 {
+    font-size: 1.18rem;
+}
+
+.home-theme-card p,
+.home-action-card p {
+    font-size: 1rem;
+}
+
+.home-announcements-section {
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 100%);
+}
+
+.home-announcements-scroll-wrapper {
+    max-width: 100%;
+    overflow: hidden;
+    position: relative;
+}
+
+.home-announcements-scroll-inner {
+    display: flex;
+    gap: 2rem;
+    animation: scrollLeft 30s linear infinite;
+    padding: 0.5rem 0;
+}
+
+.home-announcements-scroll-inner:hover {
+    animation-play-state: paused;
+}
+
+@keyframes scrollLeft {
+    0% {
+        transform: translateX(100%);
+    }
+
+    100% {
+        transform: translateX(-100%);
+    }
+}
+
+.home-announcement-card {
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    padding: 2rem;
+    min-height: 220px;
+    min-width: 350px;
+    flex-shrink: 0;
+}
+
+.home-announcement-date {
+    font-size: 0.9rem;
+}
+
+.home-announcement-empty {
+    max-width: 900px;
+    margin: 0 auto;
+    background: #ffffff;
+    border: 1px dashed rgba(15, 23, 42, 0.25);
+    border-radius: 16px;
+    padding: 2rem;
+    color: #6b7280;
+}
+
+
+@media (max-width: 768px) {
+    .home-announcement-card {
+        padding: 1.25rem;
+        min-height: 200px;
+        min-width: 280px;
+    }
+
+    .home-announcements-scroll-inner {
+        gap: 1rem;
     }
 }
 
@@ -1013,8 +1168,9 @@ body.app-layout {
 
 .app-shell {
     display: flex;
-    min-height: 100vh;
+    min-height: calc(100vh - 56px);
     width: 100%;
+    padding-top: 56px;
 }
 
 .app-main {
@@ -1022,6 +1178,7 @@ body.app-layout {
     min-width: 0;
     display: flex;
     flex-direction: column;
+    margin-left: 280px;
 }
 
 .app-topbar {
@@ -1150,8 +1307,9 @@ html[data-bs-theme="dark"] .app-dot {
 .app-sidebar {
     width: 280px;
     height: 100vh;
-    position: sticky;
+    position: fixed;
     top: 0;
+    left: 0;
     display: flex;
     flex-direction: column;
     padding: 1rem;
@@ -1407,7 +1565,8 @@ body.app-sidebar-collapsed .app-nav-link i {
     .app-sidebar {
         position: fixed;
         left: 0;
-        top: 0;
+        top: 56px;
+        height: calc(100vh - 56px);
         transform: translateX(-105%);
         transition: transform var(--transition);
         width: 300px;
@@ -1451,5 +1610,20 @@ body.app-sidebar-collapsed .app-nav-link i {
     body.app-sidebar-collapsed .app-nav-link {
         justify-content: flex-start;
         gap: 0.75rem;
+    }
+}
+
+@media (max-width: 768px) {
+    body.app-layout {
+        padding-top: 60px;
+    }
+
+    .app-shell {
+        min-height: calc(100vh - 60px);
+    }
+
+    .app-sidebar {
+        top: 60px;
+        height: calc(100vh - 60px);
     }
 }

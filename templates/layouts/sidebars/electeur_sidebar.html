@@ -1,0 +1,38 @@
+<div class="app-sidebar__spacer"></div>
+<div class="app-sidebar__section">Espace Électeur</div>
+
+<a class="app-nav-link {% if request.endpoint in ['voter_dashboard'] %}is-active{% endif %}"
+    href="{{ url_for('voter_dashboard') }}">
+    <i class="ri-dashboard-2-line"></i>
+    <span>Tableau de bord</span>
+</a>
+
+<a class="app-nav-link {% if request.endpoint in ['voter_vote'] %}is-active{% endif %}"
+    href="{{ url_for('voter_vote') }}">
+    <i class="ri-vote-line"></i>
+    <span>Voter</span>
+    {% if election and election.is_voting_open %}
+    <span class="app-pill app-pill--success">Ouvert</span>
+    {% else %}
+    <span class="app-pill">Fermé</span>
+    {% endif %}
+</a>
+
+<a class="app-nav-link {% if request.endpoint in ['voter_results'] %}is-active{% endif %}"
+    href="{{ url_for('voter_results') }}">
+    <i class="ri-bar-chart-line"></i>
+    <span>Résultats</span>
+</a>
+
+<a class="app-nav-link {% if request.endpoint in ['voter_card'] %}is-active{% endif %}"
+    href="{{ url_for('voter_card') }}">
+    <i class="ri-id-card-line"></i>
+    <span>Carte électeur</span>
+</a>
+
+<a class="app-nav-link {% if request.endpoint in ['voter_profile'] %}is-active{% endif %}"
+    href="{{ url_for('voter_profile') }}">
+    <i class="ri-user-settings-line"></i>
+    <span>Mon profil</span>
+</a>
+

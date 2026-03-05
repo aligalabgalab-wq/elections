@@ -229,8 +229,13 @@
                  data-status="{{ 'active' if announcement.is_active else 'inactive' }}"
                  data-audience="{{ announcement.audience }}"
                  data-urgent="{{ 'true' if announcement.is_urgent else 'false' }}"
-                 data-title="{{ announcement.title|lower }}"
-                 data-content="{{ announcement.content|striptags|lower }}"
+                 data-title="{{ announcement.title }}"
+                 data-title-search="{{ announcement.title|lower }}"
+                 data-content-search="{{ announcement.content|striptags|lower }}"
+                 data-full-content="{{ announcement.content|e }}"
+                 data-priority="{{ announcement.priority|default(0) }}"
+                 data-expires-at="{{ announcement.expires_at.strftime('%Y-%m-%d') if announcement.expires_at else '' }}"
+                 data-expired="{{ 'true' if announcement.expires_at and announcement.expires_at < now else 'false' }}"
                  data-created="{{ announcement.created_at.strftime('%Y-%m-%d') }}">
                 <div class="card border-0 shadow-sm announcement-card 
                     {{ 'urgent' if announcement.is_urgent else '' }} 
@@ -592,11 +597,11 @@ document.addEventListener('DOMContentLoaded', function() {
         const audienceValue = audienceFilter.value;
         
         announcementItems.forEach(item => {
-            const title = item.dataset.title;
-            const content = item.dataset.content;
+            const title = item.dataset.titleSearch || '';
+            const content = item.dataset.contentSearch || '';
             const status = item.dataset.status;
+            const isExpired = item.dataset.expired === 'true';
             const audience = item.dataset.audience;
-            const urgent = item.dataset.urgent;
             
             let matches = true;
             
@@ -606,8 +611,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             // Filtre par statut
-            if (statusValue && status !== statusValue) {
-                matches = false;
+            if (statusValue) {
+                if (statusValue === 'expired') {
+                    if (!isExpired) matches = false;
+                } else if (status !== statusValue) {
+                    matches = false;
+                }
             }
             
             // Filtre par public
@@ -682,7 +691,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     if (previewAnnouncementBtn) {
         previewAnnouncementBtn.addEventListener('click', function() {
-            previewAnnouncement();
+            previewAnnouncementDraft();
         });
     }
     
@@ -690,6 +699,29 @@ document.addEventListener('DOMContentLoaded', function() {
         confirmPublishAnnouncementBtn.addEventListener('click', function() {
             createAnnouncement();
         });
+    }
+
+    async function postForm(url, payload) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: new URLSearchParams(payload)
+        });
+
+        let data = {};
+        try {
+            data = await response.json();
+        } catch (e) {
+            data = { success: false, message: 'Réponse serveur invalide' };
+        }
+
+        if (!response.ok || !data.success) {
+            throw new Error(data.message || `Erreur HTTP ${response.status}`);
+        }
+        return data;
     }
     
     function createAnnouncement() {
@@ -712,7 +744,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
         
-        // Afficher l'indicateur de chargement
         const submitBtn = document.querySelector('#createAnnouncementForm button[type="submit"]');
         if (submitBtn) {
             submitBtn.disabled = true;
@@ -721,30 +752,44 @@ document.addEventListener('DOMContentLoaded', function() {
                 Publication...
             `;
         }
-        
-        // Simuler l'envoi
-        setTimeout(() => {
-            showToast('Annonce créée avec succès', 'success');
-            
-            // Fermer les modals
-            const createModal = bootstrap.Modal.getInstance(document.getElementById('createAnnouncementModal'));
-            const previewModal = bootstrap.Modal.getInstance(document.getElementById('previewAnnouncementModal'));
-            
-            if (createModal) createModal.hide();
-            if (previewModal) previewModal.hide();
-            
-            // Réinitialiser le formulaire
-            createAnnouncementForm.reset();
-            document.getElementById('announcementEditor').innerHTML = '<p>Saisissez le contenu de votre annonce ici...</p>';
-            
-            // Recharger la page après 1 seconde
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        }, 2000);
+
+        postForm('/admin/announcements/create', {
+            title,
+            content,
+            audience,
+            priority,
+            is_urgent: isUrgent ? '1' : '0',
+            is_active: isActive ? '1' : '0',
+            expires_at: expiresAt || ''
+        })
+            .then((data) => {
+                showToast(data.message || 'Annonce créée avec succès', 'success');
+                const createModal = bootstrap.Modal.getInstance(document.getElementById('createAnnouncementModal'));
+                const previewModal = bootstrap.Modal.getInstance(document.getElementById('previewAnnouncementModal'));
+
+                if (createModal) createModal.hide();
+                if (previewModal) previewModal.hide();
+
+                createAnnouncementForm.reset();
+                document.getElementById('announcementEditor').innerHTML = '<p>Saisissez le contenu de votre annonce ici...</p>';
+                localStorage.removeItem('announcement_draft');
+                setTimeout(() => window.location.reload(), 500);
+            })
+            .catch((error) => {
+                showToast(error.message || 'Échec de création de l’annonce', 'danger');
+            })
+            .finally(() => {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = `
+                        <i class="ri-save-line me-2"></i>
+                        Publier l'annonce
+                    `;
+                }
+            });
     }
     
-    function previewAnnouncement() {
+    function previewAnnouncementDraft() {
         const title = document.getElementById('announcementTitle').value;
         const content = document.getElementById('announcementEditor').innerHTML;
         const audience = document.getElementById('announcementAudience').value;
@@ -816,8 +861,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (!announcementItem) return;
         
-        const title = announcementItem.dataset.title;
-        const content = announcementItem.dataset.fullContent || 'Contenu de l\'annonce...';
+        const title = announcementItem.dataset.title || '';
+        const content = announcementItem.dataset.fullContent || '<p>Contenu de l\'annonce...</p>';
         const isUrgent = announcementItem.dataset.urgent === 'true';
         const audience = announcementItem.dataset.audience;
         const createdAt = announcementItem.dataset.created;
@@ -867,156 +912,136 @@ document.addEventListener('DOMContentLoaded', function() {
         previewModal.show();
     };
     
-    window.editAnnouncement = function(announcementRef) {
-        // Trouver l'annonce dans la liste
-        let announcementItem = null;
+    window.editAnnouncement = async function(announcementRef) {
         let announcementId = null;
-
         if (announcementRef && announcementRef.closest) {
-            announcementItem = announcementRef.closest('.announcement-item');
+            const announcementItem = announcementRef.closest('.announcement-item');
             announcementId = announcementItem?.dataset.announcementId || null;
         } else {
             announcementId = announcementRef;
-            announcementItem = document.querySelector(`.announcement-item[data-announcement-id="${announcementId}"]`);
+        }
+        if (!announcementId) return;
+
+        let announcement = null;
+        try {
+            const response = await fetch(`/admin/api/announcements/${announcementId}`);
+            announcement = await response.json();
+            if (!response.ok) {
+                throw new Error(announcement.message || 'Impossible de charger l’annonce');
+            }
+        } catch (error) {
+            showToast(error.message || 'Erreur de chargement', 'danger');
+            return;
         }
 
-        if (!announcementItem) return;
-        
-        // Données simulées (dans une vraie app, on ferait une requête AJAX)
-        const announcement = {
-            id: announcementId,
-            title: announcementItem.querySelector('.card-title').textContent,
-            content: '<p>Contenu de l\'annonce à modifier...</p>',
-            audience: announcementItem.dataset.audience || 'all',
-            priority: '2',
-            is_urgent: announcementItem.dataset.urgent === 'true',
-            is_active: announcementItem.dataset.status === 'active',
-            expires_at: ''
-        };
-        
         const editContent = `
             <div class="row">
                 <div class="col-md-8 mb-3">
                     <label class="form-label fw-semibold">Titre de l'annonce *</label>
-                    <input type="text" class="form-control" 
-                           id="editAnnouncementTitle" 
-                           value="${announcement.title}"
-                           required>
+                    <input type="text" class="form-control" id="editAnnouncementTitle" value="${announcement.title || ''}" required>
                 </div>
-                
                 <div class="col-md-4 mb-3">
                     <label class="form-label fw-semibold">Priorité</label>
                     <select class="form-select" id="editAnnouncementPriority">
-                        <option value="0" ${announcement.priority === '0' ? 'selected' : ''}>Normale</option>
-                        <option value="1" ${announcement.priority === '1' ? 'selected' : ''}>Moyenne</option>
-                        <option value="2" ${announcement.priority === '2' ? 'selected' : ''}>Haute</option>
-                        <option value="3" ${announcement.priority === '3' ? 'selected' : ''}>Urgente</option>
+                        <option value="0" ${String(announcement.priority) === '0' ? 'selected' : ''}>Normale</option>
+                        <option value="1" ${String(announcement.priority) === '1' ? 'selected' : ''}>Moyenne</option>
+                        <option value="2" ${String(announcement.priority) === '2' ? 'selected' : ''}>Haute</option>
+                        <option value="3" ${String(announcement.priority) === '3' ? 'selected' : ''}>Urgente</option>
                     </select>
                 </div>
             </div>
-            
+
             <div class="mb-3">
                 <label class="form-label fw-semibold">Contenu de l'annonce *</label>
                 <div class="editor-tools">
-                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="bold">
-                        <i class="ri-bold"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="italic">
-                        <i class="ri-italic"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="underline">
-                        <i class="ri-underline"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="insertUnorderedList">
-                        <i class="ri-list-unordered"></i>
-                    </button>
-                    <button type="button" class="btn btn-sm btn-outline-secondary" data-command="insertOrderedList">
-                        <i class="ri-list-ordered"></i>
-                    </button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="bold"><i class="ri-bold"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="italic"><i class="ri-italic"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="underline"><i class="ri-underline"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary me-1" data-command="insertUnorderedList"><i class="ri-list-unordered"></i></button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-command="insertOrderedList"><i class="ri-list-ordered"></i></button>
                 </div>
-                <div class="editor-container" id="editAnnouncementEditor" contenteditable="true">
-                    ${announcement.content}
-                </div>
+                <div class="editor-container" id="editAnnouncementEditor" contenteditable="true">${announcement.content || ''}</div>
             </div>
-            
+
             <div class="row">
                 <div class="col-md-6 mb-3">
                     <label class="form-label fw-semibold">Public cible *</label>
                     <select class="form-select" id="editAnnouncementAudience" required>
-                        <option value="all" ${announcement.audience === 'all' ? 'selected' : ''}>Tous les utilisateurs</option>
+                        <option value="all" ${(announcement.audience || 'all') === 'all' ? 'selected' : ''}>Tous les utilisateurs</option>
                         <option value="voters" ${announcement.audience === 'voters' ? 'selected' : ''}>Électeurs seulement</option>
                         <option value="candidates" ${announcement.audience === 'candidates' ? 'selected' : ''}>Candidats seulement</option>
                         <option value="admin" ${announcement.audience === 'admin' ? 'selected' : ''}>Administrateurs seulement</option>
                     </select>
                 </div>
-                
                 <div class="col-md-6 mb-3">
                     <label class="form-label fw-semibold">Date d'expiration</label>
-                    <input type="date" class="form-control" 
-                           id="editAnnouncementExpires"
-                           value="${announcement.expires_at || ''}">
+                    <input type="date" class="form-control" id="editAnnouncementExpires" value="${announcement.expires_at || ''}">
                 </div>
             </div>
-            
+
             <div class="mb-3">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" 
-                           id="editAnnouncementUrgent" ${announcement.is_urgent ? 'checked' : ''}>
-                    <label class="form-check-label fw-semibold">
-                        Marquer comme urgente
-                    </label>
+                    <input class="form-check-input" type="checkbox" id="editAnnouncementUrgent" ${announcement.is_urgent ? 'checked' : ''}>
+                    <label class="form-check-label fw-semibold">Marquer comme urgente</label>
                 </div>
             </div>
-            
+
             <div class="mb-3">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" 
-                           id="editAnnouncementActive" ${announcement.is_active ? 'checked' : ''}>
-                    <label class="form-check-label fw-semibold">
-                        Annonce active
-                    </label>
+                    <input class="form-check-input" type="checkbox" id="editAnnouncementActive" ${announcement.is_active ? 'checked' : ''}>
+                    <label class="form-check-label fw-semibold">Annonce active</label>
                 </div>
             </div>
         `;
-        
+
         document.getElementById('editAnnouncementId').value = announcementId;
         document.getElementById('editAnnouncementContent').innerHTML = editContent;
-        
-        // Initialiser l'éditeur
-        const editEditor = document.getElementById('editAnnouncementEditor');
-        if (editEditor) {
-            editEditor.querySelectorAll('.editor-tools button').forEach(button => {
-                button.addEventListener('click', function() {
-                    const command = this.dataset.command;
-                    document.execCommand(command, false, null);
-                    editEditor.focus();
-                });
+
+        document.querySelectorAll('#editAnnouncementContent .editor-tools button').forEach(button => {
+            button.addEventListener('click', function() {
+                const command = this.dataset.command;
+                document.execCommand(command, false, null);
+                document.getElementById('editAnnouncementEditor').focus();
             });
-        }
-        
+        });
+
         const editModal = new bootstrap.Modal(document.getElementById('editAnnouncementModal'));
         editModal.show();
-        
-        // Gérer la soumission du formulaire d'édition
+
         const editForm = document.getElementById('editAnnouncementForm');
         editForm.onsubmit = function(e) {
             e.preventDefault();
-            
+
             const title = document.getElementById('editAnnouncementTitle').value;
             const content = document.getElementById('editAnnouncementEditor').innerHTML;
-            
+            const audience = document.getElementById('editAnnouncementAudience').value;
+            const priority = document.getElementById('editAnnouncementPriority').value;
+            const isUrgent = document.getElementById('editAnnouncementUrgent').checked;
+            const isActive = document.getElementById('editAnnouncementActive').checked;
+            const expiresAt = document.getElementById('editAnnouncementExpires').value;
+
             if (!title.trim() || !content.trim()) {
-                showToast('Veuillez remplir tous les champs', 'error');
+                showToast('Veuillez remplir tous les champs', 'danger');
                 return;
             }
-            
-            // Simuler la sauvegarde
-            showToast('Annonce mise à jour avec succès', 'success');
-            editModal.hide();
-            
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
+
+            postForm(`/admin/announcements/update/${announcementId}`, {
+                title,
+                content,
+                audience,
+                priority,
+                is_urgent: isUrgent ? '1' : '0',
+                is_active: isActive ? '1' : '0',
+                expires_at: expiresAt || ''
+            })
+                .then((data) => {
+                    showToast(data.message || 'Annonce mise à jour avec succès', 'success');
+                    editModal.hide();
+                    setTimeout(() => window.location.reload(), 400);
+                })
+                .catch((error) => {
+                    showToast(error.message || 'Échec de mise à jour', 'danger');
+                });
         };
     };
     
@@ -1091,37 +1116,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     function executeAction(action, data) {
-        let message = '';
-        let icon = 'success';
-        
-        switch(action) {
-            case 'toggleStatus':
-                const status = data.isActive ? 'désactivée' : 'activée';
-                message = `Annonce ${status} avec succès`;
-                break;
-            case 'delete':
-                message = 'Annonce supprimée avec succès';
-                icon = 'info';
-                break;
-            case 'scheduleAnnouncement':
-                message = 'Annonce planifiée avec succès';
-                break;
+        if (!data || !data.announcementId) {
+            showToast("Annonce introuvable", "warning");
+            return;
         }
-        
-        showToast(message, icon);
-        
-        // Recharger la page après 1 seconde
-        setTimeout(() => {
-            window.location.reload();
-        }, 1000);
+
+        let endpoint = '';
+        if (action === 'toggleStatus') {
+            endpoint = `/admin/announcements/toggle/${data.announcementId}`;
+        } else if (action === 'delete') {
+            endpoint = `/admin/announcements/delete/${data.announcementId}`;
+        } else {
+            showToast("Action non supportée", "warning");
+            return;
+        }
+
+        postForm(endpoint, {})
+            .then((result) => {
+                showToast(result.message || 'Action effectuée', 'success');
+                setTimeout(() => window.location.reload(), 400);
+            })
+            .catch((error) => {
+                showToast(error.message || 'Erreur lors de l’action', 'danger');
+            });
     }
     
     // Fonction utilitaire pour afficher des notifications
     function showToast(message, type = 'info', duration = 3000) {
+        const toneMap = { error: 'danger', danger: 'danger', success: 'success', warning: 'warning', info: 'info' };
+        const tone = toneMap[type] || 'info';
         // Créer le toast
         const toastId = 'toast-' + Date.now();
         const toastHTML = `
-            <div id="${toastId}" class="toast align-items-center text-bg-${type} border-0" role="alert">
+            <div id="${toastId}" class="toast align-items-center text-bg-${tone} border-0" role="alert">
                 <div class="d-flex">
                     <div class="toast-body">
                         <i class="ri-information-line me-2"></i>

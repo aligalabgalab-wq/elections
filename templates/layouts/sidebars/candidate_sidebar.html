@@ -1,0 +1,37 @@
+<div class="app-sidebar__spacer"></div>
+<div class="app-sidebar__section">Espace Candidat</div>
+
+<a class="app-nav-link {% if request.endpoint in ['candidate_dashboard'] %}is-active{% endif %}"
+    href="{{ url_for('candidate_dashboard') }}">
+    <i class="ri-dashboard-2-line"></i>
+    <span>Tableau de bord</span>
+</a>
+
+<a class="app-nav-link {% if request.endpoint in ['candidate_campaign'] %}is-active{% endif %}"
+    href="{{ url_for('candidate_campaign') }}">
+    <i class="ri-megaphone-line"></i>
+    <span>Campagne</span>
+</a>
+
+<a class="app-nav-link {% if request.endpoint in ['candidate_statistics'] %}is-active{% endif %}"
+    href="{{ url_for('candidate_statistics') }}">
+    <i class="ri-line-chart-line"></i>
+    <span>Statistiques</span>
+</a>
+
+<a class="app-nav-link {% if request.endpoint in ['candidate_announcements'] %}is-active{% endif %}"
+    href="{{ url_for('candidate_announcements') }}">
+    <i class="ri-notification-3-line"></i>
+    <span>Mes annonces</span>
+</a>
+
+<a class="app-nav-link {% if request.endpoint in ['candidate_profile'] %}is-active{% endif %}"
+    href="{{ url_for('candidate_profile') }}">
+    <i class="ri-user-star-line"></i>
+    <span>Mon profil</span>
+</a>
+
+<a class="app-nav-link" href="{{ url_for('candidate_export_profile') }}">
+    <i class="ri-download-2-line"></i>
+    <span>Exporter mon profil</span>
+</a>

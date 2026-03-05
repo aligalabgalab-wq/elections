@@ -66,8 +66,13 @@ class Config:
     CONTACT_RECIPIENT = os.environ.get("CONTACT_RECIPIENT", "")
     
     # Admin
-    ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', 'admin@debat2025.dj')
-    ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', 'Admin123!')
+    # Les identifiants d'administrateur ne sont plus configurés statiquement
+    # via les variables d'environnement. Le compte est créé dynamiquement via
+    # l'interface d'inscription (une seule création autorisée), donc il n'y a
+    # plus de valeur par défaut ni de création automatique au démarrage.
+    # ADMIN_EMAIL = os.environ.get('ADMIN_EMAIL', '')
+    # ADMIN_PASSWORD = os.environ.get('ADMIN_PASSWORD', '')
+    # ADMIN_AUTO_CREATE = False  # géré depuis le code plutôt qu'ici
     
     # Chemins
     STATIC_FOLDER = 'static'

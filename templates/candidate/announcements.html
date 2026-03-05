@@ -1,0 +1,267 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Mes annonces - Candidat{% endblock %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h3 fw-bold mb-1"><i class="ri-notification-3-line me-2"></i>Mes annonces</h1>
+            <p class="text-muted mb-0">Publiez et gérez vos annonces de campagne.</p>
+        </div>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createAnnouncementModal">
+            <i class="ri-add-line me-2"></i>Nouvelle annonce
+        </button>
+    </div>
+
+    <div class="row g-4" id="candidateAnnouncementsGrid">
+        {% for announcement in announcements %}
+        <div class="col-md-6 col-xl-4 announcement-item"
+             data-announcement-id="{{ announcement.id }}"
+             data-title="{{ announcement.title|e }}"
+             data-content="{{ announcement.content|e }}"
+             data-audience="{{ announcement.audience }}"
+             data-priority="{{ announcement.priority|default(0) }}"
+             data-status="{{ 'active' if announcement.is_active else 'inactive' }}"
+             data-urgent="{{ 'true' if announcement.is_urgent else 'false' }}"
+             data-expires="{{ announcement.expires_at.strftime('%Y-%m-%d') if announcement.expires_at else '' }}">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <div class="d-flex gap-2">
+                            <span class="badge bg-{{ 'danger' if announcement.is_urgent else 'primary' }}">
+                                {{ 'URGENT' if announcement.is_urgent else 'INFO' }}
+                            </span>
+                            <span class="badge bg-{{ 'success' if announcement.is_active else 'secondary' }}">
+                                {{ 'Active' if announcement.is_active else 'Inactive' }}
+                            </span>
+                        </div>
+                        <small class="text-muted">{{ announcement.created_at|date_format }}</small>
+                    </div>
+
+                    <h5 class="fw-bold">{{ announcement.title }}</h5>
+                    <p class="text-muted small">{{ announcement.content|striptags|truncate(130) }}</p>
+
+                    <div class="small text-muted mb-3">
+                        <div><i class="ri-group-line me-1"></i>Public: {{ announcement.audience }}</div>
+                        <div><i class="ri-flag-line me-1"></i>Priorité: {{ announcement.priority|default(0) }}</div>
+                        <div><i class="ri-calendar-line me-1"></i>Expiration: {{ announcement.expires_at|date_format if announcement.expires_at else 'Aucune' }}</div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-sm btn-outline-primary" onclick="editAnnouncement(this)">
+                            <i class="ri-edit-line me-1"></i>Modifier
+                        </button>
+                        <button class="btn btn-sm btn-outline-warning" onclick="toggleAnnouncement(this)">
+                            <i class="ri-toggle-line me-1"></i>Activer/Désactiver
+                        </button>
+                        <button class="btn btn-sm btn-outline-danger" onclick="deleteAnnouncement(this)">
+                            <i class="ri-delete-bin-line me-1"></i>Supprimer
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-12">
+            <div class="card border-0 shadow-sm">
+                <div class="card-body text-center py-5">
+                    <i class="ri-inbox-line display-5 text-muted"></i>
+                    <h4 class="mt-3">Aucune annonce</h4>
+                    <p class="text-muted mb-0">Créez votre première annonce de campagne.</p>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<div class="modal fade" id="createAnnouncementModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Nouvelle annonce</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="createAnnouncementForm">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Titre *</label>
+                        <input class="form-control" id="announcementTitle" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Contenu *</label>
+                        <div class="form-control" id="announcementEditor" contenteditable="true" style="min-height:140px;">
+                            <p>Saisissez le contenu de votre annonce ici...</p>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label">Public</label>
+                            <select class="form-select" id="announcementAudience">
+                                <option value="all">Tous</option>
+                                <option value="voters">Électeurs</option>
+                                <option value="candidates">Candidats</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Priorité</label>
+                            <select class="form-select" id="announcementPriority">
+                                <option value="0">Normale</option>
+                                <option value="1">Moyenne</option>
+                                <option value="2">Haute</option>
+                                <option value="3">Urgente</option>
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">Expiration</label>
+                            <input type="date" class="form-control" id="announcementExpires">
+                        </div>
+                    </div>
+                    <div class="mt-3 d-flex gap-4">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="announcementUrgent">
+                            <label class="form-check-label">Urgente</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="announcementActive" checked>
+                            <label class="form-check-label">Active</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Annuler</button>
+                    <button class="btn btn-primary" type="submit">Publier</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="editAnnouncementModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold">Modifier annonce</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editAnnouncementForm">
+                <input type="hidden" id="editAnnouncementId">
+                <div class="modal-body" id="editAnnouncementBody"></div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" type="button" data-bs-dismiss="modal">Annuler</button>
+                    <button class="btn btn-primary" type="submit">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    async function postForm(url, payload) {
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'},
+            body: new URLSearchParams(payload)
+        });
+        const data = await response.json();
+        if (!response.ok || !data.success) throw new Error(data.message || 'Erreur');
+        return data;
+    }
+
+    document.getElementById('createAnnouncementForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const payload = {
+            title: document.getElementById('announcementTitle').value,
+            content: document.getElementById('announcementEditor').innerHTML,
+            audience: document.getElementById('announcementAudience').value,
+            priority: document.getElementById('announcementPriority').value,
+            expires_at: document.getElementById('announcementExpires').value || '',
+            is_urgent: document.getElementById('announcementUrgent').checked ? '1' : '0',
+            is_active: document.getElementById('announcementActive').checked ? '1' : '0'
+        };
+        postForm('/candidate/announcements/create', payload)
+            .then(() => window.location.reload())
+            .catch((err) => alert(err.message));
+    });
+
+    window.editAnnouncement = async function(btn) {
+        const item = btn.closest('.announcement-item');
+        const id = item?.dataset.announcementId;
+        if (!id) return;
+        const res = await fetch(`/candidate/api/announcements/${id}`);
+        const a = await res.json();
+        if (!res.ok) return alert(a.message || 'Erreur de chargement');
+
+        document.getElementById('editAnnouncementId').value = String(a.id);
+        document.getElementById('editAnnouncementBody').innerHTML = `
+            <div class="mb-3"><label class="form-label">Titre *</label>
+                <input class="form-control" id="editTitle" value="${a.title || ''}" required></div>
+            <div class="mb-3"><label class="form-label">Contenu *</label>
+                <div class="form-control" id="editContent" contenteditable="true" style="min-height:140px;">${a.content || ''}</div></div>
+            <div class="row g-3">
+                <div class="col-md-4"><label class="form-label">Public</label>
+                    <select class="form-select" id="editAudience">
+                        <option value="all" ${(a.audience === 'all') ? 'selected' : ''}>Tous</option>
+                        <option value="voters" ${(a.audience === 'voters') ? 'selected' : ''}>Électeurs</option>
+                        <option value="candidates" ${(a.audience === 'candidates') ? 'selected' : ''}>Candidats</option>
+                    </select></div>
+                <div class="col-md-4"><label class="form-label">Priorité</label>
+                    <select class="form-select" id="editPriority">
+                        <option value="0" ${(String(a.priority) === '0') ? 'selected' : ''}>Normale</option>
+                        <option value="1" ${(String(a.priority) === '1') ? 'selected' : ''}>Moyenne</option>
+                        <option value="2" ${(String(a.priority) === '2') ? 'selected' : ''}>Haute</option>
+                        <option value="3" ${(String(a.priority) === '3') ? 'selected' : ''}>Urgente</option>
+                    </select></div>
+                <div class="col-md-4"><label class="form-label">Expiration</label>
+                    <input type="date" class="form-control" id="editExpires" value="${a.expires_at || ''}"></div>
+            </div>
+            <div class="mt-3 d-flex gap-4">
+                <div class="form-check"><input class="form-check-input" type="checkbox" id="editUrgent" ${a.is_urgent ? 'checked' : ''}><label class="form-check-label">Urgente</label></div>
+                <div class="form-check"><input class="form-check-input" type="checkbox" id="editActive" ${a.is_active ? 'checked' : ''}><label class="form-check-label">Active</label></div>
+            </div>
+        `;
+        new bootstrap.Modal(document.getElementById('editAnnouncementModal')).show();
+    };
+
+    document.getElementById('editAnnouncementForm')?.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const id = document.getElementById('editAnnouncementId').value;
+        const payload = {
+            title: document.getElementById('editTitle').value,
+            content: document.getElementById('editContent').innerHTML,
+            audience: document.getElementById('editAudience').value,
+            priority: document.getElementById('editPriority').value,
+            expires_at: document.getElementById('editExpires').value || '',
+            is_urgent: document.getElementById('editUrgent').checked ? '1' : '0',
+            is_active: document.getElementById('editActive').checked ? '1' : '0'
+        };
+        postForm(`/candidate/announcements/update/${id}`, payload)
+            .then(() => window.location.reload())
+            .catch((err) => alert(err.message));
+    });
+
+    window.toggleAnnouncement = function(btn) {
+        const item = btn.closest('.announcement-item');
+        const id = item?.dataset.announcementId;
+        if (!id) return;
+        postForm(`/candidate/announcements/toggle/${id}`, {})
+            .then(() => window.location.reload())
+            .catch((err) => alert(err.message));
+    };
+
+    window.deleteAnnouncement = function(btn) {
+        const item = btn.closest('.announcement-item');
+        const id = item?.dataset.announcementId;
+        if (!id) return;
+        if (!confirm("Supprimer cette annonce ?")) return;
+        postForm(`/candidate/announcements/delete/${id}`, {})
+            .then(() => window.location.reload())
+            .catch((err) => alert(err.message));
+    };
+});
+</script>
+{% endblock %}

@@ -27,6 +27,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Progress bars dynamiques (data-target-width="42%")
     initAnimatedProgressBars();
+
+    // Hero + navbar (landing page)
+    initLandingHero();
 });
 
 /**
@@ -435,6 +438,73 @@ function copyToClipboard(text) {
  */
 function isMobile() {
     return window.innerWidth <= 768;
+}
+
+function initLandingHero() {
+    window.addEventListener('scroll', () => {
+        const header = document.getElementById('main-header');
+        if (!header) return;
+        if (window.scrollY > 50) {
+            header.classList.add('scrolled');
+        } else {
+            header.classList.remove('scrolled');
+        }
+    });
+
+    const phrases = [
+        'Simulation des elections presidentielles',
+        'Participez a une election fictive',
+        'Explorez les resultats en temps reel',
+        'Decouvrez le processus democratique'
+    ];
+
+    const textElement = document.getElementById('animated-text');
+    let currentPhrase = 0;
+    let currentChar = 0;
+
+    function typePhrase() {
+        const currentText = phrases[currentPhrase];
+        textElement.textContent = currentText.substring(0, currentChar);
+
+        if (currentChar < currentText.length) {
+            currentChar++;
+            setTimeout(typePhrase, 80);
+        } else {
+            setTimeout(erasePhrase, 2000);
+        }
+    }
+
+    function erasePhrase() {
+        const currentText = phrases[currentPhrase];
+        textElement.textContent = currentText.substring(0, currentChar);
+
+        if (currentChar > 0) {
+            currentChar--;
+            setTimeout(erasePhrase, 40);
+        } else {
+            currentPhrase = (currentPhrase + 1) % phrases.length;
+            setTimeout(typePhrase, 500);
+        }
+    }
+
+    if (textElement) {
+        typePhrase();
+    }
+
+    const menuIcon = document.getElementById('menu-icon');
+    const navbar = document.getElementById('main-navbar');
+
+    if (menuIcon && navbar) {
+        menuIcon.addEventListener('click', () => {
+            navbar.classList.toggle('open');
+            const icon = menuIcon.querySelector('i');
+            if (!icon) return;
+            icon.classList.toggle('bx-menu');
+            icon.classList.toggle('bx-x');
+            icon.classList.toggle('bi-list');
+            icon.classList.toggle('bi-x');
+        });
+    }
 }
 
 // Exporter les fonctions globales
