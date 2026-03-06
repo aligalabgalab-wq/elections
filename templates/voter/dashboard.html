@@ -75,9 +75,9 @@
                             Voter maintenant
                         </a>
                     {% else %}
-                        <a class="btn btn-outline-light fw-semibold" href="{{ url_for('voter_results') }}">
-                            <i class="ri-bar-chart-line me-2"></i>
-                            Voir les résultats
+                        <a class="btn btn-outline-light fw-semibold" href="{{ url_for('candidates_list') }}">
+                            <i class="ri-team-line me-2"></i>
+                            Voir les candidats
                         </a>
                     {% endif %}
 
@@ -225,9 +225,9 @@
                         Vous avez voté pour <span class="fw-semibold">{{ my_candidate.full_name }}</span>.
                     </div>
                 </div>
-                <a class="btn btn-outline-success" href="{{ url_for('voter_results') }}">
-                    <i class="ri-bar-chart-line me-2"></i>
-                    Voir les résultats
+                <a class="btn btn-outline-success" href="{{ url_for('candidates_list') }}">
+                    <i class="ri-team-line me-2"></i>
+                    Voir les candidats
                 </a>
             </div>
         </div>
@@ -308,9 +308,9 @@
                         </a>
                     {% endif %}
 
-                    <a class="btn btn-outline-secondary" href="{{ url_for('voter_results') }}">
-                        <i class="ri-bar-chart-line me-2"></i>
-                        Consulter les résultats
+                    <a class="btn btn-outline-secondary" href="{{ url_for('voter_card') }}">
+                        <i class="ri-id-card-line me-2"></i>
+                        Consulter ma carte
                     </a>
 
                     <a class="btn btn-outline-secondary" href="{{ url_for('candidates_list') }}">

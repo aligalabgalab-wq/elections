@@ -1835,34 +1835,6 @@ def update_voter_profile():
     flash("Profil mis à jour", "success")
     return redirect(url_for('voter_profile'))
 
-@app.route('/voter/results')
-@voter_required
-def voter_results():
-    election = Election.query.filter_by(year=2025).first()
-    candidates = Candidate.query.filter_by(is_approved=True).order_by(Candidate.vote_count.desc()).all()
-
-    total_votes = sum(c.vote_count for c in candidates)
-    for candidate in candidates:
-        candidate.percentage = (candidate.vote_count / total_votes * 100) if total_votes > 0 else 0
-
-    # Données JSON sérialisables pour les graphiques côté navigateur (Chart.js).
-    candidates_json = [
-        {
-            "id": c.id,
-            "full_name": c.full_name,
-            "vote_count": int(c.vote_count or 0),
-            "percentage": round((c.vote_count / total_votes * 100), 2) if total_votes > 0 else 0,
-        }
-        for c in candidates
-    ]
-
-    return render_template('voter/results_voter.html',
-                         election=election,
-                         candidates=candidates,
-                         candidates_json=candidates_json,
-                         total_votes=total_votes,
-                         page_title="Résultats")
-
 # ========== ROUTES CANDIDAT ==========
 @app.route('/candidate/dashboard')
 @candidate_required

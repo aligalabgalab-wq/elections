@@ -137,9 +137,9 @@
         <strong>Vote déjà effectué :</strong> 
         Vous avez exercé votre droit de vote le <strong>{{ voter.voted_at|datetime_format }}</strong>.
         <div class="mt-2">
-            <a href="{{ url_for('voter_results') }}" class="btn btn-outline-success btn-sm">
-                <i class="ri-bar-chart-line me-1"></i>
-                Voir les résultats
+            <a href="{{ url_for('voter_dashboard') }}" class="btn btn-outline-success btn-sm">
+                <i class="ri-dashboard-2-line me-1"></i>
+                Retour au tableau de bord
             </a>
         </div>
     </div>

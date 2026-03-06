@@ -18,12 +18,6 @@
     {% endif %}
 </a>
 
-<a class="app-nav-link {% if request.endpoint in ['voter_results'] %}is-active{% endif %}"
-    href="{{ url_for('voter_results') }}">
-    <i class="ri-bar-chart-line"></i>
-    <span>Résultats</span>
-</a>
-
 <a class="app-nav-link {% if request.endpoint in ['voter_card'] %}is-active{% endif %}"
     href="{{ url_for('voter_card') }}">
     <i class="ri-id-card-line"></i>

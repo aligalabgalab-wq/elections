@@ -88,7 +88,6 @@
             <ul class="dropdown-menu dropdown-menu-end shadow border-0">
                 {% if current_user.role == 'voter' %}
                     <li><a class="dropdown-item" href="{{ url_for('voter_profile') }}"><i class="ri-user-settings-line me-2"></i>Profil</a></li>
-                    <li><a class="dropdown-item" href="{{ url_for('voter_results') }}"><i class="ri-bar-chart-line me-2"></i>Résultats</a></li>
                 {% elif current_user.role == 'candidate' %}
                     <li><a class="dropdown-item" href="{{ url_for('candidate_profile') }}"><i class="ri-user-star-line me-2"></i>Profil</a></li>
                     <li><a class="dropdown-item" href="{{ url_for('candidate_statistics') }}"><i class="ri-line-chart-line me-2"></i>Statistiques</a></li>

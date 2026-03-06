@@ -4,182 +4,148 @@
 
 {% block content %}
 <main>
-    <div id="results-page" class="container-fluid py-4">
-        <section class="bg-white p-3 p-md-4 rounded-3 shadow-sm">
-            <div class="text-center mb-5">
-                <h1 class="display-5 fw-bold mb-3">Résultats de l'élection</h1>
-                <p class="lead text-muted mb-4">Résultats en temps réel de la simulation électorale</p>
-                <a class="btn btn-primary" href="{{ url_for('index') }}">
-                    <i class="ri-arrow-left-line me-2"></i>Retour à l'accueil
-                </a>
+    <div class="container-fluid py-4">
+        <div class="bg-white p-4 rounded-3 shadow-sm">
+            <div class="text-center mb-4">
+                <h1 class="display-4 fw-bold text-primary">Résultats Électoraux</h1>
+                <p class="lead text-muted">Tableau des résultats de l'élection en cours</p>
             </div>
 
-            <div class="row mb-5">
-                <div class="col-md-4 mb-3">
-                    <div class="bg-primary bg-opacity-10 p-4 rounded text-center h-100">
-                        <div class="mx-auto mb-3 d-flex justify-content-center align-items-center rounded-circle bg-primary"
-                            style="width:48px; height:48px;">
-                            <i class="ri-group-line text-white fs-4"></i>
-                        </div>
-                        <h3 class="fw-bold">{{ stats.voters_voted|default(0) }}</h3>
-                        <p class="text-muted mb-0">Total des votants</p>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="bg-success bg-opacity-10 p-4 rounded text-center h-100">
-                        <div class="mx-auto mb-3 d-flex justify-content-center align-items-center rounded-circle bg-success"
-                            style="width:48px; height:48px;">
-                            <i class="ri-percent-line text-white fs-4"></i>
-                        </div>
-                        <h3 class="fw-bold">{{ stats.participation_rate|default(0)|round(1) }}%</h3>
-                        <p class="text-muted mb-0">Taux de participation</p>
-                    </div>
-                </div>
-                <div class="col-md-4 mb-3">
-                    <div class="p-4 rounded text-center h-100" style="background: rgba(111, 66, 193, 0.1);">
-                        <div class="mx-auto mb-3 d-flex justify-content-center align-items-center rounded-circle"
-                            style="width:48px; height:48px; background-color: #6f42c1;">
-                            <i class="ri-trophy-line text-white fs-4"></i>
-                        </div>
-                        <h3 class="fw-bold">{{ candidates[0].full_name if candidates else "Aucun candidat" }}</h3>
-                        <p class="text-muted mb-0">En tête</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="row g-4">
-                <div class="col-lg-6">
-                    <div class="card border-secondary rounded">
-                        <div class="card-body">
-                            <h3 class="card-title fw-bold mb-4">Répartition des votes</h3>
-                            <canvas id="bar-chart" style="height: 300px;"></canvas>
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <i class="ri-group-line fs-1 mb-2"></i>
+                            <h4>{{ stats.voters_voted|default(0) }}</h4>
+                            <p class="mb-0">Votants</p>
                         </div>
                     </div>
                 </div>
-                <div class="col-lg-6">
-                    <div class="card border-secondary rounded">
-                        <div class="card-body">
-                            <h3 class="card-title fw-bold mb-4">Pourcentages par candidat</h3>
-                            <canvas id="pie-chart" style="height: 300px;"></canvas>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body text-center">
+                            <i class="ri-percent-line fs-1 mb-2"></i>
+                            <h4>{{ stats.participation_rate|default(0)|round(1) }}%</h4>
+                            <p class="mb-0">Participation</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-warning text-white">
+                        <div class="card-body text-center">
+                            <i class="ri-trophy-line fs-1 mb-2"></i>
+                            <h4>{{ total_votes|default(0) }}</h4>
+                            <p class="mb-0">Total Votes</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-info text-white">
+                        <div class="card-body text-center">
+                            <i class="ri-user-star-line fs-1 mb-2"></i>
+                            <h4>{{ candidates|length }}</h4>
+                            <p class="mb-0">Candidats</p>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="card border-secondary rounded mt-4">
+            <div class="card">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="ri-bar-chart-line me-2"></i>Classement des Candidats</h5>
+                </div>
                 <div class="card-body">
-                    <h3 class="card-title fw-bold mb-4">Résultats détaillés</h3>
-                    {% set palette = ['primary', 'success', 'warning', 'danger', 'info', 'secondary'] %}
-                    {% for candidate in candidates %}
-                    {% set votes = candidate.vote_count|default(0, true)|int %}
-                    {% set pct = ((votes / total_votes) * 100) if total_votes > 0 else 0 %}
-                    {% set color = palette[(loop.index0) % (palette|length)] %}
-                    <div class="mb-3 p-3 rounded bg-{{ color }} bg-opacity-10 d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center gap-3">
-                            <span class="rounded-circle bg-{{ color }}" style="width:12px; height:12px;"></span>
-                            <span class="fw-medium">{{ candidate.full_name }}</span>
-                        </div>
-                        <div class="text-end">
-                            <span class="fw-bold fs-5">{{ votes }} votes</span>
-                            <span class="text-{{ color }} ms-2">{{ pct|round(1) }}%</span>
-                        </div>
+                    <div class="table-responsive">
+                        <table class="table table-striped table-hover">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Rang</th>
+                                    <th>Candidat</th>
+                                    <th>Votes</th>
+                                    <th>Pourcentage</th>
+                                    <th>Progression</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for candidate in candidates %}
+                                <tr>
+                                    <td>
+                                        {% if loop.first %}
+                                        <i class="ri-medal-line text-warning fs-5"></i> 1er
+                                        {% elif loop.index == 2 %}
+                                        <i class="ri-medal-line text-secondary fs-5"></i> 2ème
+                                        {% elif loop.index == 3 %}
+                                        <i class="ri-medal-line text-danger fs-5"></i> 3ème
+                                        {% else %}
+                                        {{ loop.index }}ème
+                                        {% endif %}
+                                    </td>
+                                    <td class="fw-bold">{{ candidate.full_name }}</td>
+                                    <td>{{ candidate.vote_count|default(0) }}</td>
+                                    <td>
+                                        <span class="badge bg-primary">{{ candidate.percentage|round(1) }}%</span>
+                                    </td>
+                                    <td>
+                                        <div class="progress" style="height: 20px;">
+                                            <div class="progress-bar bg-success" role="progressbar"
+                                                style="width: {{ candidate.percentage }}%"
+                                                aria-valuenow="{{ candidate.percentage }}" aria-valuemin="0"
+                                                aria-valuemax="100">
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% else %}
+                                <tr>
+                                    <td colspan="5" class="text-center text-muted py-4">
+                                        <i class="ri-information-line fs-1 mb-2"></i>
+                                        <br>Aucun résultat disponible
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
                     </div>
-                    {% else %}
-                    <div class="p-3 rounded bg-light d-flex justify-content-between align-items-center">
-                        <div class="d-flex align-items-center gap-3">
-                            <span class="rounded-circle bg-secondary" style="width:12px; height:12px;"></span>
-                            <span class="fw-medium">Aucun candidat approuvé</span>
-                        </div>
-                        <div class="text-end">
-                            <span class="fw-bold fs-5">0 votes</span>
-                            <span class="text-secondary ms-2">0.0%</span>
-                        </div>
-                    </div>
-                    {% endfor %}
                 </div>
             </div>
-        </section>
+
+            <div class="text-center mt-4">
+                <a href="{{ url_for('admin_dashboard') }}" class="btn btn-outline-primary me-2">
+                    <i class="ri-arrow-left-line me-1"></i>Retour au tableau de bord
+                </a>
+                <button onclick="window.print()" class="btn btn-outline-secondary">
+                    <i class="ri-printer-line me-1"></i>Imprimer les résultats
+                </button>
+            </div>
+        </div>
     </div>
 </main>
 {% endblock %}
 
 {% block scripts %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script type="application/json" id="results-page-data">
-{{ {
-    "candidates": candidates_json,
-    "total_votes": total_votes
-} | tojson | safe }}
-</script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    let pageData = {};
-    try {
-        const dataEl = document.getElementById('results-page-data');
-        pageData = dataEl ? JSON.parse(dataEl.textContent) : {};
-    } catch (e) {
-        pageData = {};
-    }
-
-    const rows = Array.isArray(pageData.candidates) ? pageData.candidates : [];
-    const candidates = rows.map(c => c.full_name || 'Candidat');
-    const votes = rows.map(c => Number(c.vote_count || 0));
-    const colors = ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#0dcaf0', '#6c757d'];
-
-    const barCanvas = document.getElementById('bar-chart');
-    if (barCanvas) {
-        const barCtx = barCanvas.getContext('2d');
-        new Chart(barCtx, {
-            type: 'bar',
-            data: {
-                labels: candidates,
-                datasets: [{
-                    label: 'Nombre de votes',
-                    data: votes,
-                    backgroundColor: candidates.map((_, i) => colors[i % colors.length]),
-                    borderRadius: 5
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { stepSize: 1, precision: 0 }
-                    }
-                },
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: true }
+    document.addEventListener('DOMContentLoaded', function () {
+        // Animation des compteurs
+        const counters = document.querySelectorAll('.card h4');
+        counters.forEach(counter => {
+            const target = parseInt(counter.textContent.replace('%', ''));
+            let current = 0;
+            const increment = target / 50;
+            const timer = setInterval(() => {
+                current += increment;
+                if (current >= target) {
+                    counter.textContent = target + (counter.textContent.includes('%') ? '%' : '');
+                    clearInterval(timer);
+                } else {
+                    counter.textContent = Math.floor(current) + (counter.textContent.includes('%') ? '%' : '');
                 }
-            }
+            }, 30);
         });
-    }
 
-    const pieCanvas = document.getElementById('pie-chart');
-    if (pieCanvas) {
-        const pieCtx = pieCanvas.getContext('2d');
-        new Chart(pieCtx, {
-            type: 'pie',
-            data: {
-                labels: candidates,
-                datasets: [{
-                    data: votes,
-                    backgroundColor: candidates.map((_, i) => colors[i % colors.length]),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { position: 'bottom' },
-                    tooltip: { enabled: true }
-                }
-            }
-        });
-    }
-});
+        // Mise à jour automatique toutes les 30 secondes
+        setInterval(() => {
+            location.reload();
+        }, 30000);
+    });
 </script>
 {% endblock %}
