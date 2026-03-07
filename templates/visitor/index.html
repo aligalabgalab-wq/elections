@@ -21,16 +21,20 @@
                         Participez a une election fictive et explorez les resultats en temps reel.
                     </p>
                     <div class="button-group">
-                        <button class="btn btn-primary">Commencer a voter</button>
-                        <button class="btn btn-outline">Voir les resultats</button>
+                        {% if current_user.is_authenticated %}
+                        <a class="btn btn-primary" href="{{ url_for('candidates_list') }}">Commencer a voter</a>
+                        {% else %}
+                        <a class="btn btn-primary" href="{{ url_for('login') }}">Commencer a voter</a>
+                        {% endif %}
+                        <a class="btn btn-outline" href="#">Assister debat en ligne</a>
                     </div>
                 </div>
 
                 <!-- Colonne Image (image circulaire a droite) -->
                 <div class="col-lg-6 text-center">
                     <div class="image-wrapper">
-                        <img src="{{ url_for('static', filename='images/ali.jpg') }}" alt="Assemblee nationale"
-                            class="img-fluid rounded-circle hero-image"
+                        <img src="{{ url_for('static', filename='images/Ali-kalageyeh.png') }}"
+                            alt="Assemblee nationale" class="img-fluid rounded-circle hero-image"
                             style="width: min(360px, 72vw); height: min(360px, 72vw); object-fit: cover;">
                     </div>
                 </div>
@@ -41,8 +45,8 @@
     <!-- Stats -->
     <section class="py-5 bg-white home-white-section home-stats">
         <div class="container">
-            <div class="row g-4">
-                <div class="col-12 col-sm-6 col-lg-3">
+            <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
+                <div class="col">
                     <div class="card kpi-card kpi-card--primary reveal h-100">
                         <div class="card-body">
                             <div class="d-flex align-items-center justify-content-between">
@@ -59,7 +63,7 @@
                     </div>
                 </div>
 
-                <div class="col-12 col-sm-6 col-lg-3">
+                <div class="col">
                     <div class="card kpi-card kpi-card--success reveal h-100">
                         <div class="card-body">
                             <div class="d-flex align-items-center justify-content-between">
@@ -76,7 +80,7 @@
                     </div>
                 </div>
 
-                <div class="col-12 col-sm-6 col-lg-3">
+                <div class="col">
                     <div class="card kpi-card kpi-card--danger reveal h-100">
                         <div class="card-body">
                             <div class="d-flex align-items-center justify-content-between">
@@ -93,7 +97,7 @@
                     </div>
                 </div>
 
-                <div class="col-12 col-sm-6 col-lg-3">
+                <div class="col">
                     <div class="card kpi-card kpi-card--warning reveal h-100">
                         <div class="card-body">
                             <div class="d-flex align-items-center justify-content-between">
@@ -110,62 +114,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
-
-    <!-- Annonces officielles -->
-    <section class="py-5 home-announcements-section">
-        <div class="container">
-            <div class="text-center mb-4">
-                <h2 class="fw-bold mb-2">Annonces de l'administration</h2>
-                <p class="text-secondary mx-auto mb-0" style="max-width: 42rem;">
-                    Retrouvez les communications officielles publiées par les administrateurs de la plateforme.
-                </p>
-            </div>
-
-            {% if announcements %}
-            <div class="home-announcements-scroll-wrapper">
-                <div class="home-announcements-scroll-inner">
-                    {% for announcement in announcements %}
-                    <div class="home-announcement-card">
-                        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
-                            {% if announcement.is_urgent %}
-                            <span class="badge text-bg-danger">URGENT</span>
-                            {% else %}
-                            <span class="badge text-bg-primary">INFO</span>
-                            {% endif %}
-                            {% if announcement.author %}
-                            <span class="badge text-bg-secondary">
-                                {% if announcement.author.role == 'admin' %}
-                                admin
-                                {% elif announcement.author.role == 'candidate' and
-                                announcement.author.candidate_profile %}
-                                {{ announcement.author.candidate_profile.full_name }}
-                                {% else %}
-                                Utilisateur
-                                {% endif %}
-                            </span>
-                            {% endif %}
-                            <span class="home-announcement-date text-muted">
-                                {{ announcement.created_at.strftime('%d/%m/%Y %H:%M') if announcement.created_at else ''
-                                }}
-                            </span>
-                        </div>
-
-                        <h3 class="h5 fw-bold mb-3">{{ announcement.title }}</h3>
-                        <p class="mb-0 text-secondary">
-                            {{ announcement.content|striptags|truncate(280) }}
-                        </p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
-            {% else %}
-            <div class="home-announcement-empty text-center">
-                <i class="bi bi-megaphone fs-2 d-block mb-2"></i>
-                <p class="mb-0">Aucune annonce disponible pour le moment.</p>
-            </div>
-            {% endif %}
         </div>
     </section>
 
@@ -323,7 +271,11 @@
                         <p class="text-muted mb-4">
                             Consultez la liste des candidats et exprimez votre choix democratique en toute securite.
                         </p>
-                        <button class="btn btn-primary px-4" data-page="voter">Acceder au vote</button>
+                        {% if current_user.is_authenticated %}
+                        <a class="btn btn-primary px-4" href="{{ url_for('candidates_list') }}">Acceder au vote</a>
+                        {% else %}
+                        <a class="btn btn-primary px-4" href="{{ url_for('login') }}">Acceder au vote</a>
+                        {% endif %}
                     </div>
                 </div>
 
@@ -331,13 +283,13 @@
                     <div class="rounded-3 text-center shadow-sm transition-hover home-action-card">
                         <div class="bg-secondary rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center"
                             style="width: 72px; height: 72px;">
-                            <i class="ri-bar-chart-line text-white fs-2"></i>
+                            <i class="ri-discuss-line text-white fs-2"></i>
                         </div>
-                        <h5 class="fw-semibold mb-3">Resultats</h5>
+                        <h5 class="fw-semibold mb-3">Debat en ligne</h5>
                         <p class="text-muted mb-4">
-                            Suivez l'evolution des resultats en temps reel avec des graphiques.
+                            Participez au Grand Debat Presidentiel et suivez les echanges entre les candidats.
                         </p>
-                        <button class="btn btn-secondary px-4" data-page="resultat">Voir les resultats</button>
+                        <a class="btn btn-secondary px-4" href="#">Assister debat en ligne</a>
                     </div>
                 </div>
 
@@ -354,7 +306,61 @@
                         <button class="btn btn-danger px-4" data-page="debatenligne">Acceder au debat</button>
                     </div>
                 </div>
+    </section>
+
+    <!-- Annonces officielles -->
+    <section class="py-5 home-announcements-section">
+        <div class="container">
+            <div class="text-center mb-4">
+                <h2 class="fw-bold mb-2">Annonces de l'administration</h2>
+                <p class="text-secondary mx-auto mb-0" style="max-width: 42rem;">
+                    Retrouvez les communications officielles publiées par les administrateurs de la plateforme.
+                </p>
             </div>
+
+            {% if announcements %}
+            <div class="home-announcements-scroll-wrapper">
+                <div class="home-announcements-scroll-inner">
+                    {% for announcement in announcements %}
+                    <div class="home-announcement-card">
+                        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+                            {% if announcement.is_urgent %}
+                            <span class="badge text-bg-danger">URGENT</span>
+                            {% else %}
+                            <span class="badge text-bg-primary">INFO</span>
+                            {% endif %}
+                            {% if announcement.author %}
+                            <span class="badge text-bg-secondary">
+                                {% if announcement.author.role == 'admin' %}
+                                admin
+                                {% elif announcement.author.role == 'candidate' and
+                                announcement.author.candidate_profile %}
+                                {{ announcement.author.candidate_profile.full_name }}
+                                {% else %}
+                                Utilisateur
+                                {% endif %}
+                            </span>
+                            {% endif %}
+                            <span class="home-announcement-date text-muted">
+                                {{ announcement.created_at.strftime('%d/%m/%Y %H:%M') if announcement.created_at else ''
+                                }}
+                            </span>
+                        </div>
+
+                        <h3 class="h5 fw-bold mb-3">{{ announcement.title }}</h3>
+                        <p class="mb-0 text-secondary">
+                            {{ announcement.content|striptags|truncate(280) }}
+                        </p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% else %}
+            <div class="home-announcement-empty text-center">
+                <i class="bi bi-megaphone fs-2 d-block mb-2"></i>
+                <p class="mb-0">Aucune annonce disponible pour le moment.</p>
+            </div>
+            {% endif %}
         </div>
     </section>
 

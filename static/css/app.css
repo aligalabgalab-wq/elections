@@ -80,7 +80,7 @@ body {
     font-family: var(--font-family-base);
     line-height: 1.6;
     color: var(--dark-color);
-    background-color: #f5f7fa;
+    background-color: #e8f4fd;
     background-image:
         radial-gradient(900px circle at 15% 5%, rgba(0, 102, 179, 0.14), transparent 60%),
         radial-gradient(700px circle at 90% 10%, rgba(18, 173, 43, 0.10), transparent 55%),
@@ -674,6 +674,7 @@ html[data-bs-theme="dark"] .section-surface::before {
     overflow: hidden;
     transition: transform var(--transition), box-shadow var(--transition), filter var(--transition);
     animation: kpiSpin 22s linear infinite;
+    min-height: 180px;
 }
 
 .kpi-card::before {
@@ -1110,7 +1111,7 @@ html[data-bs-theme="dark"] .image-wrapper {
 }
 
 .home-announcement-card {
-    background: #ffffff;
+    background: linear-gradient(135deg, rgba(0, 102, 179, 0.05), rgba(18, 173, 43, 0.03));
     border: 1px solid rgba(15, 23, 42, 0.1);
     border-radius: 16px;
     box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);

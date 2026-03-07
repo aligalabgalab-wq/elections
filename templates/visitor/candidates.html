@@ -225,20 +225,12 @@
 
                         </button>
 
-                        {% if current_user.is_authenticated
-                        and current_user.role=='voter'
-                        and election
-                        and election.is_voting_open
-                        and not current_user.voter_profile.has_voted %}
-
                         <a href="{{ url_for('voter_vote', candidate_id=candidate.id) }}" class="btn btn-success btn-sm">
 
                             <i class="bi bi-check2-square"></i>
                             Voter
 
                         </a>
-
-                        {% endif %}
 
                     </div>
 

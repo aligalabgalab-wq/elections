@@ -1,13 +1,13 @@
 <!-- templates/layouts/header.html -->
-<header id="main-header" class="bg-white shadow-sm border-bottom border-light fixed-top">
+<header id="main-header" class="bg-dark shadow-sm border-bottom border-light fixed-top">
     <div class="container py-2">
-        <nav class="navbar navbar-expand-md navbar-light p-0">
+        <nav class="navbar navbar-expand-md navbar-dark p-0">
             <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
                 <div class="bg-primary d-flex align-items-center justify-content-center rounded me-2"
                     style="width: 32px; height: 32px;">
                     <i class="ri-bank-line text-white fs-5"></i>
                 </div>
-                <h1 class="h5 mb-0 fw-bold text-dark">{{ config.get('APP_NAME', 'Élection Nationale') }}</h1>
+                <h1 class="h5 mb-0 fw-bold text-white">{{ config.get('APP_NAME', 'Élection Nationale') }}</h1>
             </a>
 
             <button id="menu-icon" class="navbar-toggler" type="button" data-bs-toggle="collapse"

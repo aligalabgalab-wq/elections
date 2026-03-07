@@ -1188,6 +1188,74 @@ def candidates_list():
         page_title="Candidats",
     )
 
+@app.route('/candidate/<int:candidate_id>')
+def candidate_public_profile(candidate_id):
+    candidate = Candidate.query.filter_by(id=candidate_id, is_approved=True).first_or_404()
+    return render_template(
+        'visitor/candidate_profile.html',
+        candidate=candidate,
+        page_title=f"Profil de {candidate.full_name}",
+    )
+
+@app.route('/vote/<int:candidate_id>', methods=['POST'])
+@login_required
+def vote_for_candidate(candidate_id):
+    if current_user.role != 'voter':
+        flash('Seuls les électeurs peuvent voter', 'danger')
+        return redirect(url_for('index'))
+    
+    voter = Voter.query.filter_by(user_id=current_user.id).first()
+    if not voter:
+        flash('Profil électeur non trouvé', 'danger')
+        return redirect(url_for('index'))
+    
+    election = Election.query.filter_by(year=2025).first()
+    if not election or not election.is_voting_open:
+        flash('Le vote n\'est pas ouvert actuellement', 'warning')
+        return redirect(url_for('index'))
+    
+    if voter.has_voted:
+        flash('Vous avez déjà voté', 'warning')
+        return redirect(url_for('index'))
+
+    if not voter.is_eligible:
+        reason = voter.eligibility_reason or "Votre éligibilité est en cours de vérification."
+        flash(reason, 'warning')
+        return redirect(url_for('index'))
+    
+    candidate = Candidate.query.filter_by(id=candidate_id, is_approved=True).first()
+    if not candidate:
+        flash('Candidat invalide', 'danger')
+        return redirect(url_for('index'))
+    
+    # Enregistrement du vote
+    voter.has_voted = True
+    voter.voted_at = datetime.utcnow()
+    voter.vote_for_id = candidate_id
+    candidate.vote_count += 1
+    
+    # Log du vote
+    vote_hash = VoteLog.generate_vote_hash(
+        voter.id, 
+        candidate.id, 
+        election.id, 
+        secrets.token_hex(16)
+    )
+    
+    vote_log = VoteLog(
+        voter_id=voter.id,
+        candidate_id=candidate.id,
+        election_id=election.id,
+        vote_hash=vote_hash,
+        ip_address=request.remote_addr
+    )
+    
+    db.session.add(vote_log)
+    db.session.commit()
+    
+    flash(f'Votre vote pour {candidate.full_name} a été enregistré avec succès', 'success')
+    return redirect(url_for('index'))
+
 @app.route('/about')
 def about():
     return render_template('visitor/information.html',
