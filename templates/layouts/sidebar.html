@@ -1,63 +1,132 @@
 <!-- templates/layouts/sidebar.html -->
+{% set sidebar_avatar_url = None %}
+{% set sidebar_name = current_user.profile_name %}
+{% set sidebar_role = 'Utilisateur' %}
+{% set sidebar_initial = current_user.email[:1]|upper %}
+{% set role_color = 'info' %}
+{% if current_user.role == 'voter' and voter %}
+{% set sidebar_avatar_url = voter_avatar_url(voter) %}
+{% set sidebar_name = voter.full_name %}
+{% set sidebar_role = 'Électeur' %}
+{% set sidebar_initial = voter.full_name[:1]|upper %}
+{% set role_color = 'primary' %}
+{% elif current_user.role == 'candidate' and candidate %}
+{% set sidebar_avatar_url = candidate_photo_url(candidate) %}
+{% set sidebar_name = candidate.full_name %}
+{% set sidebar_role = 'Candidat' %}
+{% set sidebar_initial = candidate.full_name[:1]|upper %}
+{% set role_color = 'success' %}
+{% elif current_user.role == 'admin' %}
+{% set sidebar_avatar_url = admin_avatar_url(current_user) %}
+{% set sidebar_name = current_user.profile_name %}
+{% set sidebar_role = 'Administrateur' %}
+{% set sidebar_initial = current_user.profile_name[:1]|upper %}
+{% set role_color = 'danger' %}
+{% endif %}
+
 <aside class="app-sidebar" aria-label="Menu principal">
+    <!-- Brand -->
     <div class="app-sidebar__brand">
         <a class="app-brand" href="{{ url_for('index') }}">
             <span class="app-brand__mark" aria-hidden="true">
-                <i class="ri-shield-check-line"></i>
+                <i class="ri-government-line"></i>
             </span>
             <span class="app-brand__text">
                 <span class="app-brand__title">{{ config.get('APP_NAME', 'Élection Nationale') }}</span>
-                <span class="app-brand__subtitle">{{ config.get('APP_TAGLINE', 'Simulation • Djibouti') }}</span>
             </span>
         </a>
 
-        <button class="btn btn-sm btn-outline-light app-sidebar__toggle"
-                type="button"
-                data-app-sidebar-toggle
-                aria-label="Réduire/agrandir le menu">
+        <button class="btn btn-sm btn-outline-light app-sidebar__toggle" type="button" data-app-sidebar-toggle
+            aria-label="Réduire ou agrandir le menu" aria-expanded="true">
             <i class="ri-layout-left-line"></i>
         </button>
     </div>
 
+    <!-- Profil Card -->
+    <div class="app-sidebar__profile-card">
+        <div class="app-sidebar__profile-header">
+            <span class="app-sidebar__avatar app-avatar--lg" aria-hidden="true">
+                {% if sidebar_avatar_url %}
+                <img src="{{ sidebar_avatar_url }}" alt="" class="app-avatar__img" loading="lazy">
+                {% else %}
+                <span class="app-avatar__initial">{{ sidebar_initial }}</span>
+                {% endif %}
+            </span>
+            <div class="app-sidebar__profile-info">
+                <div class="app-sidebar__profile-name">{{ sidebar_name }}</div>
+                <div class="app-sidebar__profile-role">
+                    <span class="app-sidebar__role-badge app-sidebar__role-badge--{{ role_color }}">
+                        {{ sidebar_role }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        <div class="app-sidebar__profile-meta">
+            <span class="app-sidebar__meta-item">
+                <i class="ri-mail-line"></i>
+                <span class="app-sidebar__meta-text">{{ current_user.email }}</span>
+            </span>
+        </div>
+    </div>
+
+    <!-- Navigation -->
     <nav class="app-sidebar__nav">
         {% if current_user.is_authenticated and current_user.role == 'admin' %}
-            {% include 'layouts/sidebars/admin_sidebar.html' %}
+        {% include 'layouts/sidebars/admin_sidebar.html' %}
         {% elif current_user.is_authenticated and current_user.role == 'candidate' %}
-            {% include 'layouts/sidebars/candidate_sidebar.html' %}
+        {% include 'layouts/sidebars/candidate_sidebar.html' %}
         {% elif current_user.is_authenticated and current_user.role == 'voter' %}
-            {% include 'layouts/sidebars/electeur_sidebar.html' %}
+        {% include 'layouts/sidebars/electeur_sidebar.html' %}
         {% endif %}
     </nav>
 
+    <!-- Footer statut -->
     <div class="app-sidebar__footer">
-        {% if election %}
+        <div class="app-sidebar__election-status">
+            {% if election %}
             {% if election.is_voting_open %}
-                <span class="app-status app-status--success">
-                    <span class="app-status__dot"></span>
-                    Vote ouvert
-                </span>
-            {% elif election.is_registration_open %}
-                <span class="app-status app-status--warning">
-                    <span class="app-status__dot"></span>
-                    Inscriptions ouvertes
-                </span>
+            <div class="app-status-badge app-status-badge--success">
+                <span class="app-status-badge__dot"></span>
+                <span class="app-status-badge__text">Vote ouvert</span>
+            </div>
+            {% elif election.phase == 'preparation' %}
+            <div class="app-status-badge app-status-badge--warning">
+                <span class="app-status-badge__dot"></span>
+                <span class="app-status-badge__text">En préparation</span>
+            </div>
+            {% elif election.phase == 'vote_ferme' %}
+            <div class="app-status-badge app-status-badge--info">
+                <span class="app-status-badge__dot"></span>
+                <span class="app-status-badge__text">Vote fermé</span>
+            </div>
+            {% elif election.phase == 'depouillement' %}
+            <div class="app-status-badge app-status-badge--secondary">
+                <span class="app-status-badge__dot"></span>
+                <span class="app-status-badge__text">Dépouillement</span>
+            </div>
+            {% elif election.phase == 'resultats_proclames' %}
+            <div class="app-status-badge app-status-badge--success">
+                <span class="app-status-badge__dot"></span>
+                <span class="app-status-badge__text">Résultats proclamés</span>
+            </div>
             {% else %}
-                <span class="app-status">
-                    <span class="app-status__dot"></span>
-                    Vote fermé
-                </span>
+            <div class="app-status-badge">
+                <span class="app-status-badge__dot"></span>
+                <span class="app-status-badge__text">{{ election.phase_label }}</span>
+            </div>
             {% endif %}
-        {% else %}
-            <span class="app-status">
-                <span class="app-status__dot"></span>
-                Élection non configurée
-            </span>
-        {% endif %}
-
-        <div class="app-sidebar__meta">
-            <span class="text-muted small">v1.0.0</span>
-            {% if config.get('DEBUG') %}
-                <span class="badge bg-warning text-dark">Dev</span>
+            <div class="app-sidebar__footer-link">
+                <a href="{{ url_for('admin_election') if current_user.role == 'admin' else url_for('index') }}"
+                    class="app-sidebar__footer-btn">
+                    <i class="ri-settings-line"></i>
+                    <span>Paramètres</span>
+                </a>
+            </div>
+            {% else %}
+            <div class="app-status-badge app-status-badge--gray">
+                <span class="app-status-badge__dot"></span>
+                <span class="app-status-badge__text">Non configurée</span>
+            </div>
             {% endif %}
         </div>
     </div>

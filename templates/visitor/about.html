@@ -1,0 +1,210 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}À propos{% endblock %}
+
+{% block content %}
+<div class="public-page about-page">
+    <section class="public-hero public-hero--bare">
+        <div class="container">
+            <div class="public-hero__surface">
+                <div class="row align-items-center g-4 g-xl-5">
+                    <div class="col-lg-6">
+                        <div class="hero-copy">
+                            <h1>À propos de <span class="text-highlight">{{ config.get('APP_NAME', 'Élection Nationale')
+                                    }}</span></h1>
+                            <p class="mt-4 mb-0">
+                                Une plateforme académique de vote électronique conçue pour démontrer un processus
+                                électoral cohérent, transparent et sécurisé, adaptée au contexte djiboutien.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="public-panel p-0 overflow-hidden">
+                            <img src="{{ url_for('static', filename='images/assembleenationale.jpg') }}"
+                                alt="Illustration du projet" class="w-100" style="min-height: 320px; object-fit: cover;"
+                                loading="lazy">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="pb-5">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-12">
+                    <div class="public-panel p-4 p-lg-5 h-100">
+                        <h2 class="h2 fw-bold mb-3">Notre mission</h2>
+                        <p class="text-secondary fs-5">
+                            Mettre en œuvre concrètement le cycle complet d’une élection: préparation du scrutin,
+                            authentification des électeurs, vote, dépouillement, proclamation des résultats et
+                            traçabilité des opérations.
+                        </p>
+                        <p class="text-secondary mb-0">
+                            La plateforme sert à modéliser des règles métier strictes, à visualiser les transitions
+                            d’état et à expérimenter une gouvernance numérique crédible dans le périmètre d’un projet
+                            académique sérieux.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="row g-4 mt-3">
+                <div class="col-12">
+                    <div class="public-panel p-4 p-lg-5 h-100">
+                        <h2 class="h2 fw-bold mb-3">Nos principes</h2>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="info-tile h-100">
+                                    <div class="info-tile__icon"><i class="ri-eye-line"></i></div>
+                                    <h3>Transparence</h3>
+                                    <p>Des étapes visibles, des états explicites et une lecture simple du scrutin.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-tile h-100">
+                                    <div class="info-tile__icon"
+                                        style="background: rgba(18, 173, 43, 0.08); color: #149457;"><i
+                                            class="ri-lock-2-line"></i></div>
+                                    <h3>Sécurité</h3>
+                                    <p>Un compte, un vote, confirmation email et conservation des informations utiles.
+                                    </p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-tile h-100">
+                                    <div class="info-tile__icon"
+                                        style="background: rgba(245, 158, 11, 0.12); color: #d58d10;"><i
+                                            class="ri-line-chart-line"></i></div>
+                                    <h3>Fiabilité</h3>
+                                    <p>Des règles métier cohérentes pour limiter les incohérences entre phases et
+                                        résultats.</p>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="info-tile h-100">
+                                    <div class="info-tile__icon"
+                                        style="background: rgba(125, 86, 216, 0.12); color: #7d56d8;"><i
+                                            class="ri-team-line"></i></div>
+                                    <h3>Participation</h3>
+                                    <p>Une interface claire pour les électeurs, les candidats et l’administration.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="public-panel p-4 p-lg-5 mt-4">
+                <div class="public-section-title mb-4">
+                    <h2>Architecture fonctionnelle</h2>
+                    <p>Les grands espaces métier de la plateforme restent les mêmes, avec une présentation un peu plus
+                        claire.</p>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-6 col-xl-3">
+                        <div class="info-tile h-100">
+                            <h3>Administration</h3>
+                            <p>Configure les dates, gère les transitions d’état et conserve les archives avant
+                                réinitialisation.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-3">
+                        <div class="info-tile h-100">
+                            <h3>Électeurs</h3>
+                            <p>S’inscrivent, confirment leur email, complètent leur profil et expriment un vote unique.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-3">
+                        <div class="info-tile h-100">
+                            <h3>Candidats</h3>
+                            <p>Publient leur programme, suivent leur campagne et apparaissent après validation.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-3">
+                        <div class="info-tile h-100">
+                            <h3>Résultats</h3>
+                            <p>Ne deviennent publics qu’au moment prévu par le cycle métier défini.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="public-panel p-4 p-lg-5 mt-4">
+                <div class="public-section-title mb-4">
+                    <h2>La plateforme en chiffres</h2>
+                </div>
+                <div class="hero-mini-stats mt-0">
+                    <div class="hero-mini-stat">
+                        <strong>{{ stats.total_voters }}</strong>
+                        <span>Électeurs enregistrés</span>
+                    </div>
+                    <div class="hero-mini-stat">
+                        <strong>{{ stats.total_candidates }}</strong>
+                        <span>Candidats approuvés</span>
+                    </div>
+                    <div class="hero-mini-stat">
+                        <strong>{{ stats.votes_cast }}</strong>
+                        <span>Votes comptabilisés</span>
+                    </div>
+                    <div class="hero-mini-stat">
+                        <strong>{{ stats.announcements }}</strong>
+                        <span>Annonces actives</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="public-panel p-4 p-lg-5 mt-4">
+                <div class="public-section-title mb-4">
+                    <h2>Notre équipe de développement</h2>
+                    <p>Cette zone est prête pour accueillir vos photos et celles de votre groupe avec une présentation
+                        plus valorisante.</p>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-6 col-xl-3">
+                        <div class="info-tile about-team-card text-center h-100">
+                            <img src="{{ url_for('static', filename='images/sm1.jpg') }}" alt="Développeur 1"
+                                loading="lazy">
+                            <h3 class="mt-3">Choueb Karrieh Dini</h3>
+                            <p class="text-primary fw-semibold mb-2">Développeur Frontend</p>
+                            <p class="mb-0">Spécialiste en technologies web modernes, il développe l'interface
+                                utilisateur réactive.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-3">
+                        <div class="info-tile about-team-card text-center h-100">
+                            <img src="{{ url_for('static', filename='images/sm2.jpg') }}" alt="Développeur 2"
+                                loading="lazy">
+                            <h3 class="mt-3">Galab Ali Galab</h3>
+                            <p class="text-primary fw-semibold mb-2">Developpeur Full-Stack</p>
+                            <p class="mb-0">Expert en architecture logicielle, il supervise le développement et
+                                l'intégration des systèmes.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-3">
+                        <div class="info-tile about-team-card text-center h-100">
+                            <img src="{{ url_for('static', filename='images/sm3.jpg') }}" alt="Développeur 3"
+                                loading="lazy">
+                            <h3 class="mt-3">Balkis Youssouf Osman</h3>
+                            <p class="text-primary fw-semibold mb-2">Designeuse UX/UI</p>
+                            <p class="mb-0">Participe au maquettage de Figma et la generation du rapport.
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-xl-3">
+                        <div class="info-tile about-team-card text-center h-100">
+                            <img src="{{ url_for('static', filename='images/placeholder-avatar.svg') }}"
+                                alt="Développeur 4" loading="lazy">
+                            <h3 class="mt-3">Hassan </h3>
+                            <p class="text-primary fw-semibold mb-2">Coordination</p>
+                            <p class="mb-0">Expert en architecture logicielle, il supervise le développement et
+                                l'intégration des systèmes.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+{% endblock %}

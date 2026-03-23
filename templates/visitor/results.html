@@ -1,0 +1,191 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Résultats de l'élection{% endblock %}
+
+{% block styles %}
+<style>
+    .results-shell {
+        background: linear-gradient(180deg, #f8fafc 0%, #eef4ff 100%);
+    }
+
+    .results-hero {
+        background: #fff;
+        border-radius: 1.75rem;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+    }
+
+    .results-stat,
+    .results-panel,
+    .results-detail {
+        background: #fff;
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 1.25rem;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+    }
+
+    .results-pie {
+        width: min(360px, 100%);
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        margin: 0 auto;
+        background: {{ pie_gradient }};
+        border: 14px solid #fff;
+        box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06), 0 16px 34px rgba(15, 23, 42, 0.10);
+    }
+
+    .results-bar-track {
+        height: 14px;
+        border-radius: 999px;
+        background: #e9ecef;
+        overflow: hidden;
+    }
+
+    .results-bar-fill {
+        height: 100%;
+        border-radius: inherit;
+    }
+
+    .results-detail {
+        padding: 1rem 1.25rem;
+    }
+
+    .results-detail,
+    .results-panel,
+    .results-stat {
+        overflow-wrap: anywhere;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="results-shell py-4 py-lg-5">
+    <div class="container">
+        <div class="results-hero p-4 p-lg-5 mb-4">
+            <div class="text-center">
+                <h1 class="display-4 fw-bold mb-3">Résultats de l'élection</h1>
+                <p class="lead text-muted mb-4">
+                    Résultats consolidés du scrutin {{ election.year if election else '2025' }}.
+                </p>
+                <div class="d-flex flex-wrap justify-content-center gap-2">
+                    <a class="btn btn-primary px-4" href="{{ url_for('index') }}">
+                        <i class="ri-arrow-left-line me-2"></i>
+                        Retour à l'accueil
+                    </a>
+                    <a class="btn btn-outline-primary px-4" href="{{ url_for('candidates_list') }}">
+                        <i class="ri-group-line me-2"></i>
+                        Voir les candidats
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-md-4">
+                <div class="results-stat h-100 p-4 text-center">
+                    <div class="rounded-circle bg-primary bg-opacity-10 text-primary d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width: 68px; height: 68px;">
+                        <i class="ri-group-line fs-2"></i>
+                    </div>
+                    <div class="display-6 fw-bold">{{ stats.voters_voted }}</div>
+                    <div class="text-muted">Total des votants</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="results-stat h-100 p-4 text-center">
+                    <div class="rounded-circle bg-success bg-opacity-10 text-success d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width: 68px; height: 68px;">
+                        <i class="ri-percent-line fs-2"></i>
+                    </div>
+                    <div class="display-6 fw-bold">{{ stats.participation_rate|round(1) }}%</div>
+                    <div class="text-muted">Taux de participation</div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="results-stat h-100 p-4 text-center">
+                    <div class="rounded-circle bg-warning bg-opacity-10 text-warning d-inline-flex align-items-center justify-content-center mb-3"
+                         style="width: 68px; height: 68px;">
+                        <i class="ri-trophy-line fs-2"></i>
+                    </div>
+                    <div class="h2 fw-bold mb-1">{{ winner.candidate.full_name if winner else 'Aucun vainqueur' }}</div>
+                    <div class="text-muted">En tête du scrutin</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mb-4">
+            <div class="col-lg-6">
+                <div class="results-panel h-100 p-4">
+                    <h2 class="h3 fw-bold mb-4">Répartition des votes</h2>
+                    {% if ranked_candidates %}
+                        <div class="d-flex flex-column gap-4">
+                            {% for item in ranked_candidates %}
+                                <div>
+                                    <div class="d-flex justify-content-between gap-3 mb-2">
+                                        <div class="fw-semibold">
+                                            <span class="me-2" style="color: {{ item.color }};">●</span>
+                                            {{ item.candidate.full_name }}
+                                        </div>
+                                        <div class="text-muted small">{{ item.votes }} votes</div>
+                                    </div>
+                                    <div class="results-bar-track">
+                                        <div class="results-bar-fill" style="width: {{ item.percentage }}%; background: {{ item.color }};"></div>
+                                    </div>
+                                    <div class="text-end small text-muted mt-1">{{ item.percentage }}%</div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-light border mb-0">Aucun résultat disponible pour le moment.</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="col-lg-6">
+                <div class="results-panel h-100 p-4">
+                    <h2 class="h3 fw-bold mb-4">Pourcentages par candidat</h2>
+                    {% if ranked_candidates %}
+                        <div class="results-pie mb-4" role="img" aria-label="Diagramme des résultats par candidat"></div>
+                        <div class="d-flex flex-column gap-2">
+                            {% for item in ranked_candidates %}
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="fw-semibold">
+                                        <span class="me-2" style="color: {{ item.color }};">●</span>
+                                        {{ item.candidate.full_name }}
+                                    </div>
+                                    <div class="small text-muted">{{ item.percentage }}%</div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-light border mb-0">Le graphique sera affiché dès que des votes seront comptabilisés.</div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="results-panel p-4 p-lg-5">
+            <h2 class="h2 fw-bold mb-4">Résultats détaillés</h2>
+            <div class="d-flex flex-column gap-3">
+                {% for item in ranked_candidates %}
+                    <div class="results-detail">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
+                            <div class="fw-semibold">
+                                <span class="me-2" style="color: {{ item.color }};">●</span>
+                                {{ item.candidate.full_name }}
+                            </div>
+                            <div class="text-end">
+                                <div class="fw-bold">{{ item.votes }} votes</div>
+                                <div class="small" style="color: {{ item.color }};">{{ item.percentage }}%</div>
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <div class="alert alert-light border mb-0">
+                        Les résultats détaillés apparaîtront ici après le dépouillement.
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

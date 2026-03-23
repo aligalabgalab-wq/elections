@@ -5,174 +5,189 @@
 
 {% block styles %}
 <style>
-    .user-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #0066b3 0%, #004d8c 100%);
-        color: white;
-        display: flex;
+    .admin-stats-card {
+        height: 100%;
+        padding: 1.25rem;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        box-shadow: var(--shadow-sm);
+    }
+
+    .admin-stats-card__icon {
+        width: 54px;
+        height: 54px;
+        border-radius: 16px;
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        font-weight: 600;
+        font-size: 1.35rem;
+        margin-bottom: 0.8rem;
     }
-    
-    .role-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
+
+    .user-admin-avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 14px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1b5d9f, #2f77d0);
+        color: #fff;
+        font-weight: 800;
+        box-shadow: var(--shadow-sm);
     }
-    
-    .status-dot {
-        width: 8px;
-        height: 8px;
-        border-radius: 50%;
-        display: inline-block;
-        margin-right: 5px;
+
+    .admin-users-filter {
+        padding: 1.25rem;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        box-shadow: var(--shadow-md);
     }
-    
-    .status-active { background-color: #198754; }
-    .status-inactive { background-color: #dc3545; }
-    .status-pending { background-color: #ffc107; }
-    
-    .filters-bar {
-        background: #f8f9fa;
-        border-radius: 0.5rem;
+
+    .admin-users-table {
+        border-radius: 24px;
+        overflow: hidden;
+    }
+
+    .admin-users-table .table thead th {
+        white-space: nowrap;
+    }
+
+    .admin-users-table .table tbody td {
+        vertical-align: middle;
+    }
+
+    .admin-action-group {
+        display: inline-flex;
+        gap: 0.45rem;
+    }
+
+    .candidate-admin-name {
+        font-weight: 800;
+        color: #1f2f46;
+    }
+
+    .candidate-admin-meta {
+        color: var(--ink-soft);
+        font-size: 0.92rem;
+    }
+
+    .create-user-modal .modal-body {
+        max-height: min(72vh, 760px);
+        overflow-y: auto;
+    }
+
+    .create-user-section {
+        display: none;
+    }
+
+    .create-user-section.is-visible {
+        display: block;
+    }
+
+    .create-user-card {
+        border: 1px solid #e9ecef;
+        border-radius: 1rem;
         padding: 1rem;
-        margin-bottom: 1.5rem;
+        background: #f8fafc;
     }
-    
-    .stats-badge {
-        font-size: 0.875rem;
-        padding: 0.5rem 1rem;
-        border-radius: 2rem;
-    }
-    
-    .action-buttons {
-        display: flex;
-        gap: 0.5rem;
-    }
-    
-    .user-details {
-        background: #f8f9fa;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-top: 1rem;
+
+    .admin-user-modal .modal-dialog {
+        max-width: 1080px;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Header -->
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 mb-2">
-            <i class="ri-group-line me-2 text-primary"></i>
-            Gestion des utilisateurs
-        </h1>
-        <p class="text-muted mb-0">
-            Gérez les comptes utilisateurs, les rôles et les permissions
-        </p>
-    </div>
-    <div>
+<div>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-2">
+                <i class="ri-group-line me-2 text-primary"></i>
+                Gestion des utilisateurs
+            </h1>
+            <p class="text-muted mb-0">Consultez les comptes, les rôles, l’état des électeurs et les profils candidats.</p>
+        </div>
         <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addUserModal">
             <i class="ri-user-add-line me-2"></i>
             Ajouter un utilisateur
         </button>
     </div>
-</div>
 
-<!-- Stats -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-                <div class="text-primary fs-2 mb-2">
+    <div class="row g-4 mb-4">
+        <div class="col-md-6 col-xl-3">
+            <div class="admin-stats-card">
+                <div class="admin-stats-card__icon bg-primary bg-opacity-10 text-primary">
                     <i class="ri-group-line"></i>
                 </div>
-                <h3 class="fw-bold mb-1">{{ users|length }}</h3>
-                <p class="text-muted mb-0">Utilisateurs totaux</p>
+                <div class="h3 fw-bold mb-1">{{ users|length }}</div>
+                <div class="text-muted">Utilisateurs totaux</div>
             </div>
         </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-                <div class="text-success fs-2 mb-2">
+        <div class="col-md-6 col-xl-3">
+            <div class="admin-stats-card">
+                <div class="admin-stats-card__icon bg-success bg-opacity-10 text-success">
                     <i class="ri-user-line"></i>
                 </div>
-                <h3 class="fw-bold mb-1">{{ users|selectattr('role', 'equalto', 'voter')|list|length }}</h3>
-                <p class="text-muted mb-0">Électeurs</p>
+                <div class="h3 fw-bold mb-1">{{ users|selectattr('role', 'equalto', 'voter')|list|length }}</div>
+                <div class="text-muted">Électeurs</div>
             </div>
         </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-                <div class="text-warning fs-2 mb-2">
+        <div class="col-md-6 col-xl-3">
+            <div class="admin-stats-card">
+                <div class="admin-stats-card__icon bg-warning bg-opacity-10 text-warning">
                     <i class="ri-user-star-line"></i>
                 </div>
-                <h3 class="fw-bold mb-1">{{ users|selectattr('role', 'equalto', 'candidate')|list|length }}</h3>
-                <p class="text-muted mb-0">Candidats</p>
+                <div class="h3 fw-bold mb-1">{{ users|selectattr('role', 'equalto', 'candidate')|list|length }}</div>
+                <div class="text-muted">Candidats</div>
             </div>
         </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="card border-0 shadow-sm">
-            <div class="card-body text-center">
-                <div class="text-danger fs-2 mb-2">
+        <div class="col-md-6 col-xl-3">
+            <div class="admin-stats-card">
+                <div class="admin-stats-card__icon bg-danger bg-opacity-10 text-danger">
                     <i class="ri-admin-line"></i>
                 </div>
-                <h3 class="fw-bold mb-1">{{ users|selectattr('role', 'equalto', 'admin')|list|length }}</h3>
-                <p class="text-muted mb-0">Administrateurs</p>
+                <div class="h3 fw-bold mb-1">{{ users|selectattr('role', 'equalto', 'admin')|list|length }}</div>
+                <div class="text-muted">Administrateurs</div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Filters -->
-<div class="filters-bar mb-4">
-    <div class="row align-items-center">
-        <div class="col-md-4 mb-3 mb-md-0">
-            <div class="input-group">
-                <span class="input-group-text">
-                    <i class="ri-search-line"></i>
-                </span>
-                <input type="text" class="form-control" id="searchUsers" placeholder="Rechercher un utilisateur...">
+    <div class="admin-users-filter mb-4">
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <label class="form-label fw-semibold">Rechercher</label>
+                <input type="text" class="form-control" id="searchUsers" placeholder="Nom ou email">
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Rôle</label>
+                <select class="form-select" id="filterRole">
+                    <option value="">Tous les rôles</option>
+                    <option value="admin">Administrateur</option>
+                    <option value="voter">Électeur</option>
+                    <option value="candidate">Candidat</option>
+                    <option value="visitor">Visiteur</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label fw-semibold">Statut</label>
+                <select class="form-select" id="filterStatus">
+                    <option value="">Tous les statuts</option>
+                    <option value="active">Actif</option>
+                    <option value="inactive">Inactif</option>
+                </select>
             </div>
         </div>
-        
-        <div class="col-md-4 mb-3 mb-md-0">
-            <select class="form-select" id="filterRole">
-                <option value="">Tous les rôles</option>
-                <option value="admin">Administrateur</option>
-                <option value="voter">Électeur</option>
-                <option value="candidate">Candidat</option>
-                <option value="visitor">Visiteur</option>
-            </select>
-        </div>
-        
-        <div class="col-md-4">
-            <select class="form-select" id="filterStatus">
-                <option value="">Tous les statuts</option>
-                <option value="active">Actif</option>
-                <option value="inactive">Inactif</option>
-                <option value="pending">En attente</option>
-            </select>
-        </div>
     </div>
-</div>
 
-<!-- Users Table -->
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
+    <div class="card border-0 shadow-sm admin-users-table">
         <div class="table-responsive">
             <table class="table table-hover mb-0" id="usersTable">
                 <thead class="table-light">
                     <tr>
-                        <th style="width: 50px;"></th>
+                        <th style="width: 60px;"></th>
                         <th>Utilisateur</th>
                         <th>Email</th>
                         <th>Rôle</th>
@@ -184,185 +199,211 @@
                 </thead>
                 <tbody>
                     {% for user in users %}
+                    {% set display_name = user.voter_profile.full_name if user.role == 'voter' and user.voter_profile else (user.candidate_profile.full_name if user.role == 'candidate' and user.candidate_profile else user.email.split('@')[0]) %}
                     <tr class="user-row" data-role="{{ user.role }}" data-status="{{ 'active' if user.is_active else 'inactive' }}">
                         <td>
-                            <div class="user-avatar">
-                                {{ user.email[0]|upper }}
-                            </div>
+                            <div class="user-admin-avatar">{{ user.email[0]|upper }}</div>
                         </td>
                         <td>
-                            <div class="fw-semibold">
-                                {% if user.role == 'voter' and user.voter_profile %}
-                                    {{ user.voter_profile.full_name }}
-                                {% elif user.role == 'candidate' and user.candidate_profile %}
-                                    {{ user.candidate_profile.full_name }}
-                                {% else %}
-                                    {{ user.email.split('@')[0] }}
-                                {% endif %}
-                            </div>
-                            <small class="text-muted">ID: {{ user.id }}</small>
+                            <div class="candidate-admin-name">{{ display_name }}</div>
+                            <div class="candidate-admin-meta">ID: {{ user.id }}</div>
                         </td>
                         <td>{{ user.email }}</td>
                         <td>
-                            <span class="badge 
-                                {% if user.role == 'admin' %}bg-danger
-                                {% elif user.role == 'candidate' %}bg-warning
-                                {% elif user.role == 'voter' %}bg-success
-                                {% else %}bg-secondary{% endif %}">
-                                {% if user.role == 'admin' %}Administrateur
-                                {% elif user.role == 'candidate' %}Candidat
-                                {% elif user.role == 'voter' %}Électeur
-                                {% else %}Visiteur{% endif %}
+                            <span class="badge {% if user.role == 'admin' %}bg-danger{% elif user.role == 'candidate' %}bg-warning text-dark{% elif user.role == 'voter' %}bg-success{% else %}bg-secondary{% endif %}">
+                                {% if user.role == 'admin' %}Administrateur{% elif user.role == 'candidate' %}Candidat{% elif user.role == 'voter' %}Électeur{% else %}Visiteur{% endif %}
                             </span>
                         </td>
                         <td>
-                            <span class="d-flex align-items-center">
-                                <span class="status-dot status-{{ 'active' if user.is_active else 'inactive' }}"></span>
+                            <span class="badge {{ 'bg-success-subtle text-success' if user.is_active else 'bg-danger-subtle text-danger' }}">
                                 {{ 'Actif' if user.is_active else 'Inactif' }}
                             </span>
                             {% if not user.is_email_verified %}
-                            <small class="text-warning d-block">Email non vérifié</small>
+                            <small class="d-block text-warning mt-1">Email non vérifié</small>
                             {% endif %}
                         </td>
-                        <td>
-                            <small>{{ user.created_at|datetime_format }}</small>
-                        </td>
-                        <td>
-                            <small>
-                                {% if user.last_login %}
-                                    {{ user.last_login|datetime_format }}
-                                {% else %}
-                                    Jamais
-                                {% endif %}
-                            </small>
-                        </td>
+                        <td><small>{{ user.created_at|datetime_format }}</small></td>
+                        <td><small>{{ user.last_login|datetime_format if user.last_login else 'Jamais' }}</small></td>
                         <td class="text-end">
-                            <div class="action-buttons">
-                                <button class="btn btn-sm btn-outline-primary" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#viewUserModal"
-                                        data-user-id="{{ user.id }}">
+                            <div class="admin-action-group">
+                                <button class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#viewUserModal"
+                                    data-user-id="{{ user.id }}">
                                     <i class="ri-eye-line"></i>
                                 </button>
-                                
-                                <button class="btn btn-sm btn-outline-warning" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#editUserModal"
-                                        data-user-id="{{ user.id }}">
-                                    <i class="ri-edit-line"></i>
-                                </button>
-                                
                                 {% if user.id != current_user.id %}
                                 <button class="btn btn-sm btn-outline-danger confirm-action"
-                                        data-message="Êtes-vous sûr de vouloir supprimer cet utilisateur ?"
-                                        data-url="{{ url_for('delete_user', user_id=user.id) }}">
+                                    data-message="Êtes-vous sûr de vouloir supprimer cet utilisateur ?"
+                                    data-url="{{ url_for('delete_user', user_id=user.id) }}">
                                     <i class="ri-delete-bin-line"></i>
                                 </button>
                                 {% endif %}
                             </div>
                         </td>
                     </tr>
-                    {% endfor %}
-                    
-                    {% if not users %}
+                    {% else %}
                     <tr>
                         <td colspan="8" class="text-center py-5">
                             <i class="ri-user-search-line display-1 text-muted mb-3"></i>
                             <h5 class="text-muted">Aucun utilisateur trouvé</h5>
-                            <p class="text-muted small">Ajoutez des utilisateurs pour commencer</p>
+                            <p class="text-muted small mb-0">Ajoutez des utilisateurs pour commencer.</p>
                         </td>
                     </tr>
-                    {% endif %}
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
-    </div>
-    <div class="card-footer bg-white border-0">
-        <div class="d-flex justify-content-between align-items-center">
+        <div class="card-footer bg-white border-0">
             <div class="text-muted small">
                 Affichage de <span id="visibleCount">{{ users|length }}</span> utilisateur(s) sur {{ users|length }}
             </div>
-            <nav>
-                <ul class="pagination pagination-sm mb-0">
-                    <li class="page-item disabled">
-                        <a class="page-link" href="#">Précédent</a>
-                    </li>
-                    <li class="page-item active">
-                        <a class="page-link" href="#">1</a>
-                    </li>
-                    <li class="page-item">
-                        <a class="page-link" href="#">Suivant</a>
-                    </li>
-                </ul>
-            </nav>
         </div>
     </div>
 </div>
 
-<!-- View User Modal -->
-<div class="modal fade" id="viewUserModal" tabindex="-1">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
+<div class="modal fade admin-user-modal" id="viewUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 rounded-4 overflow-hidden">
+            <div class="modal-header border-0 text-white" style="background: linear-gradient(135deg, #1b5d9f, #2f77d0);">
+                <h2 class="modal-title h4 mb-0">
                     <i class="ri-user-line me-2"></i>
                     Détails de l'utilisateur
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </h2>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            <div class="modal-body" id="viewUserContent">
-                <!-- Content loaded by JavaScript -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fermer</button>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#editUserModal">
-                    <i class="ri-edit-line me-2"></i>
-                    Modifier
-                </button>
-            </div>
+            <div class="modal-body p-4" id="viewUserContent"></div>
         </div>
     </div>
 </div>
 
-<!-- Add User Modal -->
-<div class="modal fade" id="addUserModal" tabindex="-1">
-    <div class="modal-dialog">
+<div class="modal fade" id="addUserModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable create-user-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">
+                <h2 class="modal-title h5 mb-0">
                     <i class="ri-user-add-line me-2"></i>
                     Ajouter un utilisateur
-                </h5>
+                </h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="{{ url_for('add_user') }}">
                 <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="newEmail" class="form-label">Email</label>
-                        <input type="email" class="form-control" id="newEmail" name="email" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="newPassword" class="form-label">Mot de passe</label>
-                        <input type="password" class="form-control" id="newPassword" name="password" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="newRole" class="form-label">Rôle</label>
-                        <select class="form-select" id="newRole" name="role" required>
-                            <option value="voter">Électeur</option>
-                            <option value="candidate">Candidat</option>
-                            <option value="admin">Administrateur</option>
-                        </select>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="newIsActive" name="is_active" checked>
-                            <label class="form-check-label" for="newIsActive">
-                                Compte actif
-                            </label>
+                    <div class="create-user-card mb-4">
+                        <h6 class="fw-bold mb-3">Compte utilisateur</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="newEmail" class="form-label">Email</label>
+                                <input type="email" class="form-control" id="newEmail" name="email" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="newPassword" class="form-label">Mot de passe</label>
+                                <input type="password" class="form-control" id="newPassword" name="password" minlength="8" required>
+                                <div class="form-text">Minimum 8 caractères.</div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="newRole" class="form-label">Rôle</label>
+                                <select class="form-select" id="newRole" name="role" required>
+                                    <option value="voter">Électeur</option>
+                                    <option value="candidate">Candidat</option>
+                                    <option value="admin">Administrateur</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="newIsActive" name="is_active" checked>
+                                    <label class="form-check-label" for="newIsActive">Compte actif</label>
+                                </div>
+                            </div>
                         </div>
+                    </div>
+
+                    <div class="create-user-card create-user-section is-visible mb-4" data-role-group="voter candidate">
+                        <h6 class="fw-bold mb-3">Informations personnelles</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Prénom</label>
+                                <input type="text" class="form-control" name="first_name" data-role-required="voter candidate">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Nom</label>
+                                <input type="text" class="form-control" name="last_name" data-role-required="voter candidate">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date de naissance</label>
+                                <input type="date" class="form-control" name="date_of_birth" data-role-required="voter candidate">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Genre</label>
+                                <select class="form-select" name="gender">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="M">Masculin</option>
+                                    <option value="F">Féminin</option>
+                                    <option value="O">Autre</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Numéro CNI</label>
+                                <input type="text" class="form-control" name="cni_number" pattern="[0-9]{14}" data-role-required="voter candidate">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Lieu de naissance</label>
+                                <select class="form-select" name="place_of_birth" data-role-required="voter candidate">
+                                    <option value="">Sélectionner...</option>
+                                    <option value="Djibouti-Ville">Djibouti-Ville</option>
+                                    <option value="Ali-Sabieh">Ali-Sabieh</option>
+                                    <option value="Dikhil">Dikhil</option>
+                                    <option value="Obock">Obock</option>
+                                    <option value="Tadjourah">Tadjourah</option>
+                                    <option value="Arta">Arta</option>
+                                    <option value="Ali-Addeh">Ali-Addeh</option>
+                                    <option value="Hol-Hol">Hol-Hol</option>
+                                    <option value="As-Eyla">As-Eyla</option>
+                                    <option value="Yoboki">Yoboki</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Téléphone</label>
+                                <input type="tel" class="form-control" name="phone" placeholder="+253 77 00 00 00">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="create-user-card create-user-section mb-4" data-role-group="candidate">
+                        <h6 class="fw-bold mb-3">Profil candidat</h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Nom du parti</label>
+                                <input type="text" class="form-control" name="party_name" data-role-required="candidate">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Sigle du parti</label>
+                                <input type="text" class="form-control" name="party_acronym">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Slogan</label>
+                                <input type="text" class="form-control" name="slogan" data-role-required="candidate">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Programme politique</label>
+                                <textarea class="form-control" rows="5" name="program" data-role-required="candidate"></textarea>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="newCandidateApproved" name="is_approved">
+                                    <label class="form-check-label" for="newCandidateApproved">
+                                        Approuver immédiatement cette candidature
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="create-user-card create-user-section mb-0" data-role-group="admin">
+                        <h6 class="fw-bold mb-3">Compte administrateur</h6>
+                        <p class="text-muted mb-0">
+                            Aucun profil complémentaire n’est requis pour un administrateur. Le compte créé aura immédiatement accès à l’espace d’administration.
+                        </p>
                     </div>
                 </div>
                 <div class="modal-footer">
@@ -381,184 +422,210 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Filter users
     const searchInput = document.getElementById('searchUsers');
     const roleFilter = document.getElementById('filterRole');
     const statusFilter = document.getElementById('filterStatus');
     const userRows = document.querySelectorAll('.user-row');
     const visibleCount = document.getElementById('visibleCount');
-    
+
     function filterUsers() {
-        const searchTerm = searchInput.value.toLowerCase();
+        const searchTerm = (searchInput.value || '').toLowerCase();
         const roleValue = roleFilter.value;
         const statusValue = statusFilter.value;
-        
         let visible = 0;
-        
+
         userRows.forEach(row => {
-            const email = row.cells[2].textContent.toLowerCase();
-            const name = row.cells[1].querySelector('.fw-semibold').textContent.toLowerCase();
+            const name = (row.cells[1].textContent || '').toLowerCase();
+            const email = (row.cells[2].textContent || '').toLowerCase();
             const role = row.dataset.role;
             const status = row.dataset.status;
-            
-            const matchesSearch = email.includes(searchTerm) || name.includes(searchTerm);
+
+            const matchesSearch = name.includes(searchTerm) || email.includes(searchTerm);
             const matchesRole = !roleValue || role === roleValue;
             const matchesStatus = !statusValue || status === statusValue;
-            
+
             if (matchesSearch && matchesRole && matchesStatus) {
                 row.style.display = '';
-                visible++;
+                visible += 1;
             } else {
                 row.style.display = 'none';
             }
         });
-        
+
         visibleCount.textContent = visible;
     }
-    
+
     searchInput.addEventListener('input', filterUsers);
     roleFilter.addEventListener('change', filterUsers);
     statusFilter.addEventListener('change', filterUsers);
-    
-    // View user modal
-    const viewModal = document.getElementById('viewUserModal');
-    if (viewModal) {
-        viewModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            const userId = button.dataset.userId;
-            
-            // Load user data via AJAX
-            fetch(`/admin/api/user/${userId}`)
-                .then(response => response.json())
-                .then(user => {
-                    const content = document.getElementById('viewUserContent');
-                    content.innerHTML = `
-                        <div class="row">
-                            <div class="col-md-4 text-center">
-                                <div class="user-avatar mx-auto mb-3" style="width: 80px; height: 80px; font-size: 2rem;">
-                                    ${user.email[0].toUpperCase()}
-                                </div>
-                                <h5 class="fw-bold">${user.email.split('@')[0]}</h5>
-                                <span class="badge ${getRoleBadgeClass(user.role)}">
-                                    ${getRoleLabel(user.role)}
-                                </span>
-                            </div>
-                            <div class="col-md-8">
-                                <h6 class="fw-bold mb-3">Informations du compte</h6>
-                                <table class="table table-sm">
-                                    <tr>
-                                        <th style="width: 140px;">Email:</th>
-                                        <td>${user.email}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Statut:</th>
-                                        <td>
-                                            <span class="badge ${user.is_active ? 'bg-success' : 'bg-danger'}">
-                                                ${user.is_active ? 'Actif' : 'Inactif'}
-                                            </span>
-                                            ${!user.is_email_verified ? '<span class="badge bg-warning ms-1">Email non vérifié</span>' : ''}
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <th>Date d'inscription:</th>
-                                        <td>${new Date(user.created_at).toLocaleDateString('fr-FR')}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Dernière connexion:</th>
-                                        <td>${user.last_login ? new Date(user.last_login).toLocaleString('fr-FR') : 'Jamais'}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Nombre de connexions:</th>
-                                        <td>${user.login_count || 0}</td>
-                                    </tr>
-                                </table>
-                                
-                                ${user.voter_profile || user.candidate_profile ? `
-                                <h6 class="fw-bold mb-3 mt-4">Informations personnelles</h6>
-                                <table class="table table-sm">
-                                    ${user.voter_profile ? `
-                                    <tr>
-                                        <th style="width: 140px;">Nom complet:</th>
-                                        <td>${user.voter_profile.first_name} ${user.voter_profile.last_name}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>CNI:</th>
-                                        <td>${user.voter_profile.cni_masked || 'Non renseignée'}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Date de naissance:</th>
-                                        <td>${new Date(user.voter_profile.date_of_birth).toLocaleDateString('fr-FR')}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Lieu de naissance:</th>
-                                        <td>${user.voter_profile.place_of_birth || 'Non renseigné'}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Éligibilité:</th>
-                                        <td>
-                                            <span class="badge ${user.voter_profile.is_eligible ? 'bg-success' : 'bg-warning'}">
-                                                ${user.voter_profile.is_eligible ? 'Éligible' : 'Non éligible'}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    ` : ''}
-                                    
-                                    ${user.candidate_profile ? `
-                                    <tr>
-                                        <th style="width: 140px;">Nom complet:</th>
-                                        <td>${user.candidate_profile.first_name} ${user.candidate_profile.last_name}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Parti politique:</th>
-                                        <td>${user.candidate_profile.party_name || 'Non renseigné'}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Slogan:</th>
-                                        <td>${user.candidate_profile.campaign_slogan || 'Non renseigné'}</td>
-                                    </tr>
-                                    <tr>
-                                        <th>Statut:</th>
-                                        <td>
-                                            <span class="badge ${user.candidate_profile.is_approved ? 'bg-success' : 'bg-warning'}">
-                                                ${user.candidate_profile.is_approved ? 'Approuvé' : 'En attente'}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    ` : ''}
-                                </table>
-                                ` : ''}
-                            </div>
-                        </div>
-                    `;
-                })
-                .catch(error => {
-                    console.error('Error loading user:', error);
-                    document.getElementById('viewUserContent').innerHTML = `
-                        <div class="alert alert-danger">
-                            <i class="ri-error-warning-line me-2"></i>
-                            Erreur lors du chargement des données utilisateur
-                        </div>
-                    `;
-                });
+
+    const createRole = document.getElementById('newRole');
+    const createSections = document.querySelectorAll('[data-role-group]');
+    const createRoleFields = document.querySelectorAll('[data-role-required]');
+
+    function syncCreateUserForm() {
+        if (!createRole) return;
+        const role = createRole.value;
+
+        createSections.forEach(section => {
+            const roles = (section.dataset.roleGroup || '').split(/\s+/).filter(Boolean);
+            section.classList.toggle('is-visible', roles.includes(role));
+        });
+
+        createRoleFields.forEach(field => {
+            const roles = (field.dataset.roleRequired || '').split(/\s+/).filter(Boolean);
+            field.required = roles.includes(role);
         });
     }
-    
-    function getRoleBadgeClass(role) {
-        switch(role) {
-            case 'admin': return 'bg-danger';
-            case 'candidate': return 'bg-warning';
-            case 'voter': return 'bg-success';
-            default: return 'bg-secondary';
-        }
+
+    if (createRole) {
+        createRole.addEventListener('change', syncCreateUserForm);
+        syncCreateUserForm();
     }
-    
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatDate(value, withTime = false) {
+        if (!value) return 'Non renseigné';
+        const options = withTime
+            ? { dateStyle: 'short', timeStyle: 'short' }
+            : { dateStyle: 'short' };
+        return new Date(value).toLocaleString('fr-FR', options);
+    }
+
     function getRoleLabel(role) {
-        switch(role) {
+        switch (role) {
             case 'admin': return 'Administrateur';
             case 'candidate': return 'Candidat';
             case 'voter': return 'Électeur';
             default: return 'Visiteur';
         }
+    }
+
+    function getRoleBadge(role) {
+        switch (role) {
+            case 'admin': return 'bg-danger';
+            case 'candidate': return 'bg-warning text-dark';
+            case 'voter': return 'bg-success';
+            default: return 'bg-secondary';
+        }
+    }
+
+    function buildVoterSheet(voter) {
+        if (!voter) return '';
+        return `
+            <div class="detail-sheet__card">
+                <h4>Informations électeur</h4>
+                <div class="detail-list">
+                    <div class="detail-list__item"><span>Nom complet</span><strong>${escapeHtml(voter.full_name)}</strong></div>
+                    <div class="detail-list__item"><span>Âge</span><strong>${escapeHtml(voter.age)} ans</strong></div>
+                    <div class="detail-list__item"><span>Lieu de naissance</span><strong>${escapeHtml(voter.place_of_birth || 'Non renseigné')}</strong></div>
+                    <div class="detail-list__item"><span>Genre</span><strong>${escapeHtml(voter.gender || 'Non renseigné')}</strong></div>
+                    <div class="detail-list__item"><span>CNI</span><strong>${escapeHtml(voter.cni_masked || 'Non renseigné')}</strong></div>
+                    <div class="detail-list__item"><span>Téléphone</span><strong>${escapeHtml(voter.phone_number || 'Non renseigné')}</strong></div>
+                    <div class="detail-list__item"><span>Éligibilité</span><strong>${voter.is_eligible ? 'Éligible' : 'Non éligible'}</strong></div>
+                    <div class="detail-list__item"><span>A déjà voté</span><strong>${voter.has_voted ? 'Oui' : 'Non'}</strong></div>
+                    <div class="detail-list__item"><span>Vote enregistré</span><strong>${formatDate(voter.voted_at, true)}</strong></div>
+                </div>
+            </div>
+        `;
+    }
+
+    function buildCandidateSheet(candidate) {
+        if (!candidate) return '';
+        return `
+            <div class="detail-sheet__card">
+                <h4>Informations candidat</h4>
+                <div class="detail-list">
+                    <div class="detail-list__item"><span>Nom complet</span><strong>${escapeHtml(candidate.full_name)}</strong></div>
+                    <div class="detail-list__item"><span>Âge</span><strong>${escapeHtml(candidate.age)} ans</strong></div>
+                    <div class="detail-list__item"><span>Lieu de naissance</span><strong>${escapeHtml(candidate.place_of_birth || 'Non renseigné')}</strong></div>
+                    <div class="detail-list__item"><span>Parti</span><strong>${escapeHtml(candidate.party_name || 'Indépendant')}</strong></div>
+                    <div class="detail-list__item"><span>Sigle</span><strong>${escapeHtml(candidate.party_acronym || 'Sans sigle')}</strong></div>
+                    <div class="detail-list__item"><span>CNI</span><strong>${escapeHtml(candidate.cni_masked || 'Non renseigné')}</strong></div>
+                    <div class="detail-list__item"><span>Votes</span><strong>${escapeHtml(candidate.vote_count)}</strong></div>
+                    <div class="detail-list__item"><span>Validation</span><strong>${candidate.is_approved ? 'Approuvé' : candidate.is_rejected ? 'Rejeté' : 'En attente'}</strong></div>
+                    <div class="detail-list__item"><span>Éligibilité</span><strong>${candidate.is_eligible ? 'Éligible' : 'Non éligible'}</strong></div>
+                </div>
+            </div>
+            <div class="detail-sheet__card">
+                <h4>Campagne</h4>
+                <div class="detail-richtext">
+                    <p><strong>Slogan :</strong> ${escapeHtml(candidate.campaign_slogan || 'Non renseigné')}</p>
+                    <p><strong>Programme :</strong></p>
+                    <p class="mb-0">${escapeHtml(candidate.political_program || 'Non renseigné')}</p>
+                </div>
+            </div>
+        `;
+    }
+
+    const viewModal = document.getElementById('viewUserModal');
+    if (viewModal) {
+        viewModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const userId = button.dataset.userId;
+            const content = document.getElementById('viewUserContent');
+            content.innerHTML = '<div class="text-center py-4 text-muted">Chargement...</div>';
+
+            fetch(`/admin/api/user/${userId}`)
+                .then(response => response.json())
+                .then(user => {
+                    const title = user.voter_profile?.full_name || user.candidate_profile?.full_name || user.display_name || user.email.split('@')[0];
+                    const accountBadges = `
+                        <span class="badge ${getRoleBadge(user.role)}">${getRoleLabel(user.role)}</span>
+                        <span class="badge ${user.is_active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger'}">${user.is_active ? 'Actif' : 'Inactif'}</span>
+                        ${!user.is_email_verified ? '<span class="badge bg-warning text-dark">Email non vérifié</span>' : ''}
+                    `;
+
+                    content.innerHTML = `
+                        <div class="detail-sheet__hero">
+                            <div class="detail-sheet__portrait d-flex align-items-center justify-content-center">
+                                <span class="display-3 fw-bold text-primary">${escapeHtml(user.email[0].toUpperCase())}</span>
+                            </div>
+                            <div class="detail-sheet__summary">
+                                <h3>${escapeHtml(title)}</h3>
+                                <p class="text-primary fw-semibold mb-2">${escapeHtml(user.email)}</p>
+                                <div class="detail-sheet__chips">
+                                    <span><i class="ri-user-line"></i>ID ${escapeHtml(user.id)}</span>
+                                    <span><i class="ri-time-line"></i>${formatDate(user.created_at, true)}</span>
+                                    <span><i class="ri-login-box-line"></i>${user.login_count || 0} connexion(s)</span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">${accountBadges}</div>
+                            </div>
+                        </div>
+
+                        <div class="detail-sheet__grid">
+                            <div class="detail-sheet__card">
+                                <h4>Compte utilisateur</h4>
+                                <div class="detail-list">
+                                    <div class="detail-list__item"><span>Email</span><strong>${escapeHtml(user.email)}</strong></div>
+                                    <div class="detail-list__item"><span>Nom affiché</span><strong>${escapeHtml(user.display_name || title)}</strong></div>
+                                    <div class="detail-list__item"><span>Téléphone</span><strong>${escapeHtml(user.phone_number || user.voter_profile?.phone_number || 'Non renseigné')}</strong></div>
+                                    <div class="detail-list__item"><span>Inscription</span><strong>${formatDate(user.created_at, true)}</strong></div>
+                                    <div class="detail-list__item"><span>Dernière connexion</span><strong>${formatDate(user.last_login, true)}</strong></div>
+                                </div>
+                            </div>
+                            ${buildVoterSheet(user.voter_profile)}
+                            ${buildCandidateSheet(user.candidate_profile)}
+                        </div>
+                    `;
+                })
+                .catch(() => {
+                    content.innerHTML = `
+                        <div class="alert alert-danger mb-0">
+                            <i class="ri-error-warning-line me-2"></i>
+                            Erreur lors du chargement des données utilisateur.
+                        </div>
+                    `;
+                });
+        });
     }
 });
 </script>

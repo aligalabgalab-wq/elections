@@ -1,21 +1,21 @@
 // static/js/app.js - Fonctions globales
 
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     // Initialiser les tooltips Bootstrap
     initTooltips();
-    
+
     // Initialiser les popovers
     initPopovers();
-    
+
     // Gérer les alertes auto-dismiss
     initAutoDismissAlerts();
-    
+
     // Gérer les formulaires avec confirmation
     initConfirmForms();
 
     // Confirmation sur boutons/liens (ex: admin suppression)
     initConfirmActions();
-    
+
     // Gérer le thème sombre/clair
     initThemeToggle();
 
@@ -42,6 +42,16 @@ function initAppShell() {
     const overlay = document.querySelector('[data-app-overlay]');
     const sidebarLinks = document.querySelectorAll('.app-sidebar a.app-nav-link');
 
+    function syncToggleState() {
+        const expanded = isMobile()
+            ? document.body.classList.contains('app-sidebar-open')
+            : !document.body.classList.contains('app-sidebar-collapsed');
+
+        toggles.forEach(btn => {
+            btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        });
+    }
+
     // Restaurer l'état collapsed sur desktop
     try {
         const saved = localStorage.getItem('appSidebarCollapsed');
@@ -63,6 +73,7 @@ function initAppShell() {
     function toggleSidebar() {
         if (isMobile()) {
             document.body.classList.toggle('app-sidebar-open');
+            syncToggleState();
             return;
         }
 
@@ -75,10 +86,13 @@ function initAppShell() {
         } catch (e) {
             // ignore
         }
+
+        syncToggleState();
     }
 
     function closeMobileSidebar() {
         document.body.classList.remove('app-sidebar-open');
+        syncToggleState();
     }
 
     toggles.forEach(btn => btn.addEventListener('click', toggleSidebar));
@@ -100,7 +114,10 @@ function initAppShell() {
     // Si on passe de mobile => desktop, on enlève l'état "open"
     window.addEventListener('resize', () => {
         if (!isMobile()) closeMobileSidebar();
+        syncToggleState();
     });
+
+    syncToggleState();
 }
 
 function normalizeToastType(type) {
@@ -218,7 +235,7 @@ function initAutoDismissAlerts() {
 function initConfirmForms() {
     const confirmForms = document.querySelectorAll('form[data-confirm]');
     confirmForms.forEach(form => {
-        form.addEventListener('submit', function(e) {
+        form.addEventListener('submit', function (e) {
             const message = this.dataset.confirm || 'Êtes-vous sûr de vouloir continuer ?';
             if (!confirm(message)) {
                 e.preventDefault();
@@ -238,7 +255,7 @@ function initConfirmActions() {
     if (!elements.length) return;
 
     elements.forEach(el => {
-        el.addEventListener('click', function(e) {
+        el.addEventListener('click', function (e) {
             const url = this.dataset.url || this.getAttribute('href');
             if (!url) return;
 
@@ -260,14 +277,14 @@ function initConfirmActions() {
 function initThemeToggle() {
     const themeToggle = document.getElementById('themeToggle');
     if (themeToggle) {
-        themeToggle.addEventListener('click', function() {
+        themeToggle.addEventListener('click', function () {
             const html = document.documentElement;
             const currentTheme = html.getAttribute('data-bs-theme');
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-            
+
             html.setAttribute('data-bs-theme', newTheme);
             localStorage.setItem('theme', newTheme);
-            
+
             // Mettre à jour l'icône
             const icon = this.querySelector('i');
             if (newTheme === 'dark') {
@@ -278,11 +295,11 @@ function initThemeToggle() {
                 showToast('Thème clair activé', 'info');
             }
         });
-        
+
         // Restaurer le thème sauvegardé
         const savedTheme = localStorage.getItem('theme') || 'light';
         document.documentElement.setAttribute('data-bs-theme', savedTheme);
-        
+
         // Mettre à jour l'icône
         const icon = themeToggle.querySelector('i');
         icon.className = savedTheme === 'dark' ? 'bi bi-sun' : 'bi bi-moon';
@@ -310,7 +327,7 @@ function showToast(message, type = 'info', duration = 3000) {
         container.style.zIndex = '1090';
         document.body.appendChild(container);
     }
-    
+
     // Créer le toast
     const toastId = 'toast-' + Date.now();
     const toastHTML = `
@@ -324,17 +341,17 @@ function showToast(message, type = 'info', duration = 3000) {
             </div>
         </div>
     `;
-    
+
     container.insertAdjacentHTML('beforeend', toastHTML);
     const toastElement = document.getElementById(toastId);
     const toast = new bootstrap.Toast(toastElement, {
         delay: duration
     });
-    
+
     toast.show();
-    
+
     // Nettoyer après disparition
-    toastElement.addEventListener('hidden.bs.toast', function() {
+    toastElement.addEventListener('hidden.bs.toast', function () {
         this.remove();
     });
 }
@@ -343,7 +360,7 @@ function showToast(message, type = 'info', duration = 3000) {
  * Retourne l'icône appropriée pour le type de toast
  */
 function getToastIcon(type) {
-    switch(type) {
+    switch (type) {
         case 'success': return 'bi-check-circle-fill';
         case 'danger': return 'bi-exclamation-circle-fill';
         case 'warning': return 'bi-exclamation-triangle-fill';
@@ -358,7 +375,7 @@ function getToastIcon(type) {
  */
 function toggleLoadingOverlay(show = true) {
     let overlay = document.getElementById('loading-overlay');
-    
+
     if (!overlay) {
         overlay = document.createElement('div');
         overlay.id = 'loading-overlay';
@@ -372,7 +389,7 @@ function toggleLoadingOverlay(show = true) {
         `;
         document.body.appendChild(overlay);
     }
-    
+
     if (show) {
         overlay.classList.remove('d-none');
     } else {
@@ -453,12 +470,12 @@ function initLandingHero() {
 
     const phrases = [
         'Simulation des elections presidentielles',
-        'Participez a une election fictive',
+        'Suivez les etapes du scrutin',
         'Explorez les resultats en temps reel',
         'Decouvrez le processus democratique'
     ];
 
-    const textElement = document.getElementById('animated-text');
+    const textElement = document.querySelector('[data-hero-rotator]');
     let currentPhrase = 0;
     let currentChar = 0;
 

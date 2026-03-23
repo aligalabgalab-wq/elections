@@ -4,394 +4,329 @@
 
 {% block styles %}
 <style>
-    .candidate-profile {
-        transition: 0.3s;
-        border-radius: 12px;
-        overflow: hidden;
+    .candidate-filter-card {
+        padding: 1.5rem;
+        border-radius: 24px;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        box-shadow: var(--shadow-md);
     }
 
-    .candidate-profile:hover {
-        transform: translateY(-6px);
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
-    }
-
-    .candidate-image {
-        width: 100%;
-        height: 230px;
-        object-fit: cover;
-        background: linear-gradient(135deg, #0d6efd, #004d8c);
-    }
-
-    .vote-progress {
-        height: 8px;
-        background: #e9ecef;
-        border-radius: 5px;
-        overflow: hidden;
-    }
-
-    .vote-progress-bar {
+    .candidate-grid-card {
         height: 100%;
-        background: linear-gradient(90deg, #0d6efd, #20c997);
-        transition: 1s;
+        border-radius: 26px;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.97);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        box-shadow: var(--shadow-md);
+    }
+
+    .candidate-grid-card__media {
+        position: relative;
+        aspect-ratio: 4 / 3;
+        background: linear-gradient(135deg, #dfeafb, #f3f7fd);
+    }
+
+    .candidate-grid-card__media img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .candidate-grid-card__body {
+        padding: 1.4rem;
+    }
+
+    .candidate-grid-card__tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        margin: 0.95rem 0 1rem;
+    }
+
+    .candidate-grid-card__tags span {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        padding: 0.38rem 0.72rem;
+        border-radius: 999px;
+        background: #eef5ff;
+        color: #275d97;
+        font-size: 0.84rem;
+        font-weight: 700;
+    }
+
+    .candidate-grid-card__footer {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-top: 1.2rem;
+    }
+
+    .candidate-grid-card__footer .btn:first-child {
+        flex: 1 1 auto;
+    }
+
+    .candidate-modal .modal-dialog {
+        max-width: 980px;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-
-<div class="container py-4">
-
-    <!-- HEADER -->
-
-    <div class="text-center mb-5">
-
-        <h1 class="fw-bold text-primary">
-            Candidats à l'Élection Nationale
-        </h1>
-
-        <p class="text-muted">
-            Découvrez les candidats de la simulation électorale
-        </p>
-
-        <div class="d-flex justify-content-center gap-3 mt-3">
-
-            <span class="badge bg-primary fs-6 px-3 py-2">
-                {{ candidates|length }} candidats
-            </span>
-
-            <span class="badge bg-success fs-6 px-3 py-2">
-                {{ total_votes|default(0) }} votes
-            </span>
-
+<div class="public-page">
+    <section class="public-hero public-hero--bare">
+        <div class="container">
+            <div class="public-hero__surface">
+                <div class="public-section-title mb-0">
+                    <h1 class="mb-3">Catalogue des candidats</h1>
+                    <p>Parcourez les profils approuvés, filtrez par parti ou région et ouvrez la fiche rapide avec
+                        l’icône œil.</p>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap mt-4">
+                        <span class="detail-chip"><i class="ri-group-line"></i>{{ candidates|length }} candidats</span>
+                        <span class="detail-chip"><i class="ri-bar-chart-box-line"></i>{{ total_votes|default(0) }}
+                            votes</span>
+                    </div>
+                </div>
+            </div>
         </div>
+    </section>
 
-    </div>
-
-    <!-- FILTRES -->
-
-    <div class="card shadow-sm border-0 mb-4">
-
-        <div class="card-body">
-
-            <div class="row g-3">
-
-                <div class="col-md-3">
-                    <input type="text" class="form-control" id="candidateSearch" placeholder="Rechercher candidat">
+    <section class="pb-5">
+        <div class="container">
+            <div class="candidate-filter-card mb-4">
+                <div class="row g-3">
+                    <div class="col-lg-4">
+                        <label class="form-label fw-semibold">Rechercher</label>
+                        <input type="text" class="form-control" id="candidateSearch" placeholder="Nom du candidat">
+                    </div>
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-label fw-semibold">Parti politique</label>
+                        <select class="form-select" id="partyFilter">
+                            <option value="">Tous les partis</option>
+                            {% set parties = [] %}
+                            {% for c in candidates %}
+                            {% if c.party_name and c.party_name not in parties %}
+                            {% set _ = parties.append(c.party_name) %}
+                            <option value="{{ c.party_name|lower }}">{{ c.party_name }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 col-lg-3">
+                        <label class="form-label fw-semibold">Région</label>
+                        <select class="form-select" id="regionFilter">
+                            <option value="">Toutes les régions</option>
+                            {% set regions = [] %}
+                            {% for c in candidates %}
+                            {% if c.place_of_birth and c.place_of_birth not in regions %}
+                            {% set _ = regions.append(c.place_of_birth) %}
+                            <option value="{{ c.place_of_birth|lower }}">{{ c.place_of_birth }}</option>
+                            {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4 col-lg-2">
+                        <label class="form-label fw-semibold">Âge</label>
+                        <select class="form-select" id="ageFilter">
+                            <option value="">Tous</option>
+                            <option value="40-50">40-50</option>
+                            <option value="51-60">51-60</option>
+                            <option value="61-70">61-70</option>
+                            <option value="71+">71+</option>
+                        </select>
+                    </div>
                 </div>
-
-                <div class="col-md-3">
-                    <select class="form-select" id="partyFilter">
-                        <option value="">Tous les partis</option>
-
-                        {% set parties = [] %}
-                        {% for c in candidates %}
-                        {% if c.party_name and c.party_name not in parties %}
-                        {% set _ = parties.append(c.party_name) %}
-                        <option value="{{ c.party_name }}">{{ c.party_name }}</option>
-                        {% endif %}
-                        {% endfor %}
-
-                    </select>
-                </div>
-
-                <div class="col-md-3">
-                    <select class="form-select" id="regionFilter">
-
-                        <option value="">Toutes régions</option>
-
-                        {% set regions = [] %}
-                        {% for c in candidates %}
-                        {% if c.place_of_birth and c.place_of_birth not in regions %}
-                        {% set _ = regions.append(c.place_of_birth) %}
-                        <option value="{{ c.place_of_birth }}">{{ c.place_of_birth }}</option>
-                        {% endif %}
-                        {% endfor %}
-
-                    </select>
-                </div>
-
-                <div class="col-md-3">
-                    <select class="form-select" id="ageFilter">
-                        <option value="">Tous les âges</option>
-                        <option value="40-50">40-50</option>
-                        <option value="51-60">51-60</option>
-                        <option value="61-70">61-70</option>
-                        <option value="71+">71+</option>
-                    </select>
-                </div>
-
             </div>
 
-        </div>
-
-    </div>
-
-    <!-- GRID CANDIDATS -->
-
-    <div class="row g-4" id="candidatesGrid">
-
-        {% if candidates %}
-
-        {% for candidate in candidates %}
-
-        <!-- IMPORTANT : 4 cartes -->
-
-        <div class="col-xl-3 col-lg-3 col-md-6 candidate-card" data-name="{{ candidate.full_name|lower }}"
-            data-party="{{ candidate.party_name|default('')|lower }}" data-region="{{ candidate.place_of_birth|lower }}"
-            data-age="{{ candidate.age }}">
-
-            <div class="card candidate-profile shadow-sm border-0 h-100">
-
-                <!-- IMAGE -->
-
+            <div class="row g-4" id="candidatesGrid">
+                {% for candidate in candidates %}
                 {% set photo_url = candidate_photo_url(candidate) %}
-
-                {% if photo_url %}
-
-                <img src="{{ photo_url }}" class="candidate-image" alt="{{ candidate.full_name }}">
-
-                {% else %}
-
-                <div class="candidate-image d-flex align-items-center justify-content-center">
-                    <i class="bi bi-person text-white fs-1"></i>
-                </div>
-
-                {% endif %}
-
-                <!-- BODY -->
-
-                <div class="card-body">
-
-                    <h5 class="fw-bold">
-                        {{ candidate.full_name }}
-                    </h5>
-
-                    <p class="text-primary mb-2">
-                        {{ candidate.party_name }}
-                        {% if candidate.party_acronym %}
-                        <span class="badge bg-primary ms-2">
-                            {{ candidate.party_acronym }}
-                        </span>
-                        {% endif %}
-                    </p>
-
-                    <div class="small text-muted mb-2">
-                        <i class="bi bi-geo-alt"></i>
-                        {{ candidate.place_of_birth }}
-                    </div>
-
-                    <div class="small text-muted mb-3">
-                        <i class="bi bi-cake"></i>
-                        {{ candidate.age }} ans
-                    </div>
-
-                    {% if candidate.campaign_slogan %}
-
-                    <p class="fst-italic small text-muted">
-                        "{{ candidate.campaign_slogan }}"
-                    </p>
-
-                    {% endif %}
-
-                    <!-- SCORE -->
-
-                    {% set total = total_votes|default(1) %}
-                    {% set percent = (candidate.vote_count / total * 100) if total>0 else 0 %}
-
-                    <div class="mb-3">
-
-                        <div class="d-flex justify-content-between small">
-
-                            <span>Score</span>
-                            <span>{{ percent|round(1) }}%</span>
-
-                        </div>
-
-                        <div class="vote-progress">
-                            <div class="vote-progress-bar" data-progress-percent="{{ percent|round(2) }}">
+                {% set total = total_votes|default(1) %}
+                {% set percent = (candidate.vote_count / total * 100) if total > 0 else 0 %}
+                <div class="col-md-6 col-xl-4 candidate-card" data-name="{{ candidate.full_name|lower }}"
+                    data-party="{{ candidate.party_name|default('')|lower }}"
+                    data-region="{{ candidate.place_of_birth|default('')|lower }}" data-age="{{ candidate.age }}">
+                    <article class="candidate-grid-card transition-hover">
+                        <div class="candidate-grid-card__media">
+                            {% if photo_url %}
+                            <img src="{{ photo_url }}" alt="{{ candidate.full_name }}" loading="lazy"
+                                onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-avatar.svg') }}';">
+                            {% else %}
+                            <div class="h-100 d-flex align-items-center justify-content-center">
+                                <span class="display-4 fw-bold text-primary">{{ candidate.full_name[:1]|upper }}</span>
                             </div>
+                            {% endif %}
                         </div>
 
-                    </div>
-
-                    <!-- ACTIONS -->
-
-                    <div class="d-grid gap-2">
-
-                        <button class="btn btn-outline-primary btn-sm" data-bs-toggle="modal"
-                            data-bs-target="#candidateModal{{ candidate.id }}">
-
-                            Voir profil
-
-                        </button>
-
-                        <a href="{{ url_for('voter_vote', candidate_id=candidate.id) }}" class="btn btn-success btn-sm">
-
-                            <i class="bi bi-check2-square"></i>
-                            Voter
-
-                        </a>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-        </div>
-
-        <!-- MODAL PROFIL -->
-
-        <div class="modal fade" id="candidateModal{{ candidate.id }}" tabindex="-1">
-
-            <div class="modal-dialog modal-lg">
-
-                <div class="modal-content">
-
-                    <div class="modal-header">
-                        <h5 class="modal-title">{{ candidate.full_name }}</h5>
-                        <button class="btn-close" data-bs-dismiss="modal"></button>
-                    </div>
-
-                    <div class="modal-body">
-
-                        <div class="row">
-
-                            <div class="col-md-4 text-center">
-
-                                {% if photo_url %}
-                                <img src="{{ photo_url }}" class="img-fluid rounded-circle mb-3">
+                        <div class="candidate-grid-card__body">
+                            <h2 class="h4 fw-bold mb-1">{{ candidate.full_name }}</h2>
+                            <p class="text-primary fw-semibold mb-2">
+                                {{ candidate.party_name or 'Indépendant' }}
+                                {% if candidate.party_acronym %}
+                                <span class="ms-1">({{ candidate.party_acronym }})</span>
                                 {% endif %}
+                            </p>
+                            <p class="text-secondary mb-0">{{ candidate.campaign_slogan or 'Programme en cours de
+                                publication.' }}</p>
 
-                                <h5>{{ candidate.full_name }}</h5>
-
-                                <p class="text-primary">{{ candidate.party_name }}</p>
-
-                                <p class="text-muted">
-                                    {{ candidate.vote_count }} votes
-                                </p>
-
+                            <div class="candidate-grid-card__tags">
+                                <span><i class="ri-user-3-line"></i>{{ candidate.age }} ans</span>
+                                <span><i class="ri-map-pin-line"></i>{{ candidate.place_of_birth or 'Djibouti' }}</span>
+                                <span><i class="ri-bar-chart-box-line"></i>{{ percent|round(1) }}%</span>
                             </div>
 
-                            <div class="col-md-8">
+                            <div class="candidate-grid-card__footer">
+                                <a class="btn btn-primary"
+                                    href="{{ url_for('candidate_public_profile', candidate_id=candidate.id) }}">
+                                    Voir le profil
+                                </a>
+                                <button class="btn btn-outline-primary icon-btn" type="button" data-bs-toggle="modal"
+                                    data-bs-target="#candidateQuickView{{ candidate.id }}"
+                                    aria-label="Aperçu rapide de {{ candidate.full_name }}">
+                                    <i class="ri-eye-line"></i>
+                                </button>
+                            </div>
 
-                                <h6 class="fw-bold">Programme</h6>
-
-                                {% if candidate.political_program %}
-
-                                <div class="bg-light p-3 rounded mb-3">
-                                    {{ candidate.political_program|safe }}
-                                </div>
-
+                            <div class="candidate-grid-card__footer mt-2">
+                                {% if current_user.is_authenticated and current_user.role == 'voter' %}
+                                <a href="{{ url_for('voter_vote') }}" class="btn btn-outline-success w-100">
+                                    Voter pour ce candidat
+                                </a>
                                 {% else %}
-
-                                <div class="alert alert-info">
-                                    Programme non publié
-                                </div>
-
+                                <a href="{{ url_for('login') }}" class="btn btn-outline-secondary w-100">
+                                    Voter
+                                </a>
                                 {% endif %}
-
-                                {% if candidate.biography %}
-
-                                <h6 class="fw-bold">Biographie</h6>
-
-                                <div class="bg-light p-3 rounded">
-                                    {{ candidate.biography|safe }}
-                                </div>
-
-                                {% endif %}
-
                             </div>
-
                         </div>
-
-                    </div>
-
+                    </article>
                 </div>
 
+                <div class="modal fade candidate-modal" id="candidateQuickView{{ candidate.id }}" tabindex="-1"
+                    aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                        <div class="modal-content border-0 rounded-4 overflow-hidden">
+                            <div class="modal-header border-0 text-white"
+                                style="background: linear-gradient(135deg, #1b5d9f, #2f77d0);">
+                                <h3 class="modal-title h4 mb-0">Profil rapide du candidat</h3>
+                                <button type="button" class="btn-close btn-close-white"
+                                    data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body p-4">
+                                <div class="detail-sheet__hero">
+                                    <div class="detail-sheet__portrait">
+                                        {% if photo_url %}
+                                        <img src="{{ photo_url }}" alt="{{ candidate.full_name }}" loading="lazy"
+                                            onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-avatar.svg') }}';">
+                                        {% else %}
+                                        <div class="h-100 d-flex align-items-center justify-content-center">
+                                            <span class="display-4 fw-bold text-primary">{{
+                                                candidate.full_name[:1]|upper }}</span>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="detail-sheet__summary">
+                                        <h3>{{ candidate.full_name }}</h3>
+                                        <p class="text-primary fw-semibold mb-2">
+                                            {{ candidate.party_name or 'Indépendant' }}
+                                            {% if candidate.party_acronym %}({{ candidate.party_acronym }}){% endif %}
+                                        </p>
+                                        <p class="text-secondary mb-0">{{ candidate.campaign_slogan or 'Aucun slogan
+                                            communiqué.' }}</p>
+                                        <div class="detail-sheet__chips">
+                                            <span><i class="ri-user-3-line"></i>{{ candidate.age }} ans</span>
+                                            <span><i class="ri-map-pin-line"></i>{{ candidate.place_of_birth or
+                                                'Djibouti' }}</span>
+                                            <span><i class="ri-bar-chart-box-line"></i>{{ candidate.vote_count }}
+                                                votes</span>
+                                        </div>
+                                        <a class="btn btn-primary"
+                                            href="{{ url_for('candidate_public_profile', candidate_id=candidate.id) }}">
+                                            Ouvrir la fiche complète
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div class="detail-sheet__grid">
+                                    <div class="detail-sheet__card">
+                                        <h4>Programme</h4>
+                                        <div class="detail-richtext">
+                                            {% if candidate.political_program %}
+                                            {{ candidate.political_program|safe }}
+                                            {% else %}
+                                            <p class="mb-0">Le programme politique n’a pas encore été publié.</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="detail-sheet__card">
+                                        <h4>Biographie</h4>
+                                        <div class="detail-richtext">
+                                            {% if candidate.biography %}
+                                            {{ candidate.biography|safe }}
+                                            {% else %}
+                                            <p class="mb-0">Aucune biographie n’est encore disponible.</p>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="col-12">
+                    <div class="public-panel p-4 text-center">
+                        <p class="mb-0 text-secondary">Aucun candidat disponible.</p>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
-
         </div>
-
-        {% endfor %}
-
-        {% else %}
-
-        <div class="col-12 text-center">
-
-            <div class="alert alert-info">
-
-                Aucun candidat disponible
-
-            </div>
-
-        </div>
-
-        {% endif %}
-
-    </div>
-
+    </section>
 </div>
-
 {% endblock %}
 
 {% block scripts %}
-
 <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const search = document.getElementById('candidateSearch');
+        const party = document.getElementById('partyFilter');
+        const region = document.getElementById('regionFilter');
+        const age = document.getElementById('ageFilter');
+        const cards = document.querySelectorAll('.candidate-card');
 
-    const search = document.getElementById("candidateSearch")
-    const party = document.getElementById("partyFilter")
-    const region = document.getElementById("regionFilter")
-    const age = document.getElementById("ageFilter")
+        function filter() {
+            const searchValue = (search.value || '').toLowerCase();
+            const partyValue = (party.value || '').toLowerCase();
+            const regionValue = (region.value || '').toLowerCase();
+            const ageValue = age.value;
 
-    const cards = document.querySelectorAll(".candidate-card")
-    const progressBars = document.querySelectorAll(".vote-progress-bar[data-progress-percent]")
+            cards.forEach(card => {
+                const name = card.dataset.name || '';
+                const partyName = card.dataset.party || '';
+                const regionName = card.dataset.region || '';
+                const candidateAge = parseInt(card.dataset.age || '0', 10);
 
-    progressBars.forEach((bar) => {
-        const percent = parseFloat(bar.dataset.progressPercent || "0")
-        bar.style.width = `${percent}%`
-    })
+                let show = true;
 
-    function filter() {
+                if (searchValue && !name.includes(searchValue)) show = false;
+                if (partyValue && partyName !== partyValue) show = false;
+                if (regionValue && regionName !== regionValue) show = false;
 
-        let s = search.value.toLowerCase()
-        let p = party.value.toLowerCase()
-        let r = region.value.toLowerCase()
-        let a = age.value
+                if (ageValue === '40-50' && !(candidateAge >= 40 && candidateAge <= 50)) show = false;
+                if (ageValue === '51-60' && !(candidateAge >= 51 && candidateAge <= 60)) show = false;
+                if (ageValue === '61-70' && !(candidateAge >= 61 && candidateAge <= 70)) show = false;
+                if (ageValue === '71+' && !(candidateAge >= 71)) show = false;
 
-        cards.forEach(card => {
+                card.style.display = show ? '' : 'none';
+            });
+        }
 
-            let name = card.dataset.name
-            let party = card.dataset.party
-            let region = card.dataset.region
-            let age = parseInt(card.dataset.age)
-
-            let show = true
-
-            if (s && !name.includes(s)) show = false
-            if (p && party != p) show = false
-            if (r && region != r) show = false
-
-            if (a) {
-
-                if (a == "40-50" && !(age >= 40 && age <= 50)) show = false
-                if (a == "51-60" && !(age >= 51 && age <= 60)) show = false
-                if (a == "61-70" && !(age >= 61 && age <= 70)) show = false
-                if (a == "71+" && !(age >= 71)) show = false
-
-            }
-
-            card.style.display = show ? "" : "none"
-
-        })
-
-    }
-
-    search.addEventListener("input", filter)
-    party.addEventListener("change", filter)
-    region.addEventListener("change", filter)
-    age.addEventListener("change", filter)
-
+        search.addEventListener('input', filter);
+        party.addEventListener('change', filter);
+        region.addEventListener('change', filter);
+        age.addEventListener('change', filter);
+    });
 </script>
-
 {% endblock %}

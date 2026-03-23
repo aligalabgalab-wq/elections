@@ -1,0 +1,175 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}{{ candidate.full_name }} - Profil candidat{% endblock %}
+
+{% block styles %}
+<style>
+    .candidate-public-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #0b5ed7 100%);
+        color: #fff;
+        border-radius: 1.5rem;
+        padding: 2rem;
+        overflow: hidden;
+        box-shadow: 0 18px 40px rgba(15, 23, 42, 0.16);
+    }
+
+    .candidate-public-hero,
+    .candidate-public-hero * {
+        min-width: 0;
+        overflow-wrap: anywhere;
+    }
+
+    .candidate-public-photo {
+        width: min(220px, 100%);
+        aspect-ratio: 1 / 1;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid rgba(255, 255, 255, 0.85);
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.22);
+    }
+
+    .candidate-public-card {
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        border-radius: 1.25rem;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .candidate-public-richtext {
+        background: #f8fafc;
+        border-radius: 1rem;
+        padding: 1.25rem;
+        overflow-wrap: anywhere;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4 py-lg-5">
+    {% set photo_url = candidate_photo_url(candidate) %}
+    <section class="candidate-public-hero mb-4">
+        <div class="row align-items-center g-4">
+            <div class="col-lg-3 text-center">
+                {% if photo_url %}
+                <img src="{{ photo_url }}" alt="{{ candidate.full_name }}" class="candidate-public-photo" loading="lazy"
+                    onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-avatar.svg') }}';">
+                {% else %}
+                <div
+                    class="candidate-public-photo d-inline-flex align-items-center justify-content-center bg-white text-primary">
+                    <span class="display-4 fw-bold">{{ candidate.full_name[:1]|upper }}</span>
+                </div>
+                {% endif %}
+            </div>
+            <div class="col-lg-6">
+                <div class="small text-uppercase fw-semibold opacity-75 mb-2">Profil candidat</div>
+                <h1 class="display-5 fw-bold mb-2">{{ candidate.full_name }}</h1>
+                <p class="lead mb-3">
+                    {{ candidate.party_name }}
+                    {% if candidate.party_acronym %}
+                    ({{ candidate.party_acronym }})
+                    {% endif %}
+                </p>
+                {% if candidate.campaign_slogan %}
+                <p class="mb-0 fst-italic opacity-75">"{{ candidate.campaign_slogan }}"</p>
+                {% endif %}
+            </div>
+            <div class="col-lg-3">
+                <div class="bg-white text-dark rounded-4 p-4">
+                    <div class="small text-muted mb-2">Indicateurs</div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Votes</span>
+                        <strong>{{ candidate.vote_count }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Âge</span>
+                        <strong>{{ candidate.age }} ans</strong>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span>Origine</span>
+                        <strong>{{ candidate.place_of_birth }}</strong>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <div class="candidate-public-card card border-0 h-100">
+                <div class="card-body p-4 p-lg-5">
+                    <h2 class="h4 fw-bold mb-3">
+                        <i class="ri-file-list-3-line me-2 text-primary"></i>
+                        Programme politique
+                    </h2>
+                    {% if candidate.political_program %}
+                    <div class="candidate-public-richtext">
+                        {{ candidate.political_program|safe }}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-light border mb-0">
+                        Le programme politique n’a pas encore été publié.
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="candidate-public-card card border-0 mb-4">
+                <div class="card-body p-4">
+                    <h2 class="h5 fw-bold mb-3">
+                        <i class="ri-information-line me-2 text-primary"></i>
+                        Informations clés
+                    </h2>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Nom complet</span>
+                        <strong>{{ candidate.full_name }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Lieu de naissance</span>
+                        <strong>{{ candidate.place_of_birth }}</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2 border-bottom">
+                        <span class="text-muted">Âge</span>
+                        <strong>{{ candidate.age }} ans</strong>
+                    </div>
+                    <div class="d-flex justify-content-between py-2">
+                        <span class="text-muted">Statut</span>
+                        <span class="badge bg-success">Approuvé</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="candidate-public-card card border-0">
+                <div class="card-body p-4">
+                    <h2 class="h5 fw-bold mb-3">
+                        <i class="ri-article-line me-2 text-primary"></i>
+                        Biographie
+                    </h2>
+                    {% if candidate.biography %}
+                    <div class="candidate-public-richtext">
+                        {{ candidate.biography|safe }}
+                    </div>
+                    {% else %}
+                    <p class="text-muted mb-0">
+                        Aucune biographie n’a encore été renseignée pour ce candidat.
+                    </p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap gap-2 mt-4">
+        <a class="btn btn-outline-primary" href="{{ url_for('candidates_list') }}">
+            <i class="ri-arrow-left-line me-2"></i>
+            Retour aux candidats
+        </a>
+        {% if current_user.is_authenticated or not config.get('RESULTS_REQUIRE_AUTHENTICATION', True) %}
+        <a class="btn btn-primary" href="{{ url_for('public_results') }}">
+            <i class="ri-bar-chart-box-line me-2"></i>
+            Voir les résultats
+        </a>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

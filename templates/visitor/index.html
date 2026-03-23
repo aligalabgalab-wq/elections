@@ -9,117 +9,118 @@
     <!-- Hero Section -->
     <section class="py-5 hero-section">
         <div class="container">
-            <div class="row align-items-center">
-                <!-- Colonne Texte -->
-                <div class="col-lg-6">
-                    <h1 class="title">
-                        <span id="animated-text">Simulation des elections presidentielles</span>
-                    </h1>
+            <div class="public-hero__surface">
+                <div class="row align-items-center g-4 g-xl-5">
+                    <div class="col-lg-6">
+                        <div class="hero-copy">
 
-                    <p class="subtitle">
-                        Decouvrez le processus democratique a travers notre plateforme de simulation electorale.
-                        Participez a une election fictive et explorez les resultats en temps reel.
-                    </p>
-                    <div class="button-group">
-                        {% if current_user.is_authenticated %}
-                        <a class="btn btn-primary" href="{{ url_for('candidates_list') }}">Commencer a voter</a>
-                        {% else %}
-                        <a class="btn btn-primary" href="{{ url_for('login') }}">Commencer a voter</a>
-                        {% endif %}
-                        <a class="btn btn-outline" href="#">Assister debat en ligne</a>
+                            <h1>
+                                Bienvenue sur
+                                <span class="text-highlight d-block">notre plateforme de vote électronique
+                                    sécurisée</span>
+                            </h1>
+                            <p class="mt-4 mb-0">
+                                Découvrez les candidats, suivez les étapes du scrutin et explorez un parcours de vote
+                                clair, contrôlé et sécurisé, inspiré de notre pays.
+                            </p>
+
+                            <div class="hero-actions">
+                                {% if current_user.is_authenticated %}
+                                <a class="btn btn-primary" href="{{ url_for('candidates_list') }}">
+                                    Explorer les candidats
+                                </a>
+                                {% else %}
+                                <a class="btn btn-primary" href="{{ url_for('login') }}">
+                                    Commencer à voter
+                                </a>
+                                {% endif %}
+                                {% if current_user.is_authenticated or not config.get('RESULTS_REQUIRE_AUTHENTICATION',
+                                True) %}
+                                <a class="btn btn-outline-primary" href="{{ url_for('public_results') }}">
+                                    Voir les résultats
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-lg-6 text-center">
+                        <div class="hero-figure">
+                            <div class="hero-figure__halo"></div>
+                            <div class="hero-figure__frame">
+                                <img src="{{ url_for('static', filename='images/sm2.jpg') }}"
+                                    alt="Assemblée nationale de Djibouti" loading="lazy">
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Colonne Image (image circulaire a droite) -->
-                <div class="col-lg-6 text-center">
-                    <div class="image-wrapper">
-                        <img src="{{ url_for('static', filename='images/Ali-kalageyeh.png') }}"
-                            alt="Assemblee nationale" class="img-fluid rounded-circle hero-image"
-                            style="width: min(360px, 72vw); height: min(360px, 72vw); object-fit: cover;">
+                <div class="hero-mini-stats">
+                    <div class="hero-mini-stat">
+                        <strong>{{ stats.total_voters|default(0) }}</strong>
+                        <span>Électeurs inscrits</span>
+                    </div>
+                    <div class="hero-mini-stat">
+                        <strong>{{ stats.approved_candidates|default(0) }}</strong>
+                        <span>Candidats approuvés</span>
+                    </div>
+                    <div class="hero-mini-stat">
+                        <strong>{{ stats.total_votes|default(0) }}</strong>
+                        <span>Votes enregistrés</span>
+                    </div>
+                    <div class="hero-mini-stat">
+                        <strong>{{ stats.participation_rate|default(0) }}%</strong>
+                        <span>Taux de participation</span>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <!-- Stats -->
-    <section class="py-5 bg-white home-white-section home-stats">
+    <section class="py-5">
         <div class="container">
-            <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4">
-                <div class="col">
-                    <div class="card kpi-card kpi-card--primary reveal h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="kpi-label">Électeurs</div>
-                                    <div class="kpi-value">{{ stats.total_voters|default(0) }}</div>
-                                </div>
-                                <div class="kpi-icon" aria-hidden="true">
-                                    <i class="bi bi-person-check"></i>
-                                </div>
-                            </div>
-                            <div class="kpi-hint">Inscrits sur la plateforme</div>
+            <div class="public-section-title">
+                <h2>Nos services</h2>
+                <p>Une expérience plus lisible pour comprendre la campagne, voter et suivre les informations
+                    officielles.</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="info-tile text-center h-100">
+                        <div class="info-tile__icon mx-auto">
+                            <i class="ri-group-line"></i>
                         </div>
+                        <h3>Candidats visibles</h3>
+                        <p>Accédez rapidement aux profils, programmes et partis politiques déjà validés.</p>
                     </div>
                 </div>
-
-                <div class="col">
-                    <div class="card kpi-card kpi-card--success reveal h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="kpi-label">Candidats</div>
-                                    <div class="kpi-value">{{ stats.approved_candidates|default(0) }}</div>
-                                </div>
-                                <div class="kpi-icon" aria-hidden="true">
-                                    <i class="bi bi-award"></i>
-                                </div>
-                            </div>
-                            <div class="kpi-hint">Candidatures approuvées</div>
+                <div class="col-md-4">
+                    <div class="info-tile text-center h-100">
+                        <div class="info-tile__icon mx-auto"
+                            style="background: rgba(18, 173, 43, 0.08); color: #149457;">
+                            <i class="ri-vote-line"></i>
                         </div>
+                        <h3>Vote simplifié</h3>
+                        <p>Un parcours fluide pour les électeurs avec authentification et règles métier contrôlées.</p>
                     </div>
                 </div>
-
-                <div class="col">
-                    <div class="card kpi-card kpi-card--danger reveal h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="kpi-label">Votes</div>
-                                    <div class="kpi-value">{{ stats.total_votes|default(0) }}</div>
-                                </div>
-                                <div class="kpi-icon" aria-hidden="true">
-                                    <i class="bi bi-check2-square"></i>
-                                </div>
-                            </div>
-                            <div class="kpi-hint">Votes enregistrés</div>
+                <div class="col-md-4">
+                    <div class="info-tile text-center h-100">
+                        <div class="info-tile__icon mx-auto"
+                            style="background: rgba(245, 158, 11, 0.12); color: #d58d10;">
+                            <i class="ri-megaphone-line"></i>
                         </div>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="card kpi-card kpi-card--warning reveal h-100">
-                        <div class="card-body">
-                            <div class="d-flex align-items-center justify-content-between">
-                                <div>
-                                    <div class="kpi-label">Participation</div>
-                                    <div class="kpi-value">{{ stats.participation_rate|default(0) }}%</div>
-                                </div>
-                                <div class="kpi-icon" aria-hidden="true">
-                                    <i class="bi bi-activity"></i>
-                                </div>
-                            </div>
-                            <div class="kpi-hint">Taux actuel</div>
-                        </div>
+                        <h3>Annonces officielles</h3>
+                        <p>Suivez les messages importants publiés par l’administration sans quitter la page d’accueil.
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
     </section>
 
-    <section class="py-5 bg-white home-white-section">
+    <section class="py-5">
         <div class="container">
-            <!-- Nos Candidats -->
             <div class="text-center mb-5">
                 <h2 class="fw-bold mb-3">Nos Candidats</h2>
                 <p class="text-secondary mx-auto" style="max-width: 40rem;">
@@ -127,46 +128,49 @@
                 </p>
             </div>
 
+            <!-- conteneur de 3 candidat-->
             <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4 mb-5">
+                <!-- Carte 1 -->
                 <div class="col">
-                    <div class="card h-100 shadow-sm border-0 rounded-3 transition-hover home-candidate-card">
+                    <div class="card h-100 shadow-sm border-0 rounded-3 transition-hover">
                         <img src="{{ url_for('static', filename='images/iog.jpeg') }}" class="card-img-top rounded-3"
-                            alt="Ismael Omar Guelleh">
+                            alt="Ismael Omar guelleh" style="height: 12rem; object-fit: cover;">
                         <div class="card-body">
                             <h5 class="card-title fw-bold">Ismael Omar Guelleh</h5>
-                            <p class="text-primary fw-semibold mb-1">Rassemblement pour le progres du peuple</p>
-                            <p class="text-muted mb-3">Actuel leader de RDD</p>
+                            <p class="text-primary fw-semibold mb-1">Reassemblement pour le progres du peuple</p>
+                            <p class="text-muted small mb-3">Actuel leader de RDD</p>
                             <ul class="list-unstyled mb-0">
-                                <li class="d-flex align-items-center text-muted mb-2">
-                                    <i class="ri-check-line text-success me-2"></i> Reforme economique
+                                <li class="d-flex align-items-center text-muted small mb-2">
+                                    <i class="ri-check-line text-success me-2"></i> Réforme économique
                                 </li>
-                                <li class="d-flex align-items-center text-muted mb-2">
+                                <li class="d-flex align-items-center text-muted small mb-2">
                                     <i class="ri-check-line text-success me-2"></i> Innovation technologique
                                 </li>
-                                <li class="d-flex align-items-center text-muted">
-                                    <i class="ri-check-line text-success me-2"></i> Cohesion sociale
+                                <li class="d-flex align-items-center text-muted small">
+                                    <i class="ri-check-line text-success me-2"></i> Cohésion sociale
                                 </li>
                             </ul>
                         </div>
                     </div>
                 </div>
 
+                <!-- Carte 2 -->
                 <div class="col">
-                    <div class="card h-100 shadow-sm border-0 rounded-3 transition-hover home-candidate-card">
+                    <div class="card h-100 shadow-sm border-0 rounded-3 transition-hover">
                         <img src="{{ url_for('static', filename='images/Abiy_Ahmed_close_up_portrait.png') }}"
-                            class="card-img-top rounded-3" alt="Abiy Ahmed">
+                            class="card-img-top rounded-3" alt="Abiy ahmed" style="height: 12rem; object-fit: cover;">
                         <div class="card-body">
                             <h5 class="card-title fw-bold">Abiy Ahmed</h5>
-                            <p class="text-primary fw-semibold mb-1">Alliance Democratique</p>
-                            <p class="text-muted mb-3">President de l'Ethiopie</p>
+                            <p class="text-primary fw-semibold mb-1">Alliance Démocratique</p>
+                            <p class="text-muted small mb-3">President de l'ethiopie</p>
                             <ul class="list-unstyled mb-0">
-                                <li class="d-flex align-items-center text-muted mb-2">
-                                    <i class="ri-check-line text-success me-2"></i> Reforme institutionnelle
+                                <li class="d-flex align-items-center text-muted small mb-2">
+                                    <i class="ri-check-line text-success me-2"></i> Réforme institutionnelle
                                 </li>
-                                <li class="d-flex align-items-center text-muted mb-2">
-                                    <i class="ri-check-line text-success me-2"></i> Securite nationale
+                                <li class="d-flex align-items-center text-muted small mb-2">
+                                    <i class="ri-check-line text-success me-2"></i> Sécurité nationale
                                 </li>
-                                <li class="d-flex align-items-center text-muted">
+                                <li class="d-flex align-items-center text-muted small">
                                     <i class="ri-check-line text-success me-2"></i> Relations internationales
                                 </li>
                             </ul>
@@ -174,222 +178,180 @@
                     </div>
                 </div>
 
+                <!-- Carte 3 -->
                 <div class="col">
-                    <div class="card h-100 shadow-sm border-0 rounded-3 transition-hover home-candidate-card">
+                    <div class="card h-100 shadow-sm border-0 rounded-3 transition-hover">
                         <img src="{{ url_for('static', filename='images/hassan-sheakh-abdulkadir-scaled.jpg') }}"
-                            class="card-img-top rounded-3" alt="Hassan Cheick Abdi">
+                            class="card-img-top rounded-3" alt="Hassan Cheick abdi"
+                            style="height: 12rem; object-fit: cover;">
                         <div class="card-body">
-                            <h5 class="card-title fw-bold">Hassan Cheick Abdi</h5>
-                            <p class="text-primary fw-semibold mb-1">Mouvement Ecologique</p>
-                            <p class="text-muted mb-3">President de l'etat federal de Somalie</p>
+                            <h5 class="card-title fw-bold">Hassan Cheick abdi</h5>
+                            <p class="text-primary fw-semibold mb-1">Mouvement Écologique</p>
+                            <p class="text-muted small mb-3">President de l'etat federal de somalie</p>
                             <ul class="list-unstyled mb-0">
-                                <li class="d-flex align-items-center text-muted mb-2">
-                                    <i class="ri-check-line text-success me-2"></i> Transition ecologique
+                                <li class="d-flex align-items-center text-muted small mb-2">
+                                    <i class="ri-check-line text-success me-2"></i> Transition écologique
                                 </li>
-                                <li class="d-flex align-items-center text-muted mb-2">
-                                    <i class="ri-check-line text-success me-2"></i> Energies renouvelables
+                                <li class="d-flex align-items-center text-muted small mb-2">
+                                    <i class="ri-check-line text-success me-2"></i> Énergies renouvelables
                                 </li>
-                                <li class="d-flex align-items-center text-muted">
-                                    <i class="ri-check-line text-success me-2"></i> Biodiversite
+                                <li class="d-flex align-items-center text-muted small">
+                                    <i class="ri-check-line text-success me-2"></i> Biodiversité
                                 </li>
                             </ul>
                         </div>
                     </div>
                 </div>
             </div>
-
-            <!-- Themes Principaux -->
-            <div class="text-center mb-5">
-                <h2 class="fw-bold mb-3">Themes Principaux</h2>
-                <p class="text-secondary mx-auto" style="max-width: 40rem;">
-                    Les enjeux majeurs au coeur du debat presidentiel
-                </p>
-            </div>
-
-            <div class="row row-cols-1 row-cols-md-3 row-cols-lg-4 g-4 mb-5 text-center">
-                <div class="col">
-                    <div class="rounded-3 shadow-sm transition-hover home-theme-card">
-                        <div class="bg-primary bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
-                            style="width: 72px; height: 72px;">
-                            <i class="ri-money-euro-circle-line text-primary fs-2"></i>
-                        </div>
-                        <h5 class="fw-semibold mb-2">Economie et pouvoir d'achat</h5>
-                        <p class="text-muted mb-0">Croissance, emploi et pouvoir d'achat des Francais</p>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="rounded-3 shadow-sm transition-hover home-theme-card">
-                        <div class="bg-success bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
-                            style="width: 72px; height: 72px;">
-                            <i class="ri-plant-line text-success fs-2"></i>
-                        </div>
-                        <h5 class="fw-semibold mb-2">Environnement</h5>
-                        <p class="text-muted mb-0">Transition ecologique et developpement durable</p>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="rounded-3 shadow-sm transition-hover home-theme-card">
-                        <div class="bg-danger bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
-                            style="width: 72px; height: 72px;">
-                            <i class="ri-shield-check-line text-danger fs-2"></i>
-                        </div>
-                        <h5 class="fw-semibold mb-2">Securite et immigration</h5>
-                        <p class="text-muted mb-0">Securite nationale et politique migratoire</p>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="rounded-3 shadow-sm transition-hover home-theme-card">
-                        <div class="bg-warning bg-opacity-10 rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center"
-                            style="width: 72px; height: 72px;">
-                            <i class="ri-graduation-cap-line text-warning fs-2"></i>
-                        </div>
-                        <h5 class="fw-semibold mb-2">Education et jeunesse</h5>
-                        <p class="text-muted mb-0">Formation et avenir des jeunes generations</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Comment participer -->
-            <div class="text-center mb-5">
-                <h2 class="fw-bold mb-3">Comment participer ?</h2>
-                <p class="text-secondary mx-auto" style="max-width: 40rem;">
-                    Suivez ces etapes simples pour participer a notre simulation electorale
-                </p>
-            </div>
-
-            <div class="row row-cols-1 row-cols-md-3 g-4">
-                <div class="col">
-                    <div class="rounded-3 text-center shadow-sm transition-hover home-action-card">
-                        <div class="bg-primary rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center"
-                            style="width: 72px; height: 72px;">
-                            <i class="ri-vote-line text-white fs-2"></i>
-                        </div>
-                        <h5 class="fw-semibold mb-3">Voter</h5>
-                        <p class="text-muted mb-4">
-                            Consultez la liste des candidats et exprimez votre choix democratique en toute securite.
-                        </p>
-                        {% if current_user.is_authenticated %}
-                        <a class="btn btn-primary px-4" href="{{ url_for('candidates_list') }}">Acceder au vote</a>
-                        {% else %}
-                        <a class="btn btn-primary px-4" href="{{ url_for('login') }}">Acceder au vote</a>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="rounded-3 text-center shadow-sm transition-hover home-action-card">
-                        <div class="bg-secondary rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center"
-                            style="width: 72px; height: 72px;">
-                            <i class="ri-discuss-line text-white fs-2"></i>
-                        </div>
-                        <h5 class="fw-semibold mb-3">Debat en ligne</h5>
-                        <p class="text-muted mb-4">
-                            Participez au Grand Debat Presidentiel et suivez les echanges entre les candidats.
-                        </p>
-                        <a class="btn btn-secondary px-4" href="#">Assister debat en ligne</a>
-                    </div>
-                </div>
-
-                <div class="col">
-                    <div class="rounded-3 text-center shadow-sm transition-hover home-action-card">
-                        <div class="bg-purple rounded-circle mx-auto mb-4 d-flex align-items-center justify-content-center"
-                            style="width: 72px; height: 72px;">
-                            <i class="ri-discuss-line text-white fs-2"></i>
-                        </div>
-                        <h5 class="fw-semibold mb-3">Debat en ligne</h5>
-                        <p class="text-muted mb-4">
-                            Participez au Grand Debat Presidentiel et suivez les echanges entre les candidats.
-                        </p>
-                        <button class="btn btn-danger px-4" data-page="debatenligne">Acceder au debat</button>
-                    </div>
-                </div>
+        </div>
     </section>
 
-    <!-- Annonces officielles -->
-    <section class="py-5 home-announcements-section">
+    <section class="py-5">
         <div class="container">
-            <div class="text-center mb-4">
-                <h2 class="fw-bold mb-2">Annonces de l'administration</h2>
-                <p class="text-secondary mx-auto mb-0" style="max-width: 42rem;">
-                    Retrouvez les communications officielles publiées par les administrateurs de la plateforme.
-                </p>
+            <div class="public-section-title">
+                <h2>Thèmes Principaux</h2>
+                <p>Les enjeux majeurs au cœur du débat présidentiel</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-3">
+                    <div class="info-tile text-center h-100">
+                        <div class="info-tile__icon mx-auto"><i class="ri-stack-line"></i></div>
+                        <h3>Économie</h3>
+                        <p>Croissance, emploi et pouvoir d'achat pour tous.</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-tile text-center h-100">
+                        <div class="info-tile__icon mx-auto"><i class="ri-leaf-line"></i></div>
+                        <h3>Environnement</h3>
+                        <p>Transition écologique et développement durable.</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-tile text-center h-100">
+                        <div class="info-tile__icon mx-auto"><i class="ri-shield-cross-line"></i></div>
+                        <h3>Sécurité</h3>
+                        <p>Sécurité nationale et politique migratoire responsable.</p>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="info-tile text-center h-100">
+                        <div class="info-tile__icon mx-auto"><i class="ri-book-open-line"></i></div>
+                        <h3>Éducation</h3>
+                        <p>Formation des jeunes et mixité des compétences futures.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-5">
+        <div class="container">
+            <div class="public-section-title">
+                <h2>Comment participer ?</h2>
+                <p>Suivez ces étapes simples pour prendre part au vote électronique sécurisé.</p>
+            </div>
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="info-tile text-center h-100">
+                        <h3 class="mb-3">Voter</h3>
+                        <p>Consultez la liste des candidats et exprimez votre choix démocratique en toute sécurité.</p>
+                        <a href="{{ url_for('candidates_list') }}" class="btn btn-primary btn-sm">Accéder au vote</a>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-tile text-center h-100">
+                        <h3 class="mb-3">Résultats</h3>
+                        <p>Suivez l’évolution des résultats en temps réel avec graphiques et comparatifs.</p>
+                        <a href="{{ url_for('public_results') }}" class="btn btn-secondary btn-sm">Voir les
+                            résultats</a>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="info-tile text-center h-100">
+                        <h3 class="mb-3">Débat en ligne</h3>
+                        <p>Participez au grand débat et découvrez les positions des candidats.</p>
+                        <a href="#" class="btn btn-outline-danger btn-sm">Accéder au débat</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-5">
+        <div class="container">
+            <div class="public-panel p-4 p-lg-5">
+                <div class="public-section-title mb-4">
+                    <h2>Notre objectif</h2>
+                    <p>Structurer un cycle électoral cohérent, de la candidature jusqu’à la proclamation des résultats.
+                    </p>
+                </div>
+                <div class="row g-4">
+                    <div class="col-md-4">
+                        <div class="info-tile text-center h-100">
+                            <div class="info-tile__icon mx-auto"><i class="ri-shield-check-line"></i></div>
+                            <h3>Fiabilité</h3>
+                            <p>Des états métier explicites pour éviter les incohérences pendant le scrutin.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="info-tile text-center h-100">
+                            <div class="info-tile__icon mx-auto"
+                                style="background: rgba(18, 173, 43, 0.08); color: #149457;"><i
+                                    class="ri-team-line"></i></div>
+                            <h3>Participation</h3>
+                            <p>Une interface claire pour les électeurs, les candidats et l’administration.</p>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="info-tile text-center h-100">
+                            <div class="info-tile__icon mx-auto"
+                                style="background: rgba(245, 158, 11, 0.12); color: #d58d10;"><i
+                                    class="ri-eye-line"></i></div>
+                            <h3>Transparence</h3>
+                            <p>Des informations visibles, des annonces publiques et des résultats consultables au bon
+                                moment.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="py-5">
+        <div class="container">
+            <div class="public-section-title">
+                <h2>Annonces de l'administration</h2>
+                <p>Retrouvez les communications officielles publiées par les administrateurs de la plateforme.</p>
             </div>
 
             {% if announcements %}
-            <div class="home-announcements-scroll-wrapper">
-                <div class="home-announcements-scroll-inner">
-                    {% for announcement in announcements %}
-                    <div class="home-announcement-card">
-                        <div class="d-flex flex-wrap gap-2 align-items-center mb-2">
+            <div class="row g-4">
+                {% for announcement in announcements[:6] %}
+                <div class="col-md-6 col-xl-4">
+                    <div class="info-tile h-100">
+                        <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
                             {% if announcement.is_urgent %}
-                            <span class="badge text-bg-danger">URGENT</span>
+                            <span class="badge text-bg-danger">Urgent</span>
                             {% else %}
-                            <span class="badge text-bg-primary">INFO</span>
+                            <span class="badge text-bg-primary">Info</span>
                             {% endif %}
-                            {% if announcement.author %}
-                            <span class="badge text-bg-secondary">
-                                {% if announcement.author.role == 'admin' %}
-                                admin
-                                {% elif announcement.author.role == 'candidate' and
-                                announcement.author.candidate_profile %}
-                                {{ announcement.author.candidate_profile.full_name }}
-                                {% else %}
-                                Utilisateur
-                                {% endif %}
-                            </span>
-                            {% endif %}
-                            <span class="home-announcement-date text-muted">
+                            <span class="text-muted small">
                                 {{ announcement.created_at.strftime('%d/%m/%Y %H:%M') if announcement.created_at else ''
                                 }}
                             </span>
                         </div>
-
-                        <h3 class="h5 fw-bold mb-3">{{ announcement.title }}</h3>
-                        <p class="mb-0 text-secondary">
-                            {{ announcement.content|striptags|truncate(280) }}
-                        </p>
+                        <h3 class="h5 fw-bold">{{ announcement.title }}</h3>
+                        <p class="text-secondary mb-0">{{ announcement.content|striptags|truncate(220) }}</p>
                     </div>
-                    {% endfor %}
                 </div>
+                {% endfor %}
             </div>
             {% else %}
-            <div class="home-announcement-empty text-center">
-                <i class="bi bi-megaphone fs-2 d-block mb-2"></i>
-                <p class="mb-0">Aucune annonce disponible pour le moment.</p>
+            <div class="public-panel p-4 text-center">
+                <p class="mb-0 text-secondary">Aucune annonce disponible pour le moment.</p>
             </div>
             {% endif %}
-        </div>
-    </section>
-
-    <!-- CTA -->
-    <section class="py-5">
-        <div class="container">
-            <div class="cta-surface p-4 p-lg-5">
-                <div class="row align-items-center g-4">
-                    <div class="col-lg-8">
-                        <h2 class="h3 fw-bold mb-2">Une question ou une suggestion ?</h2>
-                        <p class="text-muted mb-0">
-                            Écrivez-nous via le formulaire de contact : nous répondons rapidement et traitons vos
-                            demandes avec sérieux.
-                        </p>
-                    </div>
-                    <div class="col-lg-4 text-lg-end">
-                        <div class="d-flex flex-wrap gap-2 justify-content-lg-end">
-                            <a class="btn btn-primary btn-lg" href="{{ url_for('contact') }}">
-                                <i class="bi bi-envelope-paper me-2"></i>
-                                Contacter
-                            </a>
-                            <a class="btn btn-outline-secondary btn-lg" href="{{ url_for('faq') }}">
-                                <i class="bi bi-question-circle me-2"></i>
-                                Aide
-                            </a>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </section>
 </div>

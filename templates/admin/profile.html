@@ -1,0 +1,210 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Profil administrateur{% endblock %}
+
+{% block styles %}
+<style>
+    .admin-profile-hero {
+        background: linear-gradient(135deg, #111827 0%, #1f2937 100%);
+        color: white;
+        border-radius: 1.5rem;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 20px 45px rgba(15, 23, 42, 0.18);
+    }
+
+    .admin-profile-avatar {
+        width: 124px;
+        height: 124px;
+        border-radius: 50%;
+        overflow: hidden;
+        background: rgba(255, 255, 255, 0.12);
+        border: 4px solid rgba(255, 255, 255, 0.2);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2.8rem;
+        font-weight: 800;
+    }
+
+    .admin-profile-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .admin-profile-card {
+        border: 0;
+        border-radius: 1.25rem;
+        box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+    }
+
+    .admin-profile-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.55rem 0.9rem;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.12);
+        font-weight: 700;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    {% set admin_avatar = admin_avatar_url(admin_user) %}
+    {% set admin_initial = admin_user.profile_name[:1]|upper %}
+
+    <section class="admin-profile-hero">
+        <div class="row align-items-center g-4">
+            <div class="col-md-3 text-center text-md-start">
+                <div class="admin-profile-avatar mx-auto mx-md-0">
+                    {% if admin_avatar %}
+                    <img src="{{ admin_avatar }}" alt="Avatar administrateur" loading="lazy">
+                    {% else %}
+                    <span>{{ admin_initial }}</span>
+                    {% endif %}
+                </div>
+                <button class="btn btn-light btn-sm mt-3" type="button" data-bs-toggle="modal" data-bs-target="#adminAvatarModal">
+                    <i class="ri-camera-line me-1"></i>Changer la photo
+                </button>
+            </div>
+            <div class="col-md-6">
+                <div class="admin-profile-badge mb-3">
+                    <i class="ri-shield-user-line"></i>
+                    Administration centrale
+                </div>
+                <h1 class="display-6 fw-bold mb-2">{{ admin_user.profile_name }}</h1>
+                <p class="mb-0 opacity-75">
+                    {{ admin_user.email }}
+                    {% if admin_user.phone_number %}
+                    • {{ admin_user.phone_number }}
+                    {% endif %}
+                </p>
+            </div>
+            <div class="col-md-3 text-center text-md-end">
+                <div class="bg-white text-dark rounded-4 p-3 d-inline-block">
+                    <div class="small text-muted">Dernière connexion</div>
+                    <div class="fw-bold">{{ admin_user.last_login|datetime_format if admin_user.last_login else 'Première connexion' }}</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="row g-4">
+        <div class="col-lg-7">
+            <div class="card admin-profile-card">
+                <div class="card-body p-4 p-lg-5">
+                    <h2 class="h4 fw-bold mb-4">
+                        <i class="ri-user-settings-line me-2 text-primary"></i>
+                        Informations du compte
+                    </h2>
+
+                    <form method="POST" action="{{ url_for('admin_profile_update') }}">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Nom affiché</label>
+                                <input class="form-control" name="display_name" value="{{ admin_user.display_name or '' }}" placeholder="Administrateur principal">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Téléphone</label>
+                                <input class="form-control" name="phone_number" value="{{ admin_user.phone_number or '' }}" placeholder="+253 ...">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Adresse email</label>
+                                <input class="form-control" value="{{ admin_user.email }}" readonly>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Mot de passe actuel</label>
+                                <input type="password" class="form-control" name="current_password" placeholder="Requis pour changer le mot de passe">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Nouveau mot de passe</label>
+                                <input type="password" class="form-control" name="new_password" minlength="8">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">Confirmer</label>
+                                <input type="password" class="form-control" name="confirm_password" minlength="8">
+                            </div>
+                            <div class="col-12">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="ri-save-line me-2"></i>Enregistrer les modifications
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card admin-profile-card mb-4">
+                <div class="card-body p-4">
+                    <h2 class="h5 fw-bold mb-3">
+                        <i class="ri-history-line me-2 text-danger"></i>
+                        Dernières actions
+                    </h2>
+                    <div class="d-flex flex-column gap-3">
+                        {% for log in recent_logs %}
+                        <div class="border rounded-4 p-3">
+                            <div class="fw-semibold">{{ log.action }}</div>
+                            <div class="small text-muted">{{ log.created_at|datetime_format }}</div>
+                            <div class="small mt-2">{{ log.details or 'Sans détail supplémentaire.' }}</div>
+                        </div>
+                        {% else %}
+                        <div class="text-muted small">Aucune action enregistrée pour le moment.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card admin-profile-card">
+                <div class="card-body p-4">
+                    <h2 class="h5 fw-bold mb-3">
+                        <i class="ri-archive-stack-line me-2 text-success"></i>
+                        Archives récentes
+                    </h2>
+                    <div class="d-flex flex-column gap-3">
+                        {% for archive in recent_archives %}
+                        <div class="border rounded-4 p-3">
+                            <div class="fw-semibold">{{ archive.title }}</div>
+                            <div class="small text-muted">{{ archive.created_at|datetime_format }}</div>
+                            <div class="small mt-2">{{ archive.summary or 'Archive système' }}</div>
+                            <a class="btn btn-sm btn-outline-primary mt-3" href="{{ url_for('download_election_archive', archive_id=archive.id) }}">
+                                <i class="ri-download-line me-1"></i>Télécharger
+                            </a>
+                        </div>
+                        {% else %}
+                        <div class="text-muted small">Aucune archive disponible.</div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="adminAvatarModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title h5 mb-0">Photo de profil administrateur</h3>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin_profile_avatar') }}" enctype="multipart/form-data">
+                <div class="modal-body">
+                    <label class="form-label fw-semibold">Choisir une image</label>
+                    <input class="form-control" type="file" name="avatar" accept="image/*" required>
+                    <div class="form-text">PNG, JPG, JPEG, GIF ou WEBP, maximum 2MB.</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

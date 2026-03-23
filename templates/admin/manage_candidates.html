@@ -5,187 +5,191 @@
 
 {% block styles %}
 <style>
-    .candidate-avatar {
-        width: 60px;
-        height: 60px;
-        border-radius: 50%;
+    .candidate-admin-avatar {
+        width: 58px;
+        height: 58px;
+        border-radius: 18px;
         object-fit: cover;
-        border: 3px solid white;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        box-shadow: var(--shadow-sm);
+        border: 3px solid rgba(255, 255, 255, 0.92);
     }
-    
-    .candidate-status {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
+
+    .candidate-admin-placeholder {
+        width: 58px;
+        height: 58px;
+        border-radius: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, #1b5d9f, #2f77d0);
+        color: #fff;
+        font-weight: 800;
+        box-shadow: var(--shadow-sm);
     }
-    
-    .approval-badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
+
+    .admin-filter-card {
+        padding: 1.25rem;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        box-shadow: var(--shadow-md);
     }
-    
-    .filters-card {
-        background: #f8f9fa;
-        border-radius: 0.5rem;
-        padding: 1rem;
-        margin-bottom: 1.5rem;
+
+    .admin-stats-card {
+        height: 100%;
+        padding: 1.25rem;
+        border-radius: 22px;
+        background: rgba(255, 255, 255, 0.96);
+        border: 1px solid rgba(15, 23, 42, 0.08);
+        box-shadow: var(--shadow-sm);
     }
-    
-    .stats-card {
-        text-align: center;
-        padding: 1rem;
-        border-radius: 0.5rem;
-        transition: all 0.3s ease;
+
+    .admin-stats-card__icon {
+        width: 54px;
+        height: 54px;
+        border-radius: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        margin-bottom: 0.8rem;
     }
-    
-    .stats-card:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-    }
-    
-    .candidate-details {
-        max-height: 0;
+
+    .admin-table-card {
+        border-radius: 24px;
         overflow: hidden;
-        transition: max-height 0.3s ease;
     }
-    
-    .candidate-details.show {
-        max-height: 500px;
+
+    .admin-table-card .table thead th {
+        white-space: nowrap;
+        font-size: 0.9rem;
     }
-    
-    .program-preview {
-        max-height: 150px;
-        overflow: hidden;
-        position: relative;
+
+    .admin-table-card .table tbody td {
+        vertical-align: middle;
     }
-    
-    .program-preview::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        height: 40px;
-        background: linear-gradient(transparent, white);
+
+    .candidate-admin-name {
+        font-weight: 800;
+        color: #1f2f46;
+    }
+
+    .candidate-admin-meta {
+        color: var(--ink-soft);
+        font-size: 0.92rem;
+    }
+
+    .admin-action-group {
+        display: inline-flex;
+        gap: 0.45rem;
+    }
+
+    .admin-detail-modal .modal-dialog {
+        max-width: 1080px;
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<!-- Header -->
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <div>
-        <h1 class="h3 mb-2">
-            <i class="ri-user-star-line me-2 text-primary"></i>
-            Gestion des candidats
-        </h1>
-        <p class="text-muted mb-0">
-            Gérez les candidatures à l'élection nationale
-        </p>
-    </div>
-    <div>
+<div>
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+        <div>
+            <h1 class="h3 mb-2">
+                <i class="ri-user-star-line me-2 text-primary"></i>
+                Gestion des candidats
+            </h1>
+            <p class="text-muted mb-0">Suivez les profils, l’éligibilité, les votes et les détails des candidatures.</p>
+        </div>
         <a href="{{ url_for('register_candidate') }}" class="btn btn-primary">
             <i class="ri-user-add-line me-2"></i>
             Ajouter un candidat
         </a>
     </div>
-</div>
 
-<!-- Stats -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="stats-card bg-primary bg-opacity-10">
-            <div class="text-primary fs-2 mb-2">
-                <i class="ri-user-star-line"></i>
+    <div class="row g-4 mb-4">
+        <div class="col-md-6 col-xl-3">
+            <div class="admin-stats-card">
+                <div class="admin-stats-card__icon bg-primary bg-opacity-10 text-primary">
+                    <i class="ri-user-star-line"></i>
+                </div>
+                <div class="h3 fw-bold mb-1">{{ candidates|length }}</div>
+                <div class="text-muted">Candidats totaux</div>
             </div>
-            <h3 class="fw-bold mb-1">{{ candidates|length }}</h3>
-            <p class="text-muted mb-0">Candidats totaux</p>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="admin-stats-card">
+                <div class="admin-stats-card__icon bg-success bg-opacity-10 text-success">
+                    <i class="ri-checkbox-circle-line"></i>
+                </div>
+                <div class="h3 fw-bold mb-1">{{ candidates|selectattr('is_approved')|list|length }}</div>
+                <div class="text-muted">Approuvés</div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="admin-stats-card">
+                <div class="admin-stats-card__icon bg-warning bg-opacity-10 text-warning">
+                    <i class="ri-shield-check-line"></i>
+                </div>
+                <div class="h3 fw-bold mb-1">{{ candidates|selectattr('is_eligible')|list|length }}</div>
+                <div class="text-muted">Éligibles</div>
+            </div>
+        </div>
+        <div class="col-md-6 col-xl-3">
+            <div class="admin-stats-card">
+                <div class="admin-stats-card__icon bg-info bg-opacity-10 text-info">
+                    <i class="ri-bar-chart-box-line"></i>
+                </div>
+                <div class="h3 fw-bold mb-1">{{ candidates|sum(attribute='vote_count') }}</div>
+                <div class="text-muted">Votes totaux</div>
+            </div>
         </div>
     </div>
-    
-    <div class="col-md-3">
-        <div class="stats-card bg-success bg-opacity-10">
-            <div class="text-success fs-2 mb-2">
-                <i class="ri-checkbox-circle-line"></i>
-            </div>
-            <h3 class="fw-bold mb-1">{{ candidates|selectattr('is_approved')|list|length }}</h3>
-            <p class="text-muted mb-0">Candidats approuvés</p>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="stats-card bg-warning bg-opacity-10">
-            <div class="text-warning fs-2 mb-2">
-                <i class="ri-time-line"></i>
-            </div>
-            <h3 class="fw-bold mb-1">{{ candidates|rejectattr('is_approved')|list|length }}</h3>
-            <p class="text-muted mb-0">En attente</p>
-        </div>
-    </div>
-    
-    <div class="col-md-3">
-        <div class="stats-card bg-info bg-opacity-10">
-            <div class="text-info fs-2 mb-2">
-                <i class="bi bi-check2-square"></i>
-            </div>
-            <h3 class="fw-bold mb-1">{{ candidates|sum(attribute='vote_count') }}</h3>
-            <p class="text-muted mb-0">Votes totaux</p>
-        </div>
-    </div>
-</div>
 
-<!-- Filters -->
-<div class="filters-card mb-4">
-    <div class="row align-items-center">
-        <div class="col-md-3 mb-3 mb-md-0">
-            <div class="input-group">
-                <span class="input-group-text">
-                    <i class="ri-search-line"></i>
-                </span>
-                <input type="text" class="form-control" id="searchCandidates" placeholder="Rechercher un candidat...">
+    <div class="admin-filter-card mb-4">
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <label class="form-label fw-semibold">Rechercher</label>
+                <input type="text" class="form-control" id="searchCandidates" placeholder="Nom du candidat">
             </div>
-        </div>
-        
-        <div class="col-md-3 mb-3 mb-md-0">
-            <select class="form-select" id="filterStatus">
-                <option value="">Tous les statuts</option>
-                <option value="approved">Approuvés</option>
-                <option value="pending">En attente</option>
-                <option value="rejected">Rejetés</option>
-            </select>
-        </div>
-        
-        <div class="col-md-3 mb-3 mb-md-0">
-            <select class="form-select" id="filterEligibility">
-                <option value="">Toutes les éligibilités</option>
-                <option value="eligible">Éligibles</option>
-                <option value="not_eligible">Non éligibles</option>
-            </select>
-        </div>
-        
-        <div class="col-md-3">
-            <select class="form-select" id="filterParty">
-                <option value="">Tous les partis</option>
-                {% set parties = [] %}
-                {% for candidate in candidates %}
+            <div class="col-md-4 col-lg-3">
+                <label class="form-label fw-semibold">Statut</label>
+                <select class="form-select" id="filterStatus">
+                    <option value="">Tous les statuts</option>
+                    <option value="approved">Approuvé</option>
+                    <option value="pending">En attente</option>
+                    <option value="rejected">Rejeté</option>
+                </select>
+            </div>
+            <div class="col-md-4 col-lg-3">
+                <label class="form-label fw-semibold">Éligibilité</label>
+                <select class="form-select" id="filterEligibility">
+                    <option value="">Toutes les éligibilités</option>
+                    <option value="eligible">Éligible</option>
+                    <option value="not_eligible">Non éligible</option>
+                </select>
+            </div>
+            <div class="col-md-4 col-lg-2">
+                <label class="form-label fw-semibold">Parti</label>
+                <select class="form-select" id="filterParty">
+                    <option value="">Tous</option>
+                    {% set parties = [] %}
+                    {% for candidate in candidates %}
                     {% if candidate.party_name and candidate.party_name not in parties %}
-                        {% set _ = parties.append(candidate.party_name) %}
-                        <option value="{{ candidate.party_name }}">{{ candidate.party_name }}</option>
+                    {% set _ = parties.append(candidate.party_name) %}
+                    <option value="{{ candidate.party_name|lower }}">{{ candidate.party_name }}</option>
                     {% endif %}
-                {% endfor %}
-            </select>
+                    {% endfor %}
+                </select>
+            </div>
         </div>
     </div>
-</div>
 
-<!-- Candidates List -->
-<div class="card border-0 shadow-sm">
-    <div class="card-body p-0">
+    <div class="card border-0 shadow-sm admin-table-card">
         <div class="table-responsive">
             <table class="table table-hover mb-0" id="candidatesTable">
                 <thead class="table-light">
                     <tr>
-                        <th style="width: 80px;"></th>
+                        <th style="width: 88px;"></th>
                         <th>Candidat</th>
                         <th>Parti politique</th>
                         <th>Statut</th>
@@ -197,66 +201,52 @@
                 </thead>
                 <tbody>
                     {% for candidate in candidates %}
-                    <tr class="candidate-row" 
-                        data-status="{{ 'approved' if candidate.is_approved else 'pending' }}"
+                    {% set photo_url = candidate_photo_url(candidate) %}
+                    <tr class="candidate-row"
+                        data-status="{% if candidate.is_rejected %}rejected{% elif candidate.is_approved %}approved{% else %}pending{% endif %}"
                         data-eligibility="{{ 'eligible' if candidate.is_eligible else 'not_eligible' }}"
-                        data-party="{{ candidate.party_name or '' }}"
-                        data-name="{{ candidate.full_name.lower() }}">
+                        data-party="{{ candidate.party_name|default('')|lower }}"
+                        data-name="{{ candidate.full_name|lower }}">
                         <td>
-                            {% set photo_url = candidate_photo_url(candidate) %}
                             {% if photo_url %}
-                                <img src="{{ photo_url }}"
-                                     alt="{{ candidate.full_name }}"
-                                     class="candidate-avatar"
-                                     loading="lazy"
-                                     onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-avatar.svg') }}';">
+                            <img src="{{ photo_url }}"
+                                alt="{{ candidate.full_name }}"
+                                class="candidate-admin-avatar"
+                                loading="lazy"
+                                onerror="this.onerror=null;this.src='{{ url_for('static', filename='images/placeholder-avatar.svg') }}';">
                             {% else %}
-                                <div class="candidate-avatar bg-primary d-flex align-items-center justify-content-center text-white">
-                                    <i class="ri-user-line fs-4"></i>
-                                </div>
+                            <div class="candidate-admin-placeholder">{{ candidate.full_name[:1]|upper }}</div>
                             {% endif %}
                         </td>
                         <td>
-                            <div class="fw-semibold">{{ candidate.full_name }}</div>
-                            <small class="text-muted">
-                                <i class="ri-cake-line me-1"></i>{{ candidate.age }} ans • 
-                                <i class="ri-map-pin-line me-1"></i>{{ candidate.place_of_birth }}
-                            </small>
-                            <br>
-                            <small class="text-muted">ID: {{ candidate.id }}</small>
+                            <div class="candidate-admin-name">{{ candidate.full_name }}</div>
+                            <div class="candidate-admin-meta">{{ candidate.age }} ans • {{ candidate.place_of_birth or 'Djibouti' }}</div>
+                            <div class="candidate-admin-meta">ID: {{ candidate.id }}</div>
                         </td>
                         <td>
                             <div class="fw-semibold">{{ candidate.party_name or 'Indépendant' }}</div>
-                            {% if candidate.party_acronym %}
-                            <small class="text-muted">({{ candidate.party_acronym }})</small>
-                            {% endif %}
+                            <small class="text-muted">{{ '(' ~ candidate.party_acronym ~ ')' if candidate.party_acronym else 'Sans sigle' }}</small>
                         </td>
                         <td>
                             {% if candidate.is_approved %}
-                                <span class="badge bg-success approval-badge">
-                                    <i class="ri-check-line me-1"></i>Approuvé
-                                </span>
-                                {% if candidate.approved_at %}
-                                <small class="d-block text-muted">{{ candidate.approved_at|date_format }}</small>
-                                {% endif %}
+                            <span class="badge bg-success">Approuvé</span>
+                            {% elif candidate.is_rejected %}
+                            <span class="badge bg-danger">Rejeté</span>
                             {% else %}
-                                <span class="badge bg-warning approval-badge">
-                                    <i class="ri-time-line me-1"></i>En attente
-                                </span>
+                            <span class="badge bg-warning text-dark">En attente</span>
+                            {% endif %}
+                            {% if candidate.approved_at %}
+                            <small class="d-block text-muted mt-1">{{ candidate.approved_at|date_format }}</small>
                             {% endif %}
                         </td>
                         <td>
                             {% if candidate.is_eligible %}
-                                <span class="badge bg-success candidate-status">
-                                    <i class="ri-check-line me-1"></i>Éligible
-                                </span>
+                            <span class="badge bg-success-subtle text-success">Éligible</span>
                             {% else %}
-                                <span class="badge bg-danger candidate-status">
-                                    <i class="ri-close-line me-1"></i>Non éligible
-                                </span>
+                            <span class="badge bg-danger-subtle text-danger">Non éligible</span>
                             {% endif %}
                             {% if candidate.eligibility_checked_at %}
-                            <small class="d-block text-muted">Vérifié le {{ candidate.eligibility_checked_at|date_format }}</small>
+                            <small class="d-block text-muted mt-1">{{ candidate.eligibility_checked_at|date_format }}</small>
                             {% endif %}
                         </td>
                         <td>
@@ -267,220 +257,80 @@
                             <small>{{ candidate.created_at|datetime_format }}</small>
                         </td>
                         <td class="text-end">
-                            <div class="btn-group" role="group">
-                                <button class="btn btn-sm btn-outline-primary" 
-                                        data-bs-toggle="collapse" 
-                                        data-bs-target="#details{{ candidate.id }}"
-                                        aria-expanded="false"
-                                        aria-controls="details{{ candidate.id }}">
+                            <div class="admin-action-group">
+                                <button class="btn btn-sm btn-outline-primary"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#viewCandidateModal"
+                                    data-candidate-id="{{ candidate.id }}"
+                                    data-photo-url="{{ photo_url or '' }}">
                                     <i class="ri-eye-line"></i>
                                 </button>
-                                
+
                                 {% if not candidate.is_approved %}
-                                <a href="{{ url_for('approve_candidate', candidate_id=candidate.id) }}" 
-                                   class="btn btn-sm btn-outline-success confirm-action"
-                                   data-message="Êtes-vous sûr d'approuver ce candidat ?">
+                                <a href="{{ url_for('approve_candidate', candidate_id=candidate.id) }}"
+                                    class="btn btn-sm btn-outline-success confirm-action"
+                                    data-message="Êtes-vous sûr d'approuver ce candidat ?">
                                     <i class="ri-check-line"></i>
                                 </a>
                                 {% endif %}
-                                
-                                <button class="btn btn-sm btn-outline-warning" 
-                                        data-bs-toggle="modal" 
-                                        data-bs-target="#editCandidateModal"
-                                        data-candidate-id="{{ candidate.id }}">
+
+                                <button class="btn btn-sm btn-outline-warning"
+                                    data-bs-toggle="modal"
+                                    data-bs-target="#editCandidateModal"
+                                    data-candidate-id="{{ candidate.id }}">
                                     <i class="ri-edit-line"></i>
                                 </button>
-                                
+
                                 <button class="btn btn-sm btn-outline-danger confirm-action"
-                                        data-message="Êtes-vous sûr de vouloir supprimer cette candidature ?"
-                                        data-url="{{ url_for('delete_candidate', candidate_id=candidate.id) }}">
+                                    data-message="Êtes-vous sûr de vouloir supprimer cette candidature ?"
+                                    data-url="{{ url_for('delete_candidate', candidate_id=candidate.id) }}">
                                     <i class="ri-delete-bin-line"></i>
                                 </button>
                             </div>
                         </td>
                     </tr>
-                    
-                    <!-- Candidate Details Row -->
-                    <tr class="candidate-details-row">
-                        <td colspan="8" class="p-0 border-0">
-                            <div class="collapse" id="details{{ candidate.id }}">
-                                <div class="candidate-details p-4 bg-light">
-                                    <div class="row">
-                                        <div class="col-md-8">
-                                            <h6 class="fw-bold mb-3">
-                                                <i class="ri-information-line me-2"></i>
-                                                Détails de la candidature
-                                            </h6>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label fw-semibold small">Slogan de campagne</label>
-                                                    <p class="mb-0">{{ candidate.campaign_slogan or 'Non renseigné' }}</p>
-                                                </div>
-                                                
-                                                <div class="col-md-6 mb-3">
-                                                    <label class="form-label fw-semibold small">CNI</label>
-                                                    <p class="mb-0">{{ candidate.cni_number }}</p>
-                                                </div>
-                                            </div>
-                                            
-                                            <div class="mb-3">
-                                                <label class="form-label fw-semibold small">Programme politique</label>
-                                                <div class="program-preview">
-                                                    {{ candidate.political_program or 'Non renseigné'|nl2br }}
-                                                </div>
-                                                {% if candidate.political_program and candidate.political_program|length > 300 %}
-                                                <button class="btn btn-sm btn-link p-0" 
-                                                        data-bs-toggle="collapse" 
-                                                        data-bs-target="#fullProgram{{ candidate.id }}">
-                                                    Voir plus...
-                                                </button>
-                                                <div class="collapse mt-2" id="fullProgram{{ candidate.id }}">
-                                                    {{ candidate.political_program|nl2br }}
-                                                </div>
-                                                {% endif %}
-                                            </div>
-                                            
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <label class="form-label fw-semibold small">Site web</label>
-                                                    <p class="mb-0">
-                                                        {% if candidate.website_url %}
-                                                            <a href="{{ candidate.website_url }}" target="_blank">
-                                                                {{ candidate.website_url }}
-                                                            </a>
-                                                        {% else %}
-                                                            Non renseigné
-                                                        {% endif %}
-                                                    </p>
-                                                </div>
-                                                
-                                                <div class="col-md-6">
-                                                    <label class="form-label fw-semibold small">Réseaux sociaux</label>
-                                                    <div class="d-flex gap-2">
-                                                        {% if candidate.facebook_url %}
-                                                        <a href="{{ candidate.facebook_url }}" target="_blank" class="text-primary">
-                                                            <i class="ri-facebook-fill fs-5"></i>
-                                                        </a>
-                                                        {% endif %}
-                                                        {% if candidate.twitter_url %}
-                                                        <a href="{{ candidate.twitter_url }}" target="_blank" class="text-info">
-                                                            <i class="ri-twitter-fill fs-5"></i>
-                                                        </a>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        <div class="col-md-4">
-                                            <h6 class="fw-bold mb-3">
-                                                <i class="ri-history-line me-2"></i>
-                                                Historique
-                                            </h6>
-                                            
-                                            <div class="list-group list-group-flush">
-                                                <div class="list-group-item border-0 px-0 py-2">
-                                                    <small class="text-muted">Inscription</small>
-                                                    <div class="fw-semibold">{{ candidate.created_at|datetime_format }}</div>
-                                                </div>
-                                                
-                                                {% if candidate.eligibility_checked_at %}
-                                                <div class="list-group-item border-0 px-0 py-2">
-                                                    <small class="text-muted">Vérification éligibilité</small>
-                                                    <div class="fw-semibold">{{ candidate.eligibility_checked_at|datetime_format }}</div>
-                                                    {% if candidate.eligibility_notes %}
-                                                    <small class="text-muted">{{ candidate.eligibility_notes }}</small>
-                                                    {% endif %}
-                                                </div>
-                                                {% endif %}
-                                                
-                                                {% if candidate.approved_at %}
-                                                <div class="list-group-item border-0 px-0 py-2">
-                                                    <small class="text-muted">Approbation</small>
-                                                    <div class="fw-semibold">{{ candidate.approved_at|datetime_format }}</div>
-                                                    {% if candidate.approved_by %}
-                                                    <small class="text-muted">Par l'administrateur {{ candidate.approved_by }}</small>
-                                                    {% endif %}
-                                                </div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                    
-                    {% if not candidates %}
+                    {% else %}
                     <tr>
                         <td colspan="8" class="text-center py-5">
                             <i class="ri-user-search-line display-1 text-muted mb-3"></i>
                             <h5 class="text-muted">Aucun candidat trouvé</h5>
-                            <p class="text-muted small">Les candidatures apparaîtront ici</p>
+                            <p class="text-muted small mb-0">Les candidatures apparaîtront ici.</p>
                         </td>
                     </tr>
-                    {% endif %}
+                    {% endfor %}
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
-<!-- Bulk Actions -->
-<div class="card border-0 shadow-sm mt-4">
-    <div class="card-body">
-        <h6 class="fw-bold mb-3">
-            <i class="ri-checkbox-multiple-line me-2"></i>
-            Actions groupées
-        </h6>
-        
-        <div class="row align-items-center">
-            <div class="col-md-4 mb-3 mb-md-0">
-                <div class="form-check">
-                    <input class="form-check-input" type="checkbox" id="selectAll">
-                    <label class="form-check-label" for="selectAll">
-                        Sélectionner tous les candidats visibles
-                    </label>
-                </div>
+<div class="modal fade admin-detail-modal" id="viewCandidateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 rounded-4 overflow-hidden">
+            <div class="modal-header border-0 text-white" style="background: linear-gradient(135deg, #1b5d9f, #2f77d0);">
+                <h2 class="modal-title h4 mb-0">
+                    <i class="ri-user-star-line me-2"></i>
+                    Détails du candidat
+                </h2>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
-            
-            <div class="col-md-4 mb-3 mb-md-0">
-                <select class="form-select" id="bulkAction">
-                    <option value="">Action groupée...</option>
-                    <option value="approve">Approuver la sélection</option>
-                    <option value="reject">Rejeter la sélection</option>
-                    <option value="delete">Supprimer la sélection</option>
-                    <option value="export">Exporter la sélection</option>
-                </select>
-            </div>
-            
-            <div class="col-md-4">
-                <button class="btn btn-primary w-100" id="applyBulkAction" disabled>
-                    <i class="ri-play-line me-2"></i>
-                    Appliquer
-                </button>
-            </div>
+            <div class="modal-body p-4" id="viewCandidateContent"></div>
         </div>
     </div>
 </div>
 
-<!-- Edit Candidate Modal -->
-<div class="modal fade" id="editCandidateModal" tabindex="-1">
+<div class="modal fade" id="editCandidateModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title">
+                <h2 class="modal-title h5 mb-0">
                     <i class="ri-edit-line me-2"></i>
                     Modifier le candidat
-                </h5>
+                </h2>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form method="POST" action="" id="editCandidateForm">
-                <div class="modal-body">
-                    <!-- Content loaded by JavaScript -->
-                </div>
+                <div class="modal-body"></div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
                     <button type="submit" class="btn btn-primary">
@@ -497,214 +347,222 @@
 {% block scripts %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Filter candidates
     const searchInput = document.getElementById('searchCandidates');
     const statusFilter = document.getElementById('filterStatus');
     const eligibilityFilter = document.getElementById('filterEligibility');
     const partyFilter = document.getElementById('filterParty');
     const candidateRows = document.querySelectorAll('.candidate-row');
-    
+
     function filterCandidates() {
-        const searchTerm = searchInput.value.toLowerCase();
+        const searchTerm = (searchInput.value || '').toLowerCase();
         const statusValue = statusFilter.value;
         const eligibilityValue = eligibilityFilter.value;
-        const partyValue = partyFilter.value;
-        
+        const partyValue = (partyFilter.value || '').toLowerCase();
+
         candidateRows.forEach(row => {
-            const name = row.dataset.name;
-            const status = row.dataset.status;
-            const eligibility = row.dataset.eligibility;
-            const party = row.dataset.party;
-            
+            const name = row.dataset.name || '';
+            const status = row.dataset.status || '';
+            const eligibility = row.dataset.eligibility || '';
+            const party = row.dataset.party || '';
+
             const matchesSearch = name.includes(searchTerm);
             const matchesStatus = !statusValue || status === statusValue;
             const matchesEligibility = !eligibilityValue || eligibility === eligibilityValue;
             const matchesParty = !partyValue || party === partyValue;
-            
-            if (matchesSearch && matchesStatus && matchesEligibility && matchesParty) {
-                row.style.display = '';
-                // Show details row too
-                const detailsRow = row.nextElementSibling;
-                if (detailsRow && detailsRow.classList.contains('candidate-details-row')) {
-                    detailsRow.style.display = '';
-                }
-            } else {
-                row.style.display = 'none';
-                // Hide details row too
-                const detailsRow = row.nextElementSibling;
-                if (detailsRow && detailsRow.classList.contains('candidate-details-row')) {
-                    detailsRow.style.display = 'none';
-                    // Also collapse details
-                    const collapseId = row.querySelector('[data-bs-target]')?.getAttribute('data-bs-target');
-                    if (collapseId) {
-                        const collapse = document.querySelector(collapseId);
-                        if (collapse && collapse.classList.contains('show')) {
-                            bootstrap.Collapse.getInstance(collapse)?.hide();
-                        }
-                    }
-                }
-            }
+
+            row.style.display = matchesSearch && matchesStatus && matchesEligibility && matchesParty ? '' : 'none';
         });
     }
-    
+
     searchInput.addEventListener('input', filterCandidates);
     statusFilter.addEventListener('change', filterCandidates);
     eligibilityFilter.addEventListener('change', filterCandidates);
     partyFilter.addEventListener('change', filterCandidates);
-    
-    // Bulk actions
-    const selectAll = document.getElementById('selectAll');
-    const bulkAction = document.getElementById('bulkAction');
-    const applyBulkAction = document.getElementById('applyBulkAction');
-    
-    selectAll.addEventListener('change', function() {
-        const checkboxes = document.querySelectorAll('.candidate-checkbox');
-        checkboxes.forEach(checkbox => {
-            checkbox.checked = this.checked;
-        });
-        updateBulkActionButton();
-    });
-    
-    bulkAction.addEventListener('change', updateBulkActionButton);
-    
-    function updateBulkActionButton() {
-        const selected = document.querySelectorAll('.candidate-checkbox:checked');
-        applyBulkAction.disabled = selected.length === 0 || !bulkAction.value;
+
+    function escapeHtml(value) {
+        return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
     }
-    
-    applyBulkAction.addEventListener('click', function() {
-        const selected = document.querySelectorAll('.candidate-checkbox:checked');
-        const action = bulkAction.value;
-        
-        if (selected.length === 0 || !action) return;
-        
-        const candidateIds = Array.from(selected).map(cb => cb.value);
-        const actionText = {
-            'approve': 'approuver',
-            'reject': 'rejeter',
-            'delete': 'supprimer',
-            'export': 'exporter'
-        }[action];
-        
-        if (confirm(`Êtes-vous sûr de vouloir ${actionText} ${selected.length} candidat(s) ?`)) {
-            // Send request to server
-            fetch('/admin/api/candidates/bulk-action', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    action: action,
-                    candidate_ids: candidateIds
+
+    function formatDate(value, withTime = false) {
+        if (!value) return 'Non renseigné';
+        const options = withTime
+            ? { dateStyle: 'short', timeStyle: 'short' }
+            : { dateStyle: 'short' };
+        return new Date(value).toLocaleString('fr-FR', options);
+    }
+
+    function nl2p(value) {
+        const safe = escapeHtml(value || '').trim();
+        if (!safe) return '<p class="mb-0">Non renseigné</p>';
+        return safe.split(/\n+/).map(line => `<p>${line}</p>`).join('');
+    }
+
+    const viewModal = document.getElementById('viewCandidateModal');
+    if (viewModal) {
+        viewModal.addEventListener('show.bs.modal', function(event) {
+            const button = event.relatedTarget;
+            const candidateId = button.dataset.candidateId;
+            const photoUrl = button.dataset.photoUrl || '';
+            const content = document.getElementById('viewCandidateContent');
+
+            content.innerHTML = '<div class="text-center py-4 text-muted">Chargement...</div>';
+
+            fetch(`/admin/api/candidate/${candidateId}`)
+                .then(response => response.json())
+                .then(candidate => {
+                    const statusBadge = candidate.is_approved
+                        ? '<span class="badge bg-success">Approuvé</span>'
+                        : candidate.is_rejected
+                            ? '<span class="badge bg-danger">Rejeté</span>'
+                            : '<span class="badge bg-warning text-dark">En attente</span>';
+                    const eligibilityBadge = candidate.is_eligible
+                        ? '<span class="badge bg-success-subtle text-success">Éligible</span>'
+                        : '<span class="badge bg-danger-subtle text-danger">Non éligible</span>';
+                    const portrait = photoUrl
+                        ? `<img src="${escapeHtml(photoUrl)}" alt="${escapeHtml(candidate.full_name)}">`
+                        : `<div class="h-100 d-flex align-items-center justify-content-center"><span class="display-4 fw-bold text-primary">${escapeHtml((candidate.full_name || '?').charAt(0).toUpperCase())}</span></div>`;
+
+                    content.innerHTML = `
+                        <div class="detail-sheet__hero">
+                            <div class="detail-sheet__portrait">${portrait}</div>
+                            <div class="detail-sheet__summary">
+                                <h3>${escapeHtml(candidate.full_name)}</h3>
+                                <p class="text-primary fw-semibold mb-2">
+                                    ${escapeHtml(candidate.party_name || 'Indépendant')}
+                                    ${candidate.party_acronym ? `(${escapeHtml(candidate.party_acronym)})` : ''}
+                                </p>
+                                <div class="detail-sheet__chips">
+                                    <span><i class="ri-user-3-line"></i>${escapeHtml(candidate.age)} ans</span>
+                                    <span><i class="ri-map-pin-line"></i>${escapeHtml(candidate.place_of_birth || 'Djibouti')}</span>
+                                    <span><i class="ri-bar-chart-box-line"></i>${escapeHtml(candidate.vote_count)} votes</span>
+                                </div>
+                                <div class="d-flex flex-wrap gap-2">
+                                    ${statusBadge}
+                                    ${eligibilityBadge}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-sheet__grid">
+                            <div class="detail-sheet__card">
+                                <h4>Informations personnelles</h4>
+                                <div class="detail-list">
+                                    <div class="detail-list__item"><span>Nom complet</span><strong>${escapeHtml(candidate.full_name)}</strong></div>
+                                    <div class="detail-list__item"><span>Âge</span><strong>${escapeHtml(candidate.age)} ans</strong></div>
+                                    <div class="detail-list__item"><span>Lieu de naissance</span><strong>${escapeHtml(candidate.place_of_birth || 'Non renseigné')}</strong></div>
+                                    <div class="detail-list__item"><span>CNI</span><strong>${escapeHtml(candidate.cni_masked || 'Non renseigné')}</strong></div>
+                                </div>
+                            </div>
+                            <div class="detail-sheet__card">
+                                <h4>Informations de candidature</h4>
+                                <div class="detail-list">
+                                    <div class="detail-list__item"><span>Parti</span><strong>${escapeHtml(candidate.party_name || 'Indépendant')}</strong></div>
+                                    <div class="detail-list__item"><span>Sigle</span><strong>${escapeHtml(candidate.party_acronym || 'Sans sigle')}</strong></div>
+                                    <div class="detail-list__item"><span>Email</span><strong>${escapeHtml(candidate.email || 'Non renseigné')}</strong></div>
+                                    <div class="detail-list__item"><span>Inscription</span><strong>${formatDate(candidate.created_at, true)}</strong></div>
+                                    <div class="detail-list__item"><span>Validation</span><strong>${formatDate(candidate.approved_at, true)}</strong></div>
+                                    <div class="detail-list__item"><span>Contrôle éligibilité</span><strong>${formatDate(candidate.eligibility_checked_at, true)}</strong></div>
+                                </div>
+                            </div>
+                            <div class="detail-sheet__card">
+                                <h4>Slogan et programme</h4>
+                                <div class="detail-richtext">
+                                    <p><strong>Slogan :</strong> ${escapeHtml(candidate.campaign_slogan || 'Non renseigné')}</p>
+                                    ${nl2p(candidate.political_program)}
+                                </div>
+                            </div>
+                            <div class="detail-sheet__card">
+                                <h4>Biographie et notes</h4>
+                                <div class="detail-richtext">
+                                    <p><strong>Biographie :</strong></p>
+                                    ${nl2p(candidate.biography)}
+                                    <p class="mt-3 mb-1"><strong>Notes d'éligibilité :</strong></p>
+                                    <p class="mb-0">${escapeHtml(candidate.eligibility_notes || 'Aucune note')}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
                 })
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast(`${selected.length} candidat(s) ${actionText}(s) avec succès`, 'success');
-                    // Reload page after 2 seconds
-                    setTimeout(() => location.reload(), 2000);
-                } else {
-                    showToast('Erreur lors de l\'action groupée', 'error');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showToast('Erreur de connexion au serveur', 'error');
-            });
-        }
-    });
-    
-    // Edit candidate modal
+                .catch(() => {
+                    content.innerHTML = `
+                        <div class="alert alert-danger mb-0">
+                            <i class="ri-error-warning-line me-2"></i>
+                            Erreur lors du chargement des données du candidat.
+                        </div>
+                    `;
+                });
+        });
+    }
+
     const editModal = document.getElementById('editCandidateModal');
     if (editModal) {
         editModal.addEventListener('show.bs.modal', function(event) {
             const button = event.relatedTarget;
             const candidateId = button.dataset.candidateId;
-            
-            // Load candidate data
+            const form = document.getElementById('editCandidateForm');
+            const modalBody = editModal.querySelector('.modal-body');
+
+            modalBody.innerHTML = '<div class="text-center py-4 text-muted">Chargement...</div>';
+
             fetch(`/admin/api/candidate/${candidateId}`)
                 .then(response => response.json())
                 .then(candidate => {
-                    const form = document.getElementById('editCandidateForm');
-                    const modalBody = editModal.querySelector('.modal-body');
-                    
                     form.action = `/admin/candidate/${candidateId}/update`;
-                    
                     modalBody.innerHTML = `
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
+                        <div class="row g-3">
+                            <div class="col-md-6">
                                 <label class="form-label">Prénom</label>
-                                <input type="text" class="form-control" name="first_name" 
-                                       value="${candidate.first_name}" required>
+                                <input type="text" class="form-control" name="first_name" value="${escapeHtml(candidate.first_name)}" required>
                             </div>
-                            
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6">
                                 <label class="form-label">Nom</label>
-                                <input type="text" class="form-control" name="last_name" 
-                                       value="${candidate.last_name}" required>
+                                <input type="text" class="form-control" name="last_name" value="${escapeHtml(candidate.last_name)}" required>
                             </div>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6">
                                 <label class="form-label">Parti politique</label>
-                                <input type="text" class="form-control" name="party_name" 
-                                       value="${candidate.party_name || ''}">
+                                <input type="text" class="form-control" name="party_name" value="${escapeHtml(candidate.party_name || '')}">
                             </div>
-                            
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6">
                                 <label class="form-label">Sigle du parti</label>
-                                <input type="text" class="form-control" name="party_acronym" 
-                                       value="${candidate.party_acronym || ''}">
+                                <input type="text" class="form-control" name="party_acronym" value="${escapeHtml(candidate.party_acronym || '')}">
                             </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Slogan de campagne</label>
-                            <input type="text" class="form-control" name="campaign_slogan" 
-                                   value="${candidate.campaign_slogan || ''}">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Programme politique</label>
-                            <textarea class="form-control" name="political_program" rows="4">${candidate.political_program || ''}</textarea>
-                        </div>
-                        
-                        <div class="row">
-                            <div class="col-md-6 mb-3">
+                            <div class="col-12">
+                                <label class="form-label">Slogan de campagne</label>
+                                <input type="text" class="form-control" name="campaign_slogan" value="${escapeHtml(candidate.campaign_slogan || '')}">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Programme politique</label>
+                                <textarea class="form-control" name="political_program" rows="5">${escapeHtml(candidate.political_program || '')}</textarea>
+                            </div>
+                            <div class="col-md-6">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="is_approved" 
-                                           id="editIsApproved" ${candidate.is_approved ? 'checked' : ''}>
-                                    <label class="form-check-label" for="editIsApproved">
-                                        Candidat approuvé
-                                    </label>
+                                    <input class="form-check-input" type="checkbox" name="is_approved" id="editIsApproved" ${candidate.is_approved ? 'checked' : ''}>
+                                    <label class="form-check-label" for="editIsApproved">Candidat approuvé</label>
                                 </div>
                             </div>
-                            
-                            <div class="col-md-6 mb-3">
+                            <div class="col-md-6">
                                 <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="is_eligible" 
-                                           id="editIsEligible" ${candidate.is_eligible ? 'checked' : ''}>
-                                    <label class="form-check-label" for="editIsEligible">
-                                        Éligible
-                                    </label>
+                                    <input class="form-check-input" type="checkbox" name="is_eligible" id="editIsEligible" ${candidate.is_eligible ? 'checked' : ''}>
+                                    <label class="form-check-label" for="editIsEligible">Éligible</label>
                                 </div>
                             </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label class="form-label">Notes d'éligibilité</label>
-                            <textarea class="form-control" name="eligibility_notes" rows="2">${candidate.eligibility_notes || ''}</textarea>
+                            <div class="col-12">
+                                <label class="form-label">Notes d'éligibilité</label>
+                                <textarea class="form-control" name="eligibility_notes" rows="3">${escapeHtml(candidate.eligibility_notes || '')}</textarea>
+                            </div>
                         </div>
                     `;
                 })
-                .catch(error => {
-                    console.error('Error loading candidate:', error);
-                    editModal.querySelector('.modal-body').innerHTML = `
-                        <div class="alert alert-danger">
+                .catch(() => {
+                    modalBody.innerHTML = `
+                        <div class="alert alert-danger mb-0">
                             <i class="ri-error-warning-line me-2"></i>
-                            Erreur lors du chargement des données du candidat
+                            Erreur lors du chargement des données du candidat.
                         </div>
                     `;
                 });

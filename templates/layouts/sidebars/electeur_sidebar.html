@@ -1,5 +1,5 @@
 <div class="app-sidebar__spacer"></div>
-<div class="app-sidebar__section">Espace Électeur</div>
+<div class="app-sidebar__section">Participation</div>
 
 <a class="app-nav-link {% if request.endpoint in ['voter_dashboard'] %}is-active{% endif %}"
     href="{{ url_for('voter_dashboard') }}">
@@ -24,9 +24,15 @@
     <span>Carte électeur</span>
 </a>
 
+<div class="app-sidebar__section">Compte</div>
+
 <a class="app-nav-link {% if request.endpoint in ['voter_profile'] %}is-active{% endif %}"
     href="{{ url_for('voter_profile') }}">
-    <i class="ri-user-settings-line"></i>
+    <i class="ri-user-line"></i>
     <span>Mon profil</span>
 </a>
 
+<a class="app-nav-link {% if request.endpoint in ['public_results'] %}is-active{% endif %}" href="{{ url_for('public_results') }}">
+    <i class="ri-bar-chart-box-line"></i>
+    <span>Résultats</span>
+</a>

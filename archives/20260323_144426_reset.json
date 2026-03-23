@@ -1,0 +1,103 @@
+{
+  "archive_type": "reset",
+  "title": "Archive avant réinitialisation - 23/03/2026 14:44",
+  "created_at": "2026-03-23T14:44:26.143952",
+  "election": {
+    "id": 3,
+    "name": "Élection Nationale 2026",
+    "year": 2026,
+    "status": "resultats_proclames",
+    "phase": "resultats_proclames",
+    "registration_start": "2026-03-21T02:31:00",
+    "registration_end": "2026-03-22T02:31:00",
+    "voting_start": "2026-03-23T02:31:00",
+    "voting_end": "2026-03-23T14:44:05",
+    "description": "moi choueb karrieh dini l'admin de ce scrutin je declare formellement le debut de ce scrutin",
+    "max_candidates": 10,
+    "is_test_mode": false,
+    "auto_approve_candidates": true
+  },
+  "counts": {
+    "users": 2,
+    "voters": 1,
+    "candidates": 1,
+    "votes": 0,
+    "announcements": 0
+  },
+  "users": [
+    {
+      "id": 7,
+      "email": "chabkarman@gmail.com",
+      "password_hash": "pbkdf2:sha256:600000$FmcU1LG7noQ69ZE4$42551c71b99ddc8d7161366005d891153671df5ced65563c6f478bb0e2d3d39e",
+      "role": "admin",
+      "is_active": true,
+      "display_name": null,
+      "phone_number": null,
+      "avatar_filename": "admin_7_0baa85b9a2bb24c2.webp",
+      "created_at": "2026-03-05T16:41:11",
+      "last_login": "2026-03-23T14:43:55",
+      "email_verified_at": "2026-03-05T16:41:11"
+    },
+    {
+      "id": 18,
+      "email": "shbmoud08@gmail.com",
+      "password_hash": "pbkdf2:sha256:600000$0kAAcG6vxjYYfQmM$00f14ef3889c84288c2a2d5421513b3401a643b41eda780f10aa6ccab28aa65f",
+      "role": "candidate",
+      "is_active": true,
+      "display_name": null,
+      "phone_number": null,
+      "avatar_filename": null,
+      "created_at": "2026-03-23T14:40:57",
+      "last_login": "2026-03-23T14:41:43",
+      "email_verified_at": "2026-03-23T14:41:38"
+    }
+  ],
+  "voters": [
+    {
+      "id": 1,
+      "user_id": 2,
+      "first_name": "choueb",
+      "last_name": "karrieh",
+      "cni_number": "12345678901234",
+      "date_of_birth": "1998-02-03",
+      "place_of_birth": "Hol-Hol",
+      "gender": "M",
+      "has_voted": false,
+      "voted_at": null,
+      "vote_for_id": null,
+      "phone_number": "567356735",
+      "is_eligible": true,
+      "eligibility_reason": null,
+      "created_at": "2026-03-01T20:36:30",
+      "updated_at": "2026-03-01T20:36:30"
+    }
+  ],
+  "candidates": [
+    {
+      "id": 8,
+      "user_id": 18,
+      "first_name": "souhaib",
+      "last_name": "Moud",
+      "cni_number": "12345678901290",
+      "date_of_birth": "1984-01-01",
+      "place_of_birth": "Ali-Addeh",
+      "party_name": "Rassemblement National",
+      "party_acronym": "RPP",
+      "campaign_slogan": "MAO",
+      "political_program": "ze,jfkaefkejzhfj;vndfvblqdfvhbqefve rufalifuroaurfuhfo zofyuouflrequglfgluzfliuzlffnsDVN:svklvqddvhkqvnBHV",
+      "biography": null,
+      "profile_image": "default-candidate.jpg",
+      "website_url": null,
+      "facebook_url": null,
+      "twitter_url": null,
+      "campaign_video_url": null,
+      "is_approved": true,
+      "is_rejected": false,
+      "vote_count": 0,
+      "created_at": "2026-03-23T14:41:01",
+      "updated_at": "2026-03-23T14:41:01"
+    }
+  ],
+  "vote_logs": [],
+  "announcements": []
+}

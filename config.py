@@ -45,8 +45,8 @@ class Config:
     LOCKOUT_TIME = 900
     # Branding (utilisé dans la barre de navigation, footer, emails...)
     APP_NAME = os.environ.get("APP_NAME", "Élection Nationale")
-    APP_TAGLINE = os.environ.get("APP_TAGLINE", "Simulation • Djibouti")
-    ELECTION_NAME = os.environ.get("ELECTION_NAME", f"{APP_NAME} 2025")
+    APP_TAGLINE = os.environ.get("APP_TAGLINE", "Vote électronique sécurisé • Djibouti")
+    ELECTION_NAME = os.environ.get("ELECTION_NAME", APP_NAME)
 
     # Liens (optionnels) — si vides, on n'affiche pas les icônes sociales.
     SOCIAL_FACEBOOK_URL = os.environ.get("SOCIAL_FACEBOOK_URL", "").strip()
@@ -64,6 +64,10 @@ class Config:
     SMTP_SENDER = os.environ.get("SMTP_SENDER", "")  # optionnel (sinon SMTP_USERNAME)
     # Ne pas exposer d'email perso par défaut : définissez CONTACT_RECIPIENT dans `.env`.
     CONTACT_RECIPIENT = os.environ.get("CONTACT_RECIPIENT", "")
+    EMAIL_VERIFICATION_REQUIRED = os.environ.get("EMAIL_VERIFICATION_REQUIRED", "1").strip().lower() in {"1", "true", "yes", "on"}
+    EMAIL_VALIDATION_CHECK_DELIVERABILITY = os.environ.get("EMAIL_VALIDATION_CHECK_DELIVERABILITY", "1").strip().lower() in {"1", "true", "yes", "on"}
+    EMAIL_VERIFICATION_CODE_TTL_MINUTES = int(os.environ.get("EMAIL_VERIFICATION_CODE_TTL_MINUTES", "15"))
+    RESULTS_REQUIRE_AUTHENTICATION = os.environ.get("RESULTS_REQUIRE_AUTHENTICATION", "1").strip().lower() in {"1", "true", "yes", "on"}
     
     # Admin
     # Les identifiants d'administrateur ne sont plus configurés statiquement

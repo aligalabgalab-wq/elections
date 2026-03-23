@@ -3,7 +3,7 @@ from flask import Flask, render_template, request, redirect, url_for, flash, ses
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, UTC
 from functools import wraps
 from io import BytesIO
 import base64
@@ -22,7 +22,25 @@ from email.message import EmailMessage
 from email.utils import formataddr
 from markupsafe import Markup, escape
 from sqlalchemy import inspect, text, or_
-from config import Config
+from sqlalchemy.exc import IntegrityError
+from config import Config, DevelopmentConfig, ProductionConfig, TestingConfig
+
+try:
+    from flask_wtf.csrf import CSRFProtect, generate_csrf, CSRFError
+except Exception:
+    CSRFProtect = None
+
+    class CSRFError(Exception):
+        def __init__(self, description="Jeton CSRF invalide"):
+            super().__init__(description)
+            self.description = description
+
+    def generate_csrf():
+        token = session.get("_csrf_token")
+        if not token:
+            token = secrets.token_urlsafe(32)
+            session["_csrf_token"] = token
+        return token
 
 try:
     from email_validator import validate_email, EmailNotValidError  # pyright: ignore[reportMissingImports]
@@ -47,7 +65,16 @@ except Exception:
 app = Flask(__name__)
 
 # Configuration de l'application
-app.config.from_object(Config)
+app_env = (os.environ.get("APP_ENV") or os.environ.get("FLASK_ENV") or "").strip().lower()
+config_object = {
+    "development": DevelopmentConfig,
+    "dev": DevelopmentConfig,
+    "production": ProductionConfig,
+    "prod": ProductionConfig,
+    "testing": TestingConfig,
+    "test": TestingConfig,
+}.get(app_env, Config)
+app.config.from_object(config_object)
 
 # Optionnel: URL DB unique (12-factor). Ex: mysql+mysqlconnector://...
 database_url = os.environ.get("DATABASE_URL")
@@ -77,6 +104,7 @@ def _allowed_file(filename: str) -> bool:
 # Initialisation des extensions
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
+csrf = CSRFProtect(app) if CSRFProtect else None
 
 # Configuration du gestionnaire de connexion
 login_manager = LoginManager()
@@ -88,6 +116,9 @@ login_manager.session_protection = "strong"
 # Configuration des logs
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+if str(app.config.get("SECRET_KEY") or "").startswith("dev-secret-key"):
+    logger.warning("SECRET_KEY de développement détectée. Définissez une clé forte en production.")
 
 def mask_sensitive(value, show_last=4, mask_char="•"):
     if not value:
@@ -112,13 +143,13 @@ def _clean_header_value(value: str, max_len: int = 180) -> str:
         s = s[:max_len].rstrip()
     return s
 
-def _normalize_email_address(value: str) -> str:
+def _normalize_email_address(value: str, *, check_deliverability: bool = False) -> str:
     email = (value or "").strip()
     if not email:
         raise EmailNotValidError("Email vide")
 
     if validate_email:
-        return validate_email(email, check_deliverability=False).email
+        return validate_email(email, check_deliverability=check_deliverability).email
 
     # Fallback minimal si `email_validator` n'est pas disponible.
     if "@" not in email:
@@ -130,13 +161,21 @@ def _normalize_email_address(value: str) -> str:
         raise EmailNotValidError("Email invalide")
     return email
 
-def _send_contact_email(*, full_name: str, email: str, subject: str, message: str, phone: str | None = None) -> None:
+def _verification_email_enabled() -> bool:
     host = (app.config.get("SMTP_HOST") or "").strip()
-    recipient = (app.config.get("CONTACT_RECIPIENT") or "").strip()
+    sender = (app.config.get("SMTP_SENDER") or app.config.get("SMTP_USERNAME") or "").strip()
+    return bool(host and sender)
+
+def _verification_redirect(email: str):
+    return redirect(url_for("login", email=email, email_verification="1"))
+
+def _public_upload_dir(*segments: str) -> str:
+    return os.path.join(app.static_folder, "uploads", *segments)
+
+def _send_system_email(*, to_email: str, subject: str, text_content: str, reply_to: str | None = None) -> None:
+    host = (app.config.get("SMTP_HOST") or "").strip()
     if not host:
         raise RuntimeError("Envoi email non activé sur ce serveur (configuration SMTP manquante).")
-    if not recipient:
-        raise RuntimeError("Envoi email non activé sur ce serveur (adresse de réception non définie).")
 
     port = int(app.config.get("SMTP_PORT") or 587)
     use_ssl = bool(app.config.get("SMTP_USE_SSL", False))
@@ -144,32 +183,22 @@ def _send_contact_email(*, full_name: str, email: str, subject: str, message: st
 
     username = (app.config.get("SMTP_USERNAME") or "").strip()
     password = app.config.get("SMTP_PASSWORD") or ""
-    sender = (app.config.get("SMTP_SENDER") or username or recipient).strip() or recipient
+    sender = (app.config.get("SMTP_SENDER") or username).strip()
+    if not sender:
+        raise RuntimeError("Adresse expéditrice SMTP manquante.")
 
     from_name = _clean_header_value(
         app.config.get("ELECTION_NAME") or app.config.get("APP_NAME") or "Élection Nationale",
         max_len=80,
     )
     safe_subject = _clean_header_value(subject, max_len=140)
-    safe_name = _clean_header_value(full_name, max_len=120)
-    safe_email = _clean_header_value(email, max_len=180)
-    safe_phone = (phone or "").strip()
-    if len(safe_phone) > 60:
-        safe_phone = safe_phone[:60].rstrip()
-
     msg = EmailMessage()
-    msg["Subject"] = f"[Contact] {safe_subject}"
+    msg["Subject"] = safe_subject
     msg["From"] = formataddr((from_name, sender))
-    msg["To"] = recipient
-    msg["Reply-To"] = safe_email
-    msg.set_content(
-        "Nouveau message depuis le formulaire de contact.\n\n"
-        f"Nom: {safe_name}\n"
-        f"Email: {safe_email}\n"
-        f"Téléphone: {safe_phone or '-'}\n\n"
-        "Message:\n"
-        f"{(message or '').strip()}\n"
-    )
+    msg["To"] = _clean_header_value(to_email, max_len=180)
+    if reply_to:
+        msg["Reply-To"] = _clean_header_value(reply_to, max_len=180)
+    msg.set_content((text_content or "").strip() + "\n")
 
     timeout_seconds = 20
     smtp_cls = smtplib.SMTP_SSL if use_ssl else smtplib.SMTP
@@ -185,6 +214,93 @@ def _send_contact_email(*, full_name: str, email: str, subject: str, message: st
         if username:
             smtp.login(username, password)
         smtp.send_message(msg)
+
+def _send_contact_email(*, full_name: str, email: str, subject: str, message: str, phone: str | None = None) -> None:
+    recipient = (app.config.get("CONTACT_RECIPIENT") or "").strip()
+    if not recipient:
+        raise RuntimeError("Envoi email non activé sur ce serveur (adresse de réception non définie).")
+
+    safe_name = _clean_header_value(full_name, max_len=120)
+    safe_email = _clean_header_value(email, max_len=180)
+    safe_phone = (phone or "").strip()
+    if len(safe_phone) > 60:
+        safe_phone = safe_phone[:60].rstrip()
+
+    _send_system_email(
+        to_email=recipient,
+        subject=f"[Contact] {_clean_header_value(subject, max_len=140)}",
+        reply_to=safe_email,
+        text_content=(
+            "Nouveau message depuis le formulaire de contact.\n\n"
+            f"Nom: {safe_name}\n"
+            f"Email: {safe_email}\n"
+            f"Téléphone: {safe_phone or '-'}\n\n"
+            "Message:\n"
+            f"{(message or '').strip()}"
+        ),
+    )
+
+def _generate_email_verification_code() -> str:
+    return f"{secrets.randbelow(1_000_000):06d}"
+
+def _hash_email_verification_code(user, code: str) -> str:
+    secret = str(app.config.get("SECRET_KEY") or "")
+    raw = f"email-verify|{getattr(user, 'id', '')}|{(getattr(user, 'email', '') or '').lower()}|{code}|{secret}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+def _issue_email_verification(user) -> None:
+    if not user:
+        raise RuntimeError("Utilisateur introuvable pour la vérification email.")
+    if not _verification_email_enabled():
+        raise RuntimeError("La vérification email n'est pas configurée sur ce serveur.")
+    if getattr(user, "id", None) is None:
+        db.session.flush()
+
+    ttl_minutes = max(5, int(app.config.get("EMAIL_VERIFICATION_CODE_TTL_MINUTES", 15) or 15))
+    issued_at = datetime.now(UTC)
+    code = _generate_email_verification_code()
+
+    user.email_verified_at = None
+    user.email_verification_code_hash = _hash_email_verification_code(user, code)
+    user.email_verification_sent_at = issued_at
+    user.email_verification_expires_at = issued_at + timedelta(minutes=ttl_minutes)
+
+    election_name = app.config.get("ELECTION_NAME") or app.config.get("APP_NAME") or "Élection Nationale"
+    _send_system_email(
+        to_email=user.email,
+        subject=f"{election_name} - Code de confirmation",
+        text_content=(
+            f"Bonjour,\n\n"
+            f"Votre code de confirmation pour {election_name} est : {code}\n\n"
+            f"Ce code expire dans {ttl_minutes} minutes.\n"
+            "Saisissez-le sur la page de connexion pour activer votre compte.\n\n"
+            "Si vous n'êtes pas à l'origine de cette inscription, ignorez cet email."
+        ),
+    )
+
+def _confirm_user_email(user, code: str) -> tuple[bool, str]:
+    if not user:
+        return False, "Compte introuvable."
+    if user.is_email_verified:
+        return True, "Cet email est déjà confirmé."
+
+    submitted_code = "".join(ch for ch in str(code or "") if ch.isdigit())
+    if len(submitted_code) != 6:
+        return False, "Le code de confirmation doit contenir 6 chiffres."
+    if not user.email_verification_code_hash:
+        return False, "Aucun code de confirmation n'est disponible. Demandez un nouveau code."
+    if not user.email_verification_expires_at or user.email_verification_expires_at < datetime.utcnow():
+        return False, "Le code de confirmation a expiré. Demandez un nouveau code."
+
+    expected_hash = _hash_email_verification_code(user, submitted_code)
+    if not hmac.compare_digest(user.email_verification_code_hash, expected_hash):
+        return False, "Code de confirmation invalide."
+
+    user.email_verified_at = datetime.utcnow()
+    user.email_verification_code_hash = None
+    user.email_verification_expires_at = None
+    user.email_verification_sent_at = None
+    return True, "Email confirmé. Vous pouvez maintenant vous connecter."
 
 def _build_voter_card_token(voter) -> str:
     """
@@ -250,6 +366,13 @@ class User(UserMixin, db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     last_login = db.Column(db.DateTime)
     is_active = db.Column(db.Boolean, default=True)
+    display_name = db.Column(db.String(120))
+    phone_number = db.Column(db.String(30))
+    avatar_filename = db.Column(db.String(255))
+    email_verified_at = db.Column(db.DateTime)
+    email_verification_code_hash = db.Column(db.String(128))
+    email_verification_expires_at = db.Column(db.DateTime)
+    email_verification_sent_at = db.Column(db.DateTime)
     
     # Relations
     voter_profile = db.relationship('Voter', backref='user', uselist=False, cascade='all, delete-orphan')
@@ -264,13 +387,16 @@ class User(UserMixin, db.Model):
 
     @property
     def is_email_verified(self):
-        # Aucun workflow de vérification email n'est implémenté pour le moment.
-        return True
+        return self.email_verified_at is not None
 
     @property
     def login_count(self):
         # Champ attendu par certains templates (placeholder).
         return 0
+
+    @property
+    def profile_name(self):
+        return (self.display_name or "").strip() or self.email.split("@")[0]
     
     def __repr__(self):
         return f'<User {self.email}>'
@@ -591,29 +717,34 @@ class CandidateDetails(db.Model):
 class Election(db.Model):
     __tablename__ = 'elections'
     PHASE_PREPARATION = "preparation"
-    PHASE_CANDIDATURES = "candidatures_ouvertes"
-    PHASE_CAMPAGNE = "campagne_electorale"
+    PHASE_VOTE_OUVERT = "vote_ouvert"
+    PHASE_VOTE_FERME = "vote_ferme"
     PHASE_DEPOUILLEMENT = "depouillement"
-    PHASE_PROCLAMATION = "proclamation_vainqueur"
+    PHASE_PROCLAMATION = "resultats_proclames"
     PHASE_FLOW = [
         PHASE_PREPARATION,
-        PHASE_CANDIDATURES,
-        PHASE_CAMPAGNE,
+        PHASE_VOTE_OUVERT,
+        PHASE_VOTE_FERME,
         PHASE_DEPOUILLEMENT,
         PHASE_PROCLAMATION,
     ]
     LEGACY_STATUS_MAP = {
         "planned": PHASE_PREPARATION,
-        "registration_open": PHASE_CANDIDATURES,
-        "registration_closed": PHASE_CAMPAGNE,
-        "open": PHASE_CAMPAGNE,
-        "closed": PHASE_DEPOUILLEMENT,
+        "candidatures_ouvertes": PHASE_PREPARATION,
+        "campagne_electorale": PHASE_VOTE_OUVERT,
+        "proclamation_vainqueur": PHASE_PROCLAMATION,
+        "registration_open": PHASE_PREPARATION,
+        "registration_closed": PHASE_VOTE_OUVERT,
+        "open": PHASE_VOTE_OUVERT,
+        "vote_open": PHASE_VOTE_OUVERT,
+        "vote_closed": PHASE_VOTE_FERME,
+        "closed": PHASE_VOTE_FERME,
         "results_published": PHASE_PROCLAMATION,
     }
     
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(100), nullable=False, default="Élection Nationale")
-    year = db.Column(db.Integer, default=2025)
+    year = db.Column(db.Integer, default=lambda: datetime.now(UTC).year)
     
     # Dates
     registration_start = db.Column(db.DateTime)
@@ -696,35 +827,48 @@ class Election(db.Model):
     def phase_label(self):
         labels = {
             self.PHASE_PREPARATION: "Préparation des élections",
-            self.PHASE_CANDIDATURES: "Candidatures ouvertes",
-            self.PHASE_CAMPAGNE: "Campagne électorale",
+            self.PHASE_VOTE_OUVERT: "Vote ouvert",
+            self.PHASE_VOTE_FERME: "Vote fermé",
             self.PHASE_DEPOUILLEMENT: "Dépouillement",
-            self.PHASE_PROCLAMATION: "Proclamation du vainqueur",
+            self.PHASE_PROCLAMATION: "Résultats proclamés",
         }
         return labels.get(self.phase, "Préparation des élections")
 
     def can_transition(self, action):
         current = self.phase
         transitions = {
-            "openRegistration": (self.PHASE_PREPARATION, self.PHASE_CANDIDATURES),
-            "closeRegistration": (self.PHASE_CANDIDATURES, self.PHASE_CAMPAGNE),
-            "openVoting": (self.PHASE_CAMPAGNE, self.PHASE_DEPOUILLEMENT),
-            "closeVoting": (self.PHASE_CAMPAGNE, self.PHASE_DEPOUILLEMENT),
+            "openVoting": (self.PHASE_PREPARATION, self.PHASE_VOTE_OUVERT),
+            "closeVoting": (self.PHASE_VOTE_OUVERT, self.PHASE_VOTE_FERME),
+            "startCounting": (self.PHASE_VOTE_FERME, self.PHASE_DEPOUILLEMENT),
             "publishResults": (self.PHASE_DEPOUILLEMENT, self.PHASE_PROCLAMATION),
         }
         expected = transitions.get(action)
         if not expected:
             return False, "Action inconnue"
+
+        # Accept idempotent transition if already in expected target phase.
+        if current == expected[1]:
+            return True, None
+
+        if current == self.PHASE_VOTE_OUVERT and action == 'startCounting':
+            # cas d'usage rapide : on lance le dépouillement directement sans repasser par vote fermé.
+            return True, None
+
         if current != expected[0]:
             return False, f"Transition impossible depuis l'état « {self.phase_label} »"
+
+        if action == "openVoting":
+            if Candidate.query.filter_by(is_approved=True).count() <= 0:
+                return False, "Au moins un candidat approuvé est requis avant l'ouverture du vote."
+            if Voter.query.count() <= 0:
+                return False, "Au moins un électeur est requis avant l'ouverture du vote."
         return True, None
 
     def apply_transition(self, action):
         transitions = {
-            "openRegistration": self.PHASE_CANDIDATURES,
-            "closeRegistration": self.PHASE_CAMPAGNE,
-            "openVoting": self.PHASE_DEPOUILLEMENT,
-            "closeVoting": self.PHASE_DEPOUILLEMENT,
+            "openVoting": self.PHASE_VOTE_OUVERT,
+            "closeVoting": self.PHASE_VOTE_FERME,
+            "startCounting": self.PHASE_DEPOUILLEMENT,
             "publishResults": self.PHASE_PROCLAMATION,
         }
         ok, reason = self.can_transition(action)
@@ -733,31 +877,35 @@ class Election(db.Model):
 
         now = datetime.utcnow()
         target = transitions[action]
+
+        # Pas d'opération si la cible est déjà atteinte
+        if self.phase == target:
+            return
+
         self.phase = target
 
-        # Garder des dates cohérentes pour les propriétés existantes.
-        if action == "openRegistration":
-            self.registration_start = self.registration_start or now
-            self.registration_end = self.registration_end or (now + timedelta(days=7))
-        elif action == "closeRegistration":
-            self.registration_end = now
-        elif action in {"openVoting", "closeVoting"}:
+        if action == "openVoting":
+            self.registration_end = self.registration_end or now
             self.voting_start = self.voting_start or now
+        elif action == "closeVoting":
             self.voting_end = now
+        elif action == "startCounting":
+            self.voting_end = self.voting_end or now
     
     @property
     def is_registration_open(self):
-        now = datetime.utcnow()
-        if self.registration_start and self.registration_end:
-            return self.registration_start <= now <= self.registration_end
-        return False
+        return self.phase == self.PHASE_PREPARATION
     
     @property
     def is_voting_open(self):
         now = datetime.utcnow()
-        if self.voting_start and self.voting_end:
-            return self.voting_start <= now <= self.voting_end
-        return False
+        if self.phase != self.PHASE_VOTE_OUVERT:
+            return False
+        if self.voting_start and now < self.voting_start:
+            return False
+        if self.voting_end and now > self.voting_end:
+            return False
+        return True
 
     @property
     def total_votes_cast(self):
@@ -792,6 +940,17 @@ class Election(db.Model):
         hours, remainder = divmod(remaining.seconds, 3600)
         minutes = remainder // 60
         return f"{days}j {hours}h {minutes}min"
+    
+    @classmethod
+    def get_current_election(cls):
+        """Get the current election (most recent active election)"""
+        current_year = datetime.utcnow().year
+        # First try to get election for current year
+        election = cls.query.filter_by(year=current_year).first()
+        if election:
+            return election
+        # Fallback to most recent election
+        return cls.query.order_by(cls.year.desc()).first()
     
     def __repr__(self):
         return f'<Election {self.name} {self.year}>'
@@ -852,6 +1011,30 @@ class VoteLog(db.Model):
     def __repr__(self):
         return f'<VoteLog Voter:{self.voter_id} -> Candidate:{self.candidate_id}>'
 
+class AuditLog(db.Model):
+    __tablename__ = "audit_logs"
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"), index=True)
+    action = db.Column(db.String(80), nullable=False, index=True)
+    details = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    user = db.relationship("User", backref=db.backref("audit_logs", lazy="dynamic"))
+
+class ElectionArchive(db.Model):
+    __tablename__ = "election_archives"
+
+    id = db.Column(db.Integer, primary_key=True)
+    archive_type = db.Column(db.String(40), nullable=False, index=True)
+    title = db.Column(db.String(160), nullable=False)
+    summary = db.Column(db.String(255))
+    file_path = db.Column(db.String(255), nullable=False)
+    created_by_id = db.Column(db.Integer, db.ForeignKey("users.id"), index=True)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    created_by = db.relationship("User", backref=db.backref("election_archives", lazy="dynamic"))
+
 # ========== FONCTIONS D'AIDE ==========
 @login_manager.user_loader
 def load_user(user_id):
@@ -882,12 +1065,218 @@ def _ensure_announcements_schema():
         db.session.execute(text(stmt))
     db.session.commit()
 
+def _ensure_users_schema():
+    """Ajoute les colonnes manquantes de `users` pour la vérification email."""
+    inspector = inspect(db.engine)
+    if 'users' not in inspector.get_table_names():
+        return
+
+    existing = {c.get('name') for c in inspector.get_columns('users')}
+    dialect = (db.engine.dialect.name or "").lower()
+    datetime_type = "TIMESTAMP" if dialect == "postgresql" else "DATETIME"
+
+    statements = []
+    if 'display_name' not in existing:
+        statements.append("ALTER TABLE users ADD COLUMN display_name VARCHAR(120)")
+    if 'phone_number' not in existing:
+        statements.append("ALTER TABLE users ADD COLUMN phone_number VARCHAR(30)")
+    if 'avatar_filename' not in existing:
+        statements.append("ALTER TABLE users ADD COLUMN avatar_filename VARCHAR(255)")
+    if 'email_verified_at' not in existing:
+        statements.append(f"ALTER TABLE users ADD COLUMN email_verified_at {datetime_type}")
+    if 'email_verification_code_hash' not in existing:
+        statements.append("ALTER TABLE users ADD COLUMN email_verification_code_hash VARCHAR(128)")
+    if 'email_verification_expires_at' not in existing:
+        statements.append(f"ALTER TABLE users ADD COLUMN email_verification_expires_at {datetime_type}")
+    if 'email_verification_sent_at' not in existing:
+        statements.append(f"ALTER TABLE users ADD COLUMN email_verification_sent_at {datetime_type}")
+
+    if statements:
+        for stmt in statements:
+            db.session.execute(text(stmt))
+        db.session.commit()
+
+    db.session.execute(
+        text(
+            "UPDATE users "
+            "SET email_verified_at = created_at "
+            "WHERE email_verified_at IS NULL AND email_verification_code_hash IS NULL"
+        )
+    )
+    db.session.commit()
+
+def _archive_dir() -> str:
+    return os.path.join(os.path.abspath(os.path.dirname(__file__)), "archives")
+
+def _ensure_archive_dir() -> str:
+    path = _archive_dir()
+    os.makedirs(path, exist_ok=True)
+    return path
+
+def _json_default(value):
+    if isinstance(value, (datetime, date)):
+        return value.isoformat()
+    return str(value)
+
+def _log_audit(action: str, details: str | None = None, *, user=None) -> None:
+    actor = user if user is not None else (current_user if current_user.is_authenticated else None)
+    db.session.add(
+        AuditLog(
+            user_id=getattr(actor, "id", None),
+            action=(action or "").strip()[:80],
+            details=(details or "").strip()[:5000] or None,
+        )
+    )
+
+def _election_snapshot(*, archive_type: str, title: str) -> tuple[str, str]:
+    election = Election.get_current_election()
+    users = User.query.order_by(User.id.asc()).all()
+    voters = Voter.query.order_by(Voter.id.asc()).all()
+    candidates = Candidate.query.order_by(Candidate.id.asc()).all()
+    vote_logs = VoteLog.query.order_by(VoteLog.id.asc()).all()
+    announcements = Announcement.query.order_by(Announcement.id.asc()).all()
+
+    snapshot = {
+        "archive_type": archive_type,
+        "title": title,
+        "created_at": datetime.utcnow().isoformat(),
+        "election": {
+            "id": election.id if election else None,
+            "name": election.name if election else None,
+            "year": election.year if election else None,
+            "status": election.status if election else None,
+            "phase": election.phase if election else None,
+            "registration_start": election.registration_start if election else None,
+            "registration_end": election.registration_end if election else None,
+            "voting_start": election.voting_start if election else None,
+            "voting_end": election.voting_end if election else None,
+            "description": election.description if election else None,
+            "max_candidates": election.max_candidates if election else None,
+            "is_test_mode": election.is_test_mode if election else None,
+            "auto_approve_candidates": election.auto_approve_candidates if election else None,
+        },
+        "counts": {
+            "users": len(users),
+            "voters": len(voters),
+            "candidates": len(candidates),
+            "votes": len(vote_logs),
+            "announcements": len(announcements),
+        },
+        "users": [
+            {
+                "id": user.id,
+                "email": user.email,
+                "password_hash": user.password_hash,
+                "role": user.role,
+                "is_active": user.is_active,
+                "display_name": user.display_name,
+                "phone_number": user.phone_number,
+                "avatar_filename": user.avatar_filename,
+                "created_at": user.created_at,
+                "last_login": user.last_login,
+                "email_verified_at": user.email_verified_at,
+            }
+            for user in users
+        ],
+        "voters": [
+            {
+                "id": voter.id,
+                "user_id": voter.user_id,
+                "first_name": voter.first_name,
+                "last_name": voter.last_name,
+                "cni_number": voter.cni_number,
+                "date_of_birth": voter.date_of_birth,
+                "place_of_birth": voter.place_of_birth,
+                "gender": voter.gender,
+                "has_voted": voter.has_voted,
+                "voted_at": voter.voted_at,
+                "vote_for_id": voter.vote_for_id,
+                "phone_number": voter.phone_number,
+                "is_eligible": voter.is_eligible,
+                "eligibility_reason": voter.eligibility_reason,
+                "created_at": voter.created_at,
+                "updated_at": voter.updated_at,
+            }
+            for voter in voters
+        ],
+        "candidates": [
+            {
+                "id": candidate.id,
+                "user_id": candidate.user_id,
+                "first_name": candidate.first_name,
+                "last_name": candidate.last_name,
+                "cni_number": candidate.cni_number,
+                "date_of_birth": candidate.date_of_birth,
+                "place_of_birth": candidate.place_of_birth,
+                "party_name": candidate.party_name,
+                "party_acronym": candidate.party_acronym,
+                "campaign_slogan": candidate.campaign_slogan,
+                "political_program": candidate.political_program,
+                "biography": candidate.biography,
+                "profile_image": candidate.profile_image,
+                "website_url": candidate.website_url,
+                "facebook_url": candidate.facebook_url,
+                "twitter_url": candidate.twitter_url,
+                "campaign_video_url": candidate.campaign_video_url,
+                "is_approved": candidate.is_approved,
+                "is_rejected": candidate.is_rejected,
+                "vote_count": candidate.vote_count,
+                "created_at": candidate.created_at,
+                "updated_at": candidate.updated_at,
+            }
+            for candidate in candidates
+        ],
+        "vote_logs": [
+            {
+                "id": vote.id,
+                "voter_id": vote.voter_id,
+                "candidate_id": vote.candidate_id,
+                "election_id": vote.election_id,
+                "vote_hash": vote.vote_hash,
+                "ip_address": vote.ip_address,
+                "vote_timestamp": vote.vote_timestamp,
+            }
+            for vote in vote_logs
+        ],
+        "announcements": [
+            {
+                "id": announcement.id,
+                "title": announcement.title,
+                "content": announcement.content,
+                "author_id": announcement.author_id,
+                "audience": announcement.audience,
+                "priority": announcement.priority,
+                "is_active": announcement.is_active,
+                "is_urgent": announcement.is_urgent,
+                "expires_at": announcement.expires_at,
+                "created_at": announcement.created_at,
+                "updated_at": announcement.updated_at,
+            }
+            for announcement in announcements
+        ],
+    }
+
+    archive_dir = _ensure_archive_dir()
+    timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
+    filename = f"{timestamp}_{archive_type}.json"
+    abs_path = os.path.join(archive_dir, filename)
+    with open(abs_path, "w", encoding="utf-8") as handle:
+        json.dump(snapshot, handle, ensure_ascii=False, indent=2, default=_json_default)
+
+    summary = (
+        f"{len(users)} utilisateurs, {len(voters)} électeurs, "
+        f"{len(candidates)} candidats, {len(vote_logs)} votes"
+    )
+    return filename, summary
+
 def init_database():
     """Initialise la base de données en silence"""
     with app.app_context():
         try:
             db.create_all()
+            _ensure_users_schema()
             _ensure_announcements_schema()
+            _ensure_archive_dir()
             
             # NOTE: l'administration ne doit plus être configurée automatiquement
             # via les variables d'environnement. Le premier compte admin est créé
@@ -895,11 +1284,12 @@ def init_database():
             # n'est requise ici.
             
             # Créer élection par défaut
-            if not Election.query.filter_by(year=2025).first():
+            current_year = datetime.utcnow().year
+            if not Election.query.filter_by(year=current_year).first():
                 now = datetime.utcnow()
                 election = Election(
-                    name="Élection Nationale 2025",
-                    year=2025,
+                    name=f"Élection Nationale {current_year}",
+                    year=current_year,
                     registration_start=now - timedelta(days=30),
                     registration_end=now + timedelta(days=60),
                     voting_start=now,
@@ -978,7 +1368,7 @@ def nl2br(value):
 @app.context_processor
 def inject_global_vars():
     try:
-        election = Election.query.filter_by(year=2025).first()
+        election = Election.get_current_election()
     except Exception:
         election = None
     try:
@@ -1012,13 +1402,53 @@ def inject_user_profiles():
 
     return {"voter": voter, "candidate": candidate}
 
-# Certains templates appellent csrf_token() (Flask-WTF). On fournit une fonction no-op
-# pour éviter une erreur si Flask-WTF n'est pas installé/configuré.
 @app.context_processor
 def inject_csrf_token():
     def csrf_token():
-        return ''
+        return generate_csrf()
     return {'csrf_token': csrf_token}
+
+@app.before_request
+def protect_csrf_fallback():
+    if csrf is not None:
+        return None
+    if request.method in {"GET", "HEAD", "OPTIONS", "TRACE"}:
+        return None
+    token = (
+        request.form.get("csrf_token")
+        or request.headers.get("X-CSRFToken")
+        or request.headers.get("X-CSRF-Token")
+    )
+    expected = session.get("_csrf_token")
+    if not token or not expected or not hmac.compare_digest(str(token), str(expected)):
+        raise CSRFError("Jeton CSRF manquant ou invalide")
+    return None
+
+@app.after_request
+def apply_security_headers(response):
+    response.headers.setdefault("X-Frame-Options", "SAMEORIGIN")
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    response.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+    try:
+        response.set_cookie(
+            "csrf_token",
+            generate_csrf(),
+            secure=bool(app.config.get("SESSION_COOKIE_SECURE")),
+            httponly=False,
+            samesite=app.config.get("SESSION_COOKIE_SAMESITE", "Lax"),
+        )
+    except Exception:
+        pass
+    return response
+
+@app.errorhandler(CSRFError)
+def handle_csrf_error(error):
+    message = "La session de sécurité a expiré ou la requête est invalide. Rechargez la page puis réessayez."
+    if request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.accept_mimetypes.best == "application/json":
+        return jsonify(success=False, message=message, reason=error.description), 400
+    flash(message, "warning")
+    return redirect(request.referrer or url_for("index"))
 
 @app.context_processor
 def inject_helpers():
@@ -1104,10 +1534,29 @@ def inject_helpers():
 
         return None
 
+    def admin_avatar_url(user):
+        if not user:
+            return None
+
+        filename = (getattr(user, "avatar_filename", None) or "").strip()
+        if not filename:
+            return None
+
+        rel = f"uploads/admins/{filename}"
+        abs_path = os.path.join(app.static_folder, rel.replace("/", os.sep))
+        if not os.path.exists(abs_path):
+            return None
+        try:
+            version = int(os.path.getmtime(abs_path))
+            return url_for("static", filename=rel, v=version)
+        except Exception:
+            return url_for("static", filename=rel)
+
     return {
         'get_candidate_color': get_candidate_color,
         'candidate_photo_url': candidate_photo_url,
         'voter_avatar_url': voter_avatar_url,
+        'admin_avatar_url': admin_avatar_url,
     }
 
 # ========== DÉCORATEURS ==========
@@ -1130,15 +1579,7 @@ admin_required = role_required('admin')
 # ========== ROUTES PUBLIQUES ==========
 @app.route('/')
 def index():
-    if current_user.is_authenticated:
-        if current_user.role == 'voter':
-            return redirect(url_for('voter_dashboard'))
-        elif current_user.role == 'candidate':
-            return redirect(url_for('candidate_dashboard'))
-        elif current_user.role == 'admin':
-            return redirect(url_for('admin_dashboard'))
-    
-    election = Election.query.filter_by(year=2025).first()
+    election = Election.get_current_election()
     candidates = (
         Candidate.query.filter_by(is_approved=True)
         .order_by(Candidate.vote_count.desc())
@@ -1175,6 +1616,7 @@ def index():
         announcements=announcements,
         stats=stats,
         page_title="Accueil",
+        show_footer_cta=True,
     )
 
 @app.route('/candidates')
@@ -1209,7 +1651,7 @@ def vote_for_candidate(candidate_id):
         flash('Profil électeur non trouvé', 'danger')
         return redirect(url_for('index'))
     
-    election = Election.query.filter_by(year=2025).first()
+    election = Election.get_current_election()
     if not election or not election.is_voting_open:
         flash('Le vote n\'est pas ouvert actuellement', 'warning')
         return redirect(url_for('index'))
@@ -1226,6 +1668,9 @@ def vote_for_candidate(candidate_id):
     candidate = Candidate.query.filter_by(id=candidate_id, is_approved=True).first()
     if not candidate:
         flash('Candidat invalide', 'danger')
+        return redirect(url_for('index'))
+    if candidate.is_rejected or not candidate.is_eligible:
+        flash("Ce candidat n'est pas autorisé à recevoir des votes.", "warning")
         return redirect(url_for('index'))
     
     # Enregistrement du vote
@@ -1251,16 +1696,28 @@ def vote_for_candidate(candidate_id):
     )
     
     db.session.add(vote_log)
-    db.session.commit()
+    try:
+        db.session.commit()
+    except IntegrityError:
+        db.session.rollback()
+        flash("Un vote existe déjà pour cet électeur dans cette élection.", "warning")
+        return redirect(url_for('index'))
     
     flash(f'Votre vote pour {candidate.full_name} a été enregistré avec succès', 'success')
     return redirect(url_for('index'))
 
 @app.route('/about')
 def about():
-    return render_template('visitor/information.html',
-                         page='about',
-                         page_title="À propos")
+    stats = {
+        "total_voters": Voter.query.count(),
+        "total_candidates": Candidate.query.filter_by(is_approved=True).count(),
+        "votes_cast": VoteLog.query.count(),
+        "announcements": Announcement.query.filter_by(is_active=True).count(),
+    }
+    return render_template('visitor/about.html',
+                         stats=stats,
+                         page_title="À propos",
+                         show_footer_cta=False)
 
 @app.route('/faq')
 def faq():
@@ -1355,14 +1812,37 @@ def contact():
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
-    
+
+    show_email_verification = (request.args.get("email_verification") or "").strip() == "1"
+    prefill_email = (request.args.get("email") or "").strip().lower()
+
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
+        email = (request.form.get('email') or '').strip().lower()
+        password = request.form.get('password') or ''
+        prefill_email = email
         
         user = User.query.filter_by(email=email).first()
         
         if user and user.check_password(password) and user.is_active:
+            if not user.is_email_verified:
+                if (
+                    app.config.get("EMAIL_VERIFICATION_REQUIRED", True)
+                    and (
+                        not user.email_verification_code_hash
+                        or not user.email_verification_expires_at
+                        or user.email_verification_expires_at <= datetime.utcnow()
+                    )
+                ):
+                    try:
+                        _issue_email_verification(user)
+                        db.session.commit()
+                        flash("Un nouveau code de confirmation a été envoyé à votre adresse email.", "info")
+                    except Exception:
+                        db.session.rollback()
+                        logger.exception("Impossible de renvoyer le code de confirmation à la connexion")
+                flash("Confirmez votre email avant de vous connecter.", "warning")
+                return _verification_redirect(email)
+
             login_user(user)
             user.last_login = datetime.utcnow()
             db.session.commit()
@@ -1377,8 +1857,60 @@ def login():
                 return redirect(url_for('admin_dashboard'))
         else:
             flash('Identifiants incorrects', 'danger')
-    
-    return render_template('auth/login.html', page_title="Connexion")
+
+    return render_template(
+        'auth/login.html',
+        page_title="Connexion",
+        show_email_verification=show_email_verification,
+        prefill_email=prefill_email,
+    )
+
+@app.route('/verify-email', methods=['POST'])
+def verify_email():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    email = (request.form.get('email') or '').strip().lower()
+    code = request.form.get('verification_code') or ''
+
+    user = User.query.filter_by(email=email).first()
+    ok, message = _confirm_user_email(user, code)
+    if ok and user and not user.email_verification_code_hash:
+        db.session.commit()
+        flash(message, 'info' if message.startswith("Cet email est déjà confirmé") else 'success')
+        return redirect(url_for('login', email=email))
+
+    flash(message, 'danger')
+    return _verification_redirect(email)
+
+@app.route('/verify-email/resend', methods=['POST'])
+def resend_email_verification():
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+
+    email = (request.form.get('email') or '').strip().lower()
+    user = User.query.filter_by(email=email).first()
+
+    if not user:
+        flash("Aucun compte trouvé pour cette adresse email.", "danger")
+        return _verification_redirect(email)
+    if user.is_email_verified:
+        flash("Cet email est déjà confirmé.", "info")
+        return redirect(url_for('login', email=email))
+
+    try:
+        _issue_email_verification(user)
+        db.session.commit()
+        flash("Un nouveau code de confirmation a été envoyé.", "success")
+    except Exception as exc:
+        db.session.rollback()
+        logger.exception("Erreur lors du renvoi du code de confirmation")
+        if isinstance(exc, smtplib.SMTPAuthenticationError):
+            flash("Authentification SMTP refusée. Vérifiez la configuration de l'email d'envoi.", "danger")
+        else:
+            flash("Impossible d'envoyer le code de confirmation pour le moment.", "danger")
+
+    return _verification_redirect(email)
 
 @app.route('/register')
 def register():
@@ -1452,20 +1984,43 @@ def register_admin():
             flash('Le mot de passe doit contenir au moins 8 caractères.', 'danger')
             return render_template('auth/register_admin.html', page_title="Créer un administrateur")
 
+        try:
+            email = _normalize_email_address(
+                email,
+                check_deliverability=bool(app.config.get("EMAIL_VALIDATION_CHECK_DELIVERABILITY", True)),
+            ).lower()
+        except EmailNotValidError as exc:
+            flash(str(exc), 'danger')
+            return render_template('auth/register_admin.html', page_title="Créer un administrateur")
+
+        if app.config.get("EMAIL_VERIFICATION_REQUIRED", True) and not _verification_email_enabled():
+            flash("La vérification email n'est pas configurée sur ce serveur.", "danger")
+            return render_template('auth/register_admin.html', page_title="Créer un administrateur")
+
         if User.query.filter_by(email=email).first():
             flash('Cet email est déjà utilisé.', 'danger')
             return render_template('auth/register_admin.html', page_title="Créer un administrateur")
 
-        user = User(email=email, role='admin', is_active=True)
-        user.set_password(password)
-        db.session.add(user)
-        db.session.commit()
+        try:
+            user = User(email=email, role='admin', is_active=True)
+            user.set_password(password)
+            db.session.add(user)
+            db.session.flush()
+            _issue_email_verification(user)
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            logger.exception("Erreur lors de l'inscription administrateur")
+            if isinstance(exc, smtplib.SMTPAuthenticationError):
+                flash("Authentification SMTP refusée. Vérifiez SMTP_USERNAME / SMTP_PASSWORD.", "danger")
+            elif isinstance(exc, EmailNotValidError):
+                flash(str(exc), "danger")
+            else:
+                flash("Impossible d'envoyer l'email de confirmation. Vérifiez la configuration SMTP.", "danger")
+            return render_template('auth/register_admin.html', page_title="Créer un administrateur")
 
-        login_user(user)
-        user.last_login = datetime.utcnow()
-        db.session.commit()
-        flash("Compte administrateur créé avec succès.", "success")
-        return redirect(url_for('admin_dashboard'))
+        flash("Compte administrateur créé. Vérifiez votre email puis confirmez le code sur la page de connexion.", "success")
+        return _verification_redirect(email)
 
     return render_template('auth/register_admin.html', page_title="Créer un administrateur")
 
@@ -1473,15 +2028,36 @@ def register_admin():
 def register_voter():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
+
+    election = Election.get_current_election()
+    if election and not election.is_registration_open:
+        flash("Les inscriptions électeurs sont actuellement fermées.", "warning")
+        return redirect(url_for('login'))
     
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
+        email = (request.form.get('email') or '').strip().lower()
+        password = request.form.get('password') or ''
+        confirm_password = request.form.get('confirm_password') or ''
         
         # Validation de base
         if password != confirm_password:
             flash('Les mots de passe ne correspondent pas', 'danger')
+            return render_template('auth/register_voter.html')
+        if len(password) < 8:
+            flash('Le mot de passe doit contenir au moins 8 caractères', 'danger')
+            return render_template('auth/register_voter.html')
+
+        try:
+            email = _normalize_email_address(
+                email,
+                check_deliverability=bool(app.config.get("EMAIL_VALIDATION_CHECK_DELIVERABILITY", True)),
+            ).lower()
+        except EmailNotValidError as exc:
+            flash(str(exc), 'danger')
+            return render_template('auth/register_voter.html')
+
+        if app.config.get("EMAIL_VERIFICATION_REQUIRED", True) and not _verification_email_enabled():
+            flash("La vérification email n'est pas configurée sur ce serveur.", "danger")
             return render_template('auth/register_voter.html')
         
         if User.query.filter_by(email=email).first():
@@ -1508,31 +2084,40 @@ def register_voter():
             return render_template('auth/register_voter.html')
         
         # Création de l'utilisateur
-        user = User(
-            email=email,
-            role='voter',
-            is_active=True
-        )
-        user.set_password(password)
-        db.session.add(user)
-        db.session.flush()
+        try:
+            user = User(
+                email=email,
+                role='voter',
+                is_active=True
+            )
+            user.set_password(password)
+            db.session.add(user)
+            db.session.flush()
+            
+            voter = Voter(
+                user_id=user.id,
+                first_name=request.form.get('first_name'),
+                last_name=request.form.get('last_name'),
+                cni_number=cni_number,
+                date_of_birth=date_of_birth,
+                place_of_birth=request.form.get('place_of_birth'),
+                gender=request.form.get('gender')
+            )
+            voter.phone_number = request.form.get("phone")
+            db.session.add(voter)
+            _issue_email_verification(user)
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            logger.exception("Erreur lors de l'inscription électeur")
+            if isinstance(exc, smtplib.SMTPAuthenticationError):
+                flash("Authentification SMTP refusée. Vérifiez SMTP_USERNAME / SMTP_PASSWORD.", "danger")
+            else:
+                flash("Impossible d'envoyer l'email de confirmation. Vérifiez la configuration SMTP.", "danger")
+            return render_template('auth/register_voter.html')
         
-        # Création du profil électeur
-        voter = Voter(
-            user_id=user.id,
-            first_name=request.form.get('first_name'),
-            last_name=request.form.get('last_name'),
-            cni_number=cni_number,
-            date_of_birth=date_of_birth,
-            place_of_birth=request.form.get('place_of_birth'),
-            gender=request.form.get('gender')
-        )
-        voter.phone_number = request.form.get("phone")
-        db.session.add(voter)
-        db.session.commit()
-        
-        flash('Inscription réussie. Vous pouvez vous connecter.', 'success')
-        return redirect(url_for('login'))
+        flash("Inscription réussie. Un code de confirmation a été envoyé à votre email.", 'success')
+        return _verification_redirect(email)
     
     return render_template('auth/register_voter.html', page_title="Inscription Électeur")
 
@@ -1540,14 +2125,35 @@ def register_voter():
 def register_candidate():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
+
+    election = Election.get_current_election()
+    if election and not election.is_registration_open:
+        flash("Les candidatures sont actuellement fermées.", "warning")
+        return redirect(url_for('login'))
     
     if request.method == 'POST':
-        email = request.form.get('email')
-        password = request.form.get('password')
-        confirm_password = request.form.get('confirm_password')
+        email = (request.form.get('email') or '').strip().lower()
+        password = request.form.get('password') or ''
+        confirm_password = request.form.get('confirm_password') or ''
         
         if password != confirm_password:
             flash('Les mots de passe ne correspondent pas', 'danger')
+            return render_template('auth/register_candidate.html')
+        if len(password) < 8:
+            flash('Le mot de passe doit contenir au moins 8 caractères', 'danger')
+            return render_template('auth/register_candidate.html')
+
+        try:
+            email = _normalize_email_address(
+                email,
+                check_deliverability=bool(app.config.get("EMAIL_VALIDATION_CHECK_DELIVERABILITY", True)),
+            ).lower()
+        except EmailNotValidError as exc:
+            flash(str(exc), 'danger')
+            return render_template('auth/register_candidate.html')
+
+        if app.config.get("EMAIL_VERIFICATION_REQUIRED", True) and not _verification_email_enabled():
+            flash("La vérification email n'est pas configurée sur ce serveur.", "danger")
             return render_template('auth/register_candidate.html')
         
         if User.query.filter_by(email=email).first():
@@ -1574,40 +2180,49 @@ def register_candidate():
             return render_template('auth/register_candidate.html')
         
         # Création de l'utilisateur
-        user = User(
-            email=email,
-            role='candidate',
-            is_active=True
-        )
-        user.set_password(password)
-        db.session.add(user)
-        db.session.flush()
-        
-        # Création du profil candidat
-        candidate = Candidate(
-            user_id=user.id,
-            first_name=request.form.get('first_name'),
-            last_name=request.form.get('last_name'),
-            cni_number=cni_number,
-            date_of_birth=date_of_birth,
-            party_name=request.form.get('party_name'),
-            party_acronym=request.form.get('party_acronym'),
-            is_approved=False
-        )
-        candidate.place_of_birth = request.form.get("place_of_birth")
-        candidate.campaign_slogan = request.form.get("slogan")
-        candidate.political_program = request.form.get("program")
-        candidate.is_rejected = False
+        try:
+            user = User(
+                email=email,
+                role='candidate',
+                is_active=True
+            )
+            user.set_password(password)
+            db.session.add(user)
+            db.session.flush()
+            
+            candidate = Candidate(
+                user_id=user.id,
+                first_name=request.form.get('first_name'),
+                last_name=request.form.get('last_name'),
+                cni_number=cni_number,
+                date_of_birth=date_of_birth,
+                party_name=request.form.get('party_name'),
+                party_acronym=request.form.get('party_acronym'),
+                is_approved=False
+            )
+            candidate.place_of_birth = request.form.get("place_of_birth")
+            candidate.campaign_slogan = request.form.get("slogan")
+            candidate.political_program = request.form.get("program")
+            candidate.is_rejected = False
 
-        election = Election.query.filter_by(year=2025).first()
-        if election and election.auto_approve_candidates:
-            candidate.is_approved = True
-            candidate.approved_at = datetime.utcnow()
-        db.session.add(candidate)
-        db.session.commit()
+            election = Election.get_current_election()
+            if election and election.auto_approve_candidates:
+                candidate.is_approved = True
+                candidate.approved_at = datetime.utcnow()
+            db.session.add(candidate)
+            _issue_email_verification(user)
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            logger.exception("Erreur lors de l'inscription candidat")
+            if isinstance(exc, smtplib.SMTPAuthenticationError):
+                flash("Authentification SMTP refusée. Vérifiez SMTP_USERNAME / SMTP_PASSWORD.", "danger")
+            else:
+                flash("Impossible d'envoyer l'email de confirmation. Vérifiez la configuration SMTP.", "danger")
+            return render_template('auth/register_candidate.html')
         
-        flash('Candidature enregistrée. Elle sera examinée par l\'administration.', 'success')
-        return redirect(url_for('login'))
+        flash("Candidature enregistrée. Confirmez d'abord votre email, puis connectez-vous.", 'success')
+        return _verification_redirect(email)
     
     return render_template('auth/register_candidate.html', page_title="Inscription Candidat")
 
@@ -1623,7 +2238,7 @@ def logout():
 @voter_required
 def voter_dashboard():
     voter = Voter.query.filter_by(user_id=current_user.id).first_or_404()
-    election = Election.query.filter_by(year=2025).first()
+    election = Election.get_current_election()
 
     candidates = Candidate.query.filter_by(is_approved=True).order_by(Candidate.vote_count.desc()).all()
     total_votes = sum(c.vote_count for c in candidates)
@@ -1658,7 +2273,7 @@ def voter_dashboard():
 @voter_required
 def voter_vote():
     voter = Voter.query.filter_by(user_id=current_user.id).first_or_404()
-    election = Election.query.filter_by(year=2025).first()
+    election = Election.get_current_election()
     
     # Vérifications
     if not election or not election.is_voting_open:
@@ -1676,10 +2291,13 @@ def voter_vote():
     
     if request.method == 'POST':
         candidate_id = request.form.get('candidate_id')
-        candidate = Candidate.query.get(candidate_id)
+        candidate = Candidate.query.filter_by(id=candidate_id, is_approved=True).first()
         
         if not candidate:
             flash('Candidat invalide', 'danger')
+            return redirect(url_for('voter_vote'))
+        if candidate.is_rejected or not candidate.is_eligible:
+            flash("Ce candidat n'est pas autorisé à recevoir des votes.", "warning")
             return redirect(url_for('voter_vote'))
         
         # Enregistrement du vote
@@ -1705,11 +2323,16 @@ def voter_vote():
         )
         
         db.session.add(vote_log)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except IntegrityError:
+            db.session.rollback()
+            flash("Un vote existe déjà pour cet électeur dans cette élection.", "warning")
+            return redirect(url_for('voter_dashboard'))
         
         flash('Votre vote a été enregistré', 'success')
         flash(
-            "Important (simulation) : pensez à imprimer votre carte d’électeur depuis votre profil et à la présenter "
+            "Important : pensez à imprimer votre carte d’électeur depuis votre profil et à la présenter "
             "pour vérification (commissariat / service de population).",
             "info",
         )
@@ -1757,7 +2380,7 @@ def update_voter_avatar():
         flash("Format d'image invalide. Utilisez PNG/JPG/JPEG/GIF/WEBP.", "danger")
         return redirect(url_for("voter_profile"))
 
-    upload_dir = os.path.join(app.config.get("UPLOAD_FOLDER", "static/uploads"), "avatars")
+    upload_dir = _public_upload_dir("avatars")
     os.makedirs(upload_dir, exist_ok=True)
 
     try:
@@ -1766,6 +2389,9 @@ def update_voter_avatar():
         raw = b""
     if not raw:
         flash("Fichier invalide.", "danger")
+        return redirect(url_for("voter_profile"))
+    if len(raw) > 2 * 1024 * 1024:
+        flash("L'image ne doit pas dépasser 2MB.", "warning")
         return redirect(url_for("voter_profile"))
 
     # Nettoyer les anciennes versions (cache + extensions multiples)
@@ -1813,7 +2439,7 @@ def update_voter_avatar():
 @voter_required
 def voter_card():
     voter = Voter.query.filter_by(user_id=current_user.id).first_or_404()
-    election = Election.query.filter_by(year=2025).first()
+    election = Election.get_current_election()
 
     card_token = _build_voter_card_token(voter)
     verify_url = _build_voter_card_verify_url(voter, card_token)
@@ -1862,7 +2488,7 @@ def verify_voter_card(voter_id: int, token: str):
     expected = _build_voter_card_token(voter)
     is_valid = bool(provided) and hmac.compare_digest(expected, provided)
 
-    election = Election.query.filter_by(year=2025).first()
+    election = Election.get_current_election()
 
     return render_template(
         "visitor/verify_voter_card.html",
@@ -1908,7 +2534,7 @@ def update_voter_profile():
 @candidate_required
 def candidate_dashboard():
     candidate = Candidate.query.filter_by(user_id=current_user.id).first_or_404()
-    election = Election.query.filter_by(year=2025).first()
+    election = Election.get_current_election()
     now_utc = datetime.utcnow()
     announcements = (
         Announcement.query.filter(
@@ -1931,7 +2557,7 @@ def candidate_dashboard():
 @candidate_required
 def candidate_profile():
     candidate = Candidate.query.filter_by(user_id=current_user.id).first_or_404()
-    election = Election.query.filter_by(year=2025).first()
+    election = Election.get_current_election()
 
     competitors = Candidate.query.filter_by(is_approved=True).order_by(Candidate.vote_count.desc()).all()
     total_candidates = len(competitors)
@@ -1978,7 +2604,7 @@ def candidate_update_photo():
         flash("L'image ne doit pas dépasser 2MB.", "warning")
         return redirect(url_for("candidate_profile"))
 
-    upload_dir = os.path.join(app.config.get("UPLOAD_FOLDER", "static/uploads"), "candidates")
+    upload_dir = _public_upload_dir("candidates")
     os.makedirs(upload_dir, exist_ok=True)
 
     # Supprimer l'ancienne photo si elle existe
@@ -2052,7 +2678,7 @@ def candidate_change_password():
 @candidate_required
 def candidate_export_profile():
     candidate = Candidate.query.filter_by(user_id=current_user.id).first_or_404()
-    election = Election.query.filter_by(year=2025).first()
+    election = Election.get_current_election()
 
     payload = {
         "exported_at": datetime.utcnow().isoformat() + "Z",
@@ -2075,7 +2701,7 @@ def candidate_export_profile():
             "campaign_video_url": candidate.campaign_video_url,
         },
         "election": {
-            "year": election.year if election else 2025,
+            "year": election.year if election else datetime.utcnow().year,
             "name": election.name if election else (app.config.get("ELECTION_NAME") or ""),
         },
     }
@@ -2331,7 +2957,7 @@ def candidate_campaign_gallery_delete():
 @candidate_required
 def candidate_statistics():
     candidate = Candidate.query.filter_by(user_id=current_user.id).first_or_404()
-    election = Election.query.filter_by(year=2025).first()
+    election = Election.get_current_election()
 
     competitors = Candidate.query.filter_by(is_approved=True).order_by(Candidate.vote_count.desc()).all()
     total_candidates = len(competitors)
@@ -2373,6 +2999,117 @@ def admin_dashboard():
                          stats=stats,
                          page_title="Administration")
 
+@app.route('/admin/profile')
+@admin_required
+def admin_profile():
+    recent_logs = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(8).all()
+    recent_archives = ElectionArchive.query.order_by(ElectionArchive.created_at.desc()).limit(5).all()
+    return render_template(
+        'admin/profile.html',
+        admin_user=current_user,
+        recent_logs=recent_logs,
+        recent_archives=recent_archives,
+        page_title="Profil administrateur",
+    )
+
+@app.route('/admin/profile/update', methods=['POST'])
+@admin_required
+def admin_profile_update():
+    current_user.display_name = (request.form.get('display_name') or '').strip() or None
+    current_user.phone_number = (request.form.get('phone_number') or '').strip() or None
+
+    current_password = request.form.get('current_password') or ''
+    new_password = request.form.get('new_password') or ''
+    confirm_password = request.form.get('confirm_password') or ''
+
+    if new_password or confirm_password:
+        if not current_password or not current_user.check_password(current_password):
+            flash("Mot de passe actuel incorrect.", "danger")
+            return redirect(url_for('admin_profile'))
+        if len(new_password) < 8:
+            flash("Le nouveau mot de passe doit contenir au moins 8 caractères.", "warning")
+            return redirect(url_for('admin_profile'))
+        if new_password != confirm_password:
+            flash("Les nouveaux mots de passe ne correspondent pas.", "warning")
+            return redirect(url_for('admin_profile'))
+        current_user.set_password(new_password)
+
+    _log_audit(
+        "admin_profile_update",
+        f"Mise à jour du profil administrateur ({current_user.profile_name}).",
+    )
+    db.session.commit()
+    flash("Profil administrateur mis à jour.", "success")
+    return redirect(url_for('admin_profile'))
+
+@app.route('/admin/profile/avatar', methods=['POST'])
+@admin_required
+def admin_profile_avatar():
+    photo = request.files.get("avatar")
+    if not photo or not getattr(photo, "filename", ""):
+        flash("Veuillez sélectionner une image.", "warning")
+        return redirect(url_for('admin_profile'))
+
+    original_name = secure_filename(photo.filename or "")
+    ext = original_name.rsplit(".", 1)[-1].lower().strip() if "." in original_name else ""
+    if ext not in {"png", "jpg", "jpeg", "gif", "webp"}:
+        flash("Format d'image invalide. Utilisez PNG, JPG, JPEG, GIF ou WEBP.", "danger")
+        return redirect(url_for('admin_profile'))
+
+    try:
+        raw = photo.read()
+    except Exception:
+        raw = b""
+
+    if not raw:
+        flash("Fichier image invalide.", "danger")
+        return redirect(url_for('admin_profile'))
+    if len(raw) > 2 * 1024 * 1024:
+        flash("L'image ne doit pas dépasser 2MB.", "warning")
+        return redirect(url_for('admin_profile'))
+
+    upload_dir = _public_upload_dir("admins")
+    os.makedirs(upload_dir, exist_ok=True)
+
+    old_name = (current_user.avatar_filename or "").strip()
+    if old_name:
+        old_path = os.path.join(upload_dir, secure_filename(old_name))
+        if os.path.exists(old_path):
+            try:
+                os.remove(old_path)
+            except Exception:
+                pass
+
+    saved_name = None
+    if Image:
+        try:
+            img = Image.open(BytesIO(raw))
+            if ImageOps:
+                img = ImageOps.exif_transpose(img)
+            if img.mode not in ("RGB", "RGBA"):
+                img = img.convert("RGBA" if "A" in img.mode else "RGB")
+            img.thumbnail((512, 512))
+            saved_name = f"admin_{current_user.id}_{secrets.token_hex(8)}.webp"
+            img.save(os.path.join(upload_dir, saved_name), "WEBP", quality=86, method=6)
+        except Exception:
+            logger.exception("Erreur traitement avatar administrateur")
+
+    if not saved_name:
+        saved_name = f"admin_{current_user.id}_{secrets.token_hex(8)}.{ext}"
+        try:
+            with open(os.path.join(upload_dir, saved_name), "wb") as handle:
+                handle.write(raw)
+        except Exception:
+            logger.exception("Erreur écriture avatar administrateur")
+            flash("Impossible d'enregistrer l'image.", "danger")
+            return redirect(url_for('admin_profile'))
+
+    current_user.avatar_filename = saved_name
+    _log_audit("admin_avatar_update", "Nouvel avatar administrateur enregistré.")
+    db.session.commit()
+    flash("Photo de profil administrateur mise à jour.", "success")
+    return redirect(url_for('admin_profile'))
+
 @app.route('/admin/users')
 @admin_required
 def admin_users():
@@ -2386,23 +3123,145 @@ def admin_users():
 def add_user():
     email = (request.form.get('email') or '').strip().lower()
     password = request.form.get('password') or ''
-    role = request.form.get('role') or 'voter'
+    role = (request.form.get('role') or 'voter').strip().lower()
     is_active = bool(request.form.get('is_active'))
+    allowed_roles = {'admin', 'voter', 'candidate'}
 
     if not email or not password:
         flash("Email et mot de passe requis", "danger")
+        return redirect(url_for('admin_users'))
+
+    if role not in allowed_roles:
+        flash("Rôle utilisateur invalide", "danger")
+        return redirect(url_for('admin_users'))
+
+    if len(password) < 8:
+        flash("Le mot de passe doit contenir au moins 8 caractères", "warning")
+        return redirect(url_for('admin_users'))
+
+    try:
+        email = _normalize_email_address(email).lower()
+    except EmailNotValidError as exc:
+        flash(str(exc), "danger")
         return redirect(url_for('admin_users'))
 
     if User.query.filter_by(email=email).first():
         flash("Cet email est déjà utilisé", "warning")
         return redirect(url_for('admin_users'))
 
+    profile_factory = None
+    success_message = "Utilisateur créé avec succès"
+
+    if role == 'voter':
+        first_name = (request.form.get('first_name') or '').strip()
+        last_name = (request.form.get('last_name') or '').strip()
+        cni_number = (request.form.get('cni_number') or '').strip()
+        place_of_birth = (request.form.get('place_of_birth') or '').strip()
+        gender = (request.form.get('gender') or '').strip() or None
+        phone = (request.form.get('phone') or '').strip() or None
+        raw_birth_date = (request.form.get('date_of_birth') or '').strip()
+
+        if not all([first_name, last_name, cni_number, place_of_birth, raw_birth_date]):
+            flash("Le formulaire électeur est incomplet", "danger")
+            return redirect(url_for('admin_users'))
+
+        try:
+            date_of_birth = datetime.strptime(raw_birth_date, '%Y-%m-%d').date()
+        except Exception:
+            flash("Date de naissance invalide", "danger")
+            return redirect(url_for('admin_users'))
+
+        min_age = int(app.config.get("MIN_VOTER_AGE", 18) or 18)
+        if calculate_age(date_of_birth) < min_age:
+            flash(f"L'électeur doit avoir au moins {min_age} ans", "warning")
+            return redirect(url_for('admin_users'))
+
+        if Voter.query.filter_by(cni_number=cni_number).first():
+            flash("Cette CNI est déjà enregistrée pour un électeur", "warning")
+            return redirect(url_for('admin_users'))
+
+        def profile_factory(user_id):
+            voter = Voter(
+                user_id=user_id,
+                first_name=first_name,
+                last_name=last_name,
+                cni_number=cni_number,
+                date_of_birth=date_of_birth,
+                place_of_birth=place_of_birth,
+                gender=gender,
+            )
+            voter.phone_number = phone
+            return voter
+
+        success_message = "Électeur créé avec succès"
+
+    elif role == 'candidate':
+        first_name = (request.form.get('first_name') or '').strip()
+        last_name = (request.form.get('last_name') or '').strip()
+        cni_number = (request.form.get('cni_number') or '').strip()
+        place_of_birth = (request.form.get('place_of_birth') or '').strip()
+        party_name = (request.form.get('party_name') or '').strip()
+        party_acronym = (request.form.get('party_acronym') or '').strip() or None
+        slogan = (request.form.get('slogan') or '').strip()
+        program = (request.form.get('program') or '').strip()
+        raw_birth_date = (request.form.get('date_of_birth') or '').strip()
+        is_approved = bool(request.form.get('is_approved'))
+
+        if not all([first_name, last_name, cni_number, place_of_birth, party_name, slogan, program, raw_birth_date]):
+            flash("Le formulaire candidat est incomplet", "danger")
+            return redirect(url_for('admin_users'))
+
+        try:
+            date_of_birth = datetime.strptime(raw_birth_date, '%Y-%m-%d').date()
+        except Exception:
+            flash("Date de naissance invalide", "danger")
+            return redirect(url_for('admin_users'))
+
+        min_age = int(app.config.get("MIN_CANDIDATE_AGE", 40) or 40)
+        if calculate_age(date_of_birth) < min_age:
+            flash(f"Le candidat doit avoir au moins {min_age} ans", "warning")
+            return redirect(url_for('admin_users'))
+
+        if Candidate.query.filter_by(cni_number=cni_number).first():
+            flash("Cette CNI est déjà enregistrée pour un candidat", "warning")
+            return redirect(url_for('admin_users'))
+
+        election = Election.get_current_election()
+
+        def profile_factory(user_id):
+            candidate = Candidate(
+                user_id=user_id,
+                first_name=first_name,
+                last_name=last_name,
+                cni_number=cni_number,
+                date_of_birth=date_of_birth,
+                party_name=party_name,
+                party_acronym=party_acronym,
+                is_approved=is_approved,
+            )
+            candidate.place_of_birth = place_of_birth
+            candidate.campaign_slogan = slogan
+            candidate.political_program = program
+            candidate.is_rejected = False
+            if candidate.is_approved or (election and election.auto_approve_candidates):
+                candidate.is_approved = True
+                candidate.approved_at = datetime.utcnow()
+            return candidate
+
+        success_message = "Candidat créé avec succès"
+
     user = User(email=email, role=role, is_active=is_active)
     user.set_password(password)
+    user.email_verified_at = datetime.utcnow()
     db.session.add(user)
+    db.session.flush()
+
+    if profile_factory:
+        db.session.add(profile_factory(user.id))
+
     db.session.commit()
 
-    flash("Utilisateur créé avec succès", "success")
+    flash(success_message, "success")
     return redirect(url_for('admin_users'))
 
 @app.route('/admin/users/delete/<int:user_id>', methods=['GET', 'POST'])
@@ -2422,10 +3281,14 @@ def delete_user(user_id):
 @app.route('/admin/election')
 @admin_required
 def admin_election():
-    election = Election.query.filter_by(year=2025).first()
+    election = Election.get_current_election()
+    audit_logs = AuditLog.query.order_by(AuditLog.created_at.desc()).limit(20).all()
+    recent_archives = ElectionArchive.query.order_by(ElectionArchive.created_at.desc()).limit(5).all()
     return render_template('admin/election_settings.html',
                          election=election,
-                         now=datetime.utcnow(),
+                         audit_logs=audit_logs,
+                         recent_archives=recent_archives,
+                         now=datetime.now(UTC),
                          page_title="Paramètres de l'élection")
 
 def _parse_datetime_local(value):
@@ -2442,9 +3305,10 @@ def _parse_datetime_local(value):
 @app.route('/admin/election/save', methods=['POST'])
 @admin_required
 def admin_election_save():
-    election = Election.query.filter_by(year=2025).first()
+    current_year = datetime.now(UTC).year
+    election = Election.query.filter_by(year=current_year).first()
     if not election:
-        election = Election(year=2025, status=Election.PHASE_PREPARATION)
+        election = Election(year=current_year, status=Election.PHASE_PREPARATION)
         db.session.add(election)
 
     name = (request.form.get('name') or '').strip()
@@ -2453,7 +3317,7 @@ def admin_election_save():
         return jsonify(success=False, message="Le nom de l'élection est obligatoire"), 400
 
     try:
-        year = int(year_raw or "2025")
+        year = int(year_raw or str(datetime.now(UTC).year))
     except Exception:
         return jsonify(success=False, message="Année invalide"), 400
 
@@ -2483,6 +3347,10 @@ def admin_election_save():
     election.auto_approve_candidates = bool(request.form.get('auto_approve_candidates'))
 
     try:
+        _log_audit(
+            "save_election_settings",
+            f"Paramètres mis à jour pour {election.name} {election.year} ({election.phase_label})",
+        )
         db.session.commit()
         return jsonify(success=True, message="Paramètres enregistrés avec succès")
     except Exception as e:
@@ -2490,29 +3358,121 @@ def admin_election_save():
         logger.exception("Erreur admin_election_save")
         return jsonify(success=False, message=f"Impossible d'enregistrer: {e}"), 500
 
-@app.route('/admin/election/transition', methods=['POST'])
-@admin_required
-def admin_election_transition():
-    election = Election.query.filter_by(year=2025).first()
+def _create_archive_entry(archive_type: str, title: str) -> ElectionArchive:
+    filename, summary = _election_snapshot(archive_type=archive_type, title=title)
+    archive = ElectionArchive(
+        archive_type=archive_type,
+        title=title,
+        summary=summary,
+        file_path=filename,
+        created_by_id=current_user.id,
+    )
+    db.session.add(archive)
+    db.session.flush()
+    return archive
+
+def _reset_election_runtime(election):
+    VoteLog.query.delete(synchronize_session=False)
+    Announcement.query.delete(synchronize_session=False)
+
+    removable_users = User.query.filter(User.role != 'admin').all()
+    for user in removable_users:
+        db.session.delete(user)
+
     if not election:
-        return jsonify(success=False, message="Aucune élection configurée"), 404
+        current_year = datetime.now(UTC).year
+        election = Election(year=current_year, status=Election.PHASE_PREPARATION)
+        db.session.add(election)
+
+    election.phase = Election.PHASE_PREPARATION
+    election.registration_start = None
+    election.registration_end = None
+    election.voting_start = None
+    election.voting_end = None
+    return election
+
+def _clear_all_system_data(election):
+    election = _reset_election_runtime(election)
+    current_year = datetime.now(UTC).year
+    election.name = f"Élection Nationale {current_year}"
+    election.year = current_year
+    election.description = ""
+    election.max_candidates = 10
+    election.is_test_mode = False
+    election.auto_approve_candidates = False
+    return election
+
+@app.route('/admin/election/action', methods=['POST'])
+@admin_required
+def admin_election_action():
+    election = Election.get_current_election()
 
     action = (request.form.get('action') or '').strip()
     try:
-        election.apply_transition(action)
+        if action in {'openVoting', 'closeVoting', 'startCounting', 'publishResults'}:
+            if not election:
+                return jsonify(success=False, message="Aucune élection configurée"), 404
+            previous_phase = election.phase_label
+            election.apply_transition(action)
+            archive = None
+            _log_audit(
+                action,
+                f"Transition admin: {previous_phase} -> {election.phase_label}",
+            )
+            success_message = f"Transition appliquée: {election.phase_label}"
+        elif action == 'resetElection':
+            archive = _create_archive_entry(
+                "reset",
+                f"Archive avant réinitialisation - {datetime.utcnow().strftime('%d/%m/%Y %H:%M')}",
+            )
+            election = _reset_election_runtime(election)
+            _log_audit(
+                action,
+                f"Réinitialisation complète des données électorales. Archive #{archive.id} créée.",
+            )
+            success_message = "Élection réinitialisée. Les anciennes données ont été archivées."
+        elif action == 'clearAllData':
+            archive = _create_archive_entry(
+                "purge",
+                f"Archive avant suppression totale - {datetime.utcnow().strftime('%d/%m/%Y %H:%M')}",
+            )
+            election = _clear_all_system_data(election)
+            _log_audit(
+                action,
+                f"Suppression totale des données non-admin. Archive #{archive.id} créée.",
+            )
+            success_message = "Toutes les données opérationnelles ont été supprimées. Une archive a été créée."
+        else:
+            return jsonify(success=False, message="Action inconnue"), 400
+
         db.session.commit()
         return jsonify(
             success=True,
-            message=f"Transition appliquée: {election.phase_label}",
-            phase=election.phase,
-            phase_label=election.phase_label,
+            message=success_message,
+            phase=election.phase if election else None,
+            phase_label=election.phase_label if election else None,
+            archive_id=archive.id if archive else None,
         )
     except ValueError as e:
         return jsonify(success=False, message=str(e)), 400
     except Exception as e:
         db.session.rollback()
-        logger.exception("Erreur admin_election_transition")
+        logger.exception("Erreur admin_election_action")
         return jsonify(success=False, message=f"Transition échouée: {e}"), 500
+
+@app.route('/admin/election/transition', methods=['POST'])
+@admin_required
+def admin_election_transition():
+    return admin_election_action()
+
+@app.route('/admin/archives/<int:archive_id>/download')
+@admin_required
+def download_election_archive(archive_id):
+    archive = ElectionArchive.query.get_or_404(archive_id)
+    abs_path = os.path.join(_ensure_archive_dir(), archive.file_path)
+    if not os.path.exists(abs_path):
+        abort(404)
+    return send_file(abs_path, as_attachment=True, download_name=os.path.basename(abs_path))
 
 @app.route('/admin/announcements')
 @admin_required
@@ -2830,44 +3790,98 @@ def approve_candidate(candidate_id):
     flash(f'Candidat {candidate.full_name} approuvé', 'success')
     return redirect(url_for('admin_candidates'))
 
-@app.route('/admin/results')
-@admin_required
-def admin_results():
-    election = Election.query.filter_by(year=2025).first()
-    candidates = Candidate.query.filter_by(is_approved=True).order_by(Candidate.vote_count.desc()).all()
-    
-    total_votes = sum(int(c.vote_count or 0) for c in candidates)
-    for candidate in candidates:
-        votes = int(candidate.vote_count or 0)
-        candidate.percentage = (votes / total_votes * 100) if total_votes > 0 else 0
+RESULTS_PALETTE = ["#0d6efd", "#198754", "#ffc107", "#dc3545", "#6f42c1", "#0dcaf0"]
 
-    # Données JSON sérialisables (utilisées dans Chart.js côté admin).
-    candidates_json = [
-        {
-            "id": c.id,
-            "full_name": c.full_name,
-            "vote_count": int(c.vote_count or 0),
-            "percentage": round((c.vote_count / total_votes * 100), 2) if total_votes > 0 else 0,
-        }
-        for c in candidates
-    ]
+def _results_are_public(election):
+    if not election:
+        return False
+    return election.phase == Election.PHASE_PROCLAMATION
+
+def _build_results_context():
+    election = Election.get_current_election()
+    candidates = Candidate.query.filter_by(is_approved=True).order_by(Candidate.vote_count.desc()).all()
+
+    total_votes = sum(int(c.vote_count or 0) for c in candidates)
+    ranked_candidates = []
+    gradient_parts = []
+    cursor = 0.0
+
+    for index, candidate in enumerate(candidates):
+        votes = int(candidate.vote_count or 0)
+        percentage = round((votes / total_votes * 100), 1) if total_votes > 0 else 0.0
+        candidate.percentage = percentage
+        color = RESULTS_PALETTE[index % len(RESULTS_PALETTE)]
+        ranked_candidates.append({
+            "candidate": candidate,
+            "votes": votes,
+            "percentage": percentage,
+            "color": color,
+            "rank": index + 1,
+        })
+
+        if percentage > 0:
+            next_cursor = min(100.0, cursor + percentage)
+            gradient_parts.append(f"{color} {cursor:.2f}% {next_cursor:.2f}%")
+            cursor = next_cursor
+
+    if cursor < 100.0:
+        gradient_parts.append(f"#e9ecef {cursor:.2f}% 100%")
 
     total_voters = Voter.query.count()
     voters_voted = Voter.query.filter_by(has_voted=True).count()
-    participation_rate = (voters_voted / total_voters * 100) if total_voters > 0 else 0.0
-    stats = {
-        'total_voters': total_voters,
-        'voters_voted': voters_voted,
-        'participation_rate': participation_rate
+    participation_rate = round((voters_voted / total_voters * 100), 1) if total_voters > 0 else 0.0
+    winner = ranked_candidates[0] if ranked_candidates else None
+
+    current_year = datetime.utcnow().year
+    return {
+        "election": election,
+        "candidates": candidates,
+        "ranked_candidates": ranked_candidates,
+        "candidates_json": [
+            {
+                "id": item["candidate"].id,
+                "full_name": item["candidate"].full_name,
+                "vote_count": item["votes"],
+                "percentage": item["percentage"],
+                "color": item["color"],
+            }
+            for item in ranked_candidates
+        ],
+        "pie_gradient": f"conic-gradient({', '.join(gradient_parts)})" if gradient_parts else "conic-gradient(#e9ecef 0% 100%)",
+        "winner": winner,
+        "total_votes": total_votes,
+        "results_available": _results_are_public(election),
+        "stats": {
+            "total_voters": total_voters,
+            "voters_voted": voters_voted,
+            "participation_rate": participation_rate,
+            "total_votes": total_votes,
+        },
     }
-    
-    return render_template('admin/results_admin.html',
-                          election=election,
-                          candidates=candidates,
-                          candidates_json=candidates_json,
-                          total_votes=total_votes,
-                          stats=stats,
-                          page_title="Résultats")
+
+@app.route('/admin/results')
+@admin_required
+def admin_results():
+    context = _build_results_context()
+    return render_template('admin/results_admin.html', page_title="Résultats", **context)
+
+@app.route('/results')
+def public_results():
+    if current_user.is_authenticated and current_user.role == 'admin':
+        return redirect(url_for('admin_results'))
+    if app.config.get("RESULTS_REQUIRE_AUTHENTICATION", True) and not current_user.is_authenticated:
+        flash("Connectez-vous pour consulter les résultats.", "warning")
+        return redirect(url_for('login'))
+
+    context = _build_results_context()
+    if not context["results_available"]:
+        flash("Les résultats seront publiés à la fin du scrutin.", "info")
+        if current_user.is_authenticated and current_user.role == 'candidate':
+            return redirect(url_for('candidate_dashboard'))
+        if current_user.is_authenticated and current_user.role == 'voter':
+            return redirect(url_for('voter_dashboard'))
+        return redirect(url_for('index'))
+    return render_template('visitor/results.html', page_title="Résultats", **context)
 
 # ========== API (AJAX) ==========
 def _iso(value):
@@ -2891,7 +3905,7 @@ def api_admin_system_health():
 @app.route('/api/election/status')
 @admin_required
 def api_election_status():
-    election = Election.query.filter_by(year=2025).first()
+    election = Election.get_current_election()
     sig = None
     payload = {
         "exists": bool(election),
@@ -2914,7 +3928,7 @@ def api_election_status():
 @app.route('/api/election/results/live')
 @admin_required
 def api_election_results_live():
-    election = Election.query.filter_by(year=2025).first()
+    election = Election.get_current_election()
     total_votes = 0
     if election:
         total_votes = VoteLog.query.filter_by(election_id=election.id).count()
@@ -2996,6 +4010,8 @@ def api_admin_user(user_id):
         "created_at": _iso(user.created_at),
         "last_login": _iso(user.last_login),
         "login_count": int(user.login_count or 0),
+        "display_name": user.profile_name,
+        "phone_number": user.phone_number,
         "voter_profile": None,
         "candidate_profile": None,
     }
@@ -3003,22 +4019,46 @@ def api_admin_user(user_id):
     if user.voter_profile:
         v = user.voter_profile
         payload["voter_profile"] = {
+            "id": v.id,
+            "full_name": v.full_name,
             "first_name": v.first_name,
             "last_name": v.last_name,
             "cni_masked": v.cni_masked,
             "date_of_birth": _iso(v.date_of_birth),
+            "age": int(v.age or 0),
             "place_of_birth": v.place_of_birth,
+            "gender": v.gender,
             "is_eligible": bool(v.is_eligible),
+            "phone_number": v.phone_number,
+            "has_voted": bool(v.has_voted),
+            "voted_at": _iso(v.voted_at),
+            "eligibility_checked_at": _iso(v.eligibility_checked_at),
+            "eligibility_reason": v.eligibility_reason,
         }
 
     if user.candidate_profile:
         c = user.candidate_profile
         payload["candidate_profile"] = {
+            "id": c.id,
+            "full_name": c.full_name,
             "first_name": c.first_name,
             "last_name": c.last_name,
             "party_name": c.party_name,
+            "party_acronym": c.party_acronym,
             "campaign_slogan": c.campaign_slogan,
             "is_approved": bool(c.is_approved),
+            "is_eligible": bool(c.is_eligible),
+            "is_rejected": bool(c.is_rejected),
+            "age": int(c.age or 0),
+            "place_of_birth": c.place_of_birth,
+            "vote_count": int(c.vote_count or 0),
+            "created_at": _iso(c.created_at),
+            "approved_at": _iso(c.approved_at),
+            "eligibility_checked_at": _iso(c.eligibility_checked_at),
+            "eligibility_notes": c.eligibility_notes,
+            "cni_masked": c.cni_masked,
+            "political_program": c.political_program,
+            "biography": c.biography,
         }
 
     return jsonify(payload)
@@ -3029,16 +4069,29 @@ def api_admin_candidate(candidate_id):
     candidate = Candidate.query.get_or_404(candidate_id)
     return jsonify(
         id=candidate.id,
+        full_name=candidate.full_name,
         first_name=candidate.first_name,
         last_name=candidate.last_name,
+        age=int(candidate.age or 0),
+        place_of_birth=candidate.place_of_birth,
+        cni_masked=candidate.cni_masked,
         party_name=candidate.party_name,
         party_acronym=candidate.party_acronym,
         campaign_slogan=candidate.campaign_slogan,
         political_program=candidate.political_program,
+        biography=candidate.biography,
+        vote_count=int(candidate.vote_count or 0),
+        created_at=_iso(candidate.created_at),
+        approved_at=_iso(candidate.approved_at),
+        eligibility_checked_at=_iso(candidate.eligibility_checked_at),
         is_approved=bool(candidate.is_approved),
         is_eligible=bool(candidate.is_eligible),
         eligibility_notes=candidate.eligibility_notes,
         is_rejected=bool(candidate.is_rejected),
+        website_url=candidate.website_url,
+        facebook_url=candidate.facebook_url,
+        twitter_url=candidate.twitter_url,
+        email=(candidate.user.email if candidate.user else None),
     )
 
 @app.route('/admin/candidate/<int:candidate_id>/update', methods=['POST'])
@@ -3124,8 +4177,11 @@ def internal_server_error(e):
 # ========== POINT D'ENTRÉE ==========
 if __name__ == '__main__':
     # Création silencieuse des dossiers nécessaires
-    os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
-    os.makedirs(os.path.join(app.config['UPLOAD_FOLDER'], 'candidates'), exist_ok=True)
+    os.makedirs(_public_upload_dir(), exist_ok=True)
+    os.makedirs(_public_upload_dir('candidates'), exist_ok=True)
+    os.makedirs(_public_upload_dir('avatars'), exist_ok=True)
+    os.makedirs(_public_upload_dir('admins'), exist_ok=True)
+    _ensure_archive_dir()
     
     # Initialisation silencieuse de la base de données
     try:

@@ -1,45 +1,60 @@
 <!-- templates/layouts/header.html -->
-<header id="main-header" class="bg-dark shadow-sm border-bottom border-light fixed-top">
-    <div class="container py-2">
-        <nav class="navbar navbar-expand-md navbar-dark p-0">
-            <a class="navbar-brand d-flex align-items-center" href="{{ url_for('index') }}">
-                <div class="bg-primary d-flex align-items-center justify-content-center rounded me-2"
-                    style="width: 32px; height: 32px;">
-                    <i class="ri-bank-line text-white fs-5"></i>
-                </div>
-                <h1 class="h5 mb-0 fw-bold text-white">{{ config.get('APP_NAME', 'Élection Nationale') }}</h1>
-            </a>
+<header id="main-header" class="site-header fixed-top">
+    <div class="container">
+        <nav class="navbar navbar-expand-lg site-navbar p-0">
+            <div class="d-flex align-items-center gap-2 gap-lg-3">
+                <a class="navbar-brand site-brand d-flex align-items-center" href="{{ url_for('index') }}">
+                    <span class="site-brand__mark" aria-hidden="true">
+                        <i class="ri-government-line"></i>
+                    </span>
+                    <span class="site-brand__copy">
+                        <span class="site-brand__title">{{ config.get('APP_NAME', 'Élection Nationale') }}</span>
+                        <span class="site-brand__subtitle">{{ config.get('APP_TAGLINE', 'Vote électronique sécurisé')
+                            }}</span>
+                    </span>
+                </a>
+            </div>
 
-            <button id="menu-icon" class="navbar-toggler" type="button" data-bs-toggle="collapse"
+            <button id="menu-icon" class="navbar-toggler site-navbar-toggler" type="button" data-bs-toggle="collapse"
                 data-bs-target="#main-navbar" aria-controls="main-navbar" aria-expanded="false"
-                aria-label="Toggle navigation">
+                aria-label="Afficher le menu principal">
                 <i class="bi bi-list"></i>
             </button>
 
             <div class="collapse navbar-collapse justify-content-end" id="main-navbar">
-                <ul class="navbar-nav mb-2 mb-md-0 align-items-center gap-md-1">
+                <ul class="navbar-nav align-items-lg-center gap-lg-1 site-nav-list">
+                    {% set results_url = url_for('admin_results') if current_user.is_authenticated and current_user.role
+                    == 'admin' else url_for('public_results') %}
                     <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if request.endpoint == 'index' %}active text-primary bg-primary-subtle{% else %}text-secondary{% endif %}"
+                        <a class="nav-link site-nav-link {% if request.endpoint == 'index' %}is-active{% endif %}"
                             href="{{ url_for('index') }}">
-                            <i class="ri-home-line me-1"></i> Accueil
+                            Accueil
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if request.endpoint == 'candidates_list' %}active text-primary bg-primary-subtle{% else %}text-secondary{% endif %}"
+                        <a class="nav-link site-nav-link {% if request.endpoint == 'candidates_list' %}is-active{% endif %}"
                             href="{{ url_for('candidates_list') }}">
-                            <i class="ri-group-line me-1"></i> Candidats
+                            Candidats
                         </a>
                     </li>
+                    {% if current_user.is_authenticated or not config.get('RESULTS_REQUIRE_AUTHENTICATION', True) %}
                     <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if request.endpoint == 'about' %}active text-primary bg-primary-subtle{% else %}text-secondary{% endif %}"
+                        <a class="nav-link site-nav-link {% if request.endpoint in ['public_results', 'admin_results'] %}is-active{% endif %}"
+                            href="{{ results_url }}">
+                            Résultats
+                        </a>
+                    </li>
+                    {% endif %}
+                    <li class="nav-item">
+                        <a class="nav-link site-nav-link {% if request.endpoint == 'about' %}is-active{% endif %}"
                             href="{{ url_for('about') }}">
-                            <i class="ri-information-line me-1"></i> A propos
+                            À propos
                         </a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link px-3 py-2 {% if request.endpoint == 'contact' %}active text-primary bg-primary-subtle{% else %}text-secondary{% endif %}"
+                        <a class="nav-link site-nav-link {% if request.endpoint == 'contact' %}is-active{% endif %}"
                             href="{{ url_for('contact') }}">
-                            <i class="ri-mail-line me-1"></i> Contact
+                            Contact
                         </a>
                     </li>
 
@@ -51,14 +66,54 @@
                     {% else %}
                     {% set dashboard_url = url_for('voter_dashboard') %}
                     {% endif %}
+                    {% set navbar_avatar_url = None %}
+                    {% set navbar_label = current_user.email.split('@')[0] %}
+                    {% set navbar_initial = current_user.email[:1]|upper %}
+                    {% if current_user.role == 'voter' and voter %}
+                    {% set navbar_avatar_url = voter_avatar_url(voter) %}
+                    {% set navbar_label = voter.full_name %}
+                    {% set navbar_initial = voter.full_name[:1]|upper %}
+                    {% elif current_user.role == 'candidate' and candidate %}
+                    {% set navbar_avatar_url = candidate_photo_url(candidate) %}
+                    {% set navbar_label = candidate.full_name %}
+                    {% set navbar_initial = candidate.full_name[:1]|upper %}
+                    {% elif current_user.role == 'admin' %}
+                    {% set navbar_avatar_url = admin_avatar_url(current_user) %}
+                    {% set navbar_label = current_user.profile_name %}
+                    {% set navbar_initial = current_user.profile_name[:1]|upper %}
+                    {% endif %}
 
-                    <li class="nav-item dropdown ms-md-2">
-                        <a class="nav-link dropdown-toggle" href="#" id="navbarProfile" role="button"
-                            data-bs-toggle="dropdown" aria-expanded="false">
-                            <i class="ri-user-3-line me-1"></i> Mon compte
+                    <li class="nav-item dropdown ms-lg-2">
+                        <a class="nav-link site-profile-toggle" href="#" id="navbarProfile" role="button"
+                            data-bs-toggle="dropdown" aria-expanded="false"
+                            aria-label="Menu du profil de {{ navbar_label }}">
+                            <span class="app-avatar" aria-hidden="true">
+                                {% if navbar_avatar_url %}
+                                <img src="{{ navbar_avatar_url }}" alt="" class="app-avatar__img" loading="lazy">
+                                {% else %}
+                                <span class="app-avatar__initial">{{ navbar_initial }}</span>
+                                {% endif %}
+                            </span>
+                            <span class="site-profile-toggle__label d-none">{{ navbar_label }}</span>
                         </a>
-                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3"
+                        <ul class="dropdown-menu dropdown-menu-end site-dropdown shadow-sm border-0 rounded-4"
                             aria-labelledby="navbarProfile">
+                            <li class="px-3 py-3 border-bottom">
+                                <div class="d-flex align-items-center gap-3">
+                                    <span class="app-avatar" aria-hidden="true" style="width: 42px; height: 42px;">
+                                        {% if navbar_avatar_url %}
+                                        <img src="{{ navbar_avatar_url }}" alt="" class="app-avatar__img"
+                                            loading="lazy">
+                                        {% else %}
+                                        <span class="app-avatar__initial">{{ navbar_initial }}</span>
+                                        {% endif %}
+                                    </span>
+                                    <div class="min-w-0">
+                                        <div class="fw-semibold text-truncate">{{ navbar_label }}</div>
+                                        <div class="small text-muted text-truncate">{{ current_user.email }}</div>
+                                    </div>
+                                </div>
+                            </li>
                             {% if current_user.role == 'voter' %}
                             <li><a class="dropdown-item" href="{{ url_for('voter_profile') }}"><i
                                         class="ri-user-line me-2 text-primary"></i>Mon profil</a></li>
@@ -66,26 +121,30 @@
                             <li><a class="dropdown-item" href="{{ url_for('candidate_profile') }}"><i
                                         class="ri-user-line me-2 text-primary"></i>Mon profil</a></li>
                             {% else %}
-                            <li><a class="dropdown-item" href="{{ url_for('admin_dashboard') }}"><i
+                            <li><a class="dropdown-item" href="{{ url_for('admin_profile') }}"><i
                                         class="ri-user-line me-2 text-primary"></i>Mon profil</a></li>
                             {% endif %}
+                            <li><a class="dropdown-item" href="{{ results_url }}"><i
+                                        class="ri-bar-chart-box-line me-2 text-info"></i>Résultats</a></li>
                             <li><a class="dropdown-item" href="{{ dashboard_url }}"><i
-                                        class="ri-dashboard-line me-2 text-success"></i>Dashboard</a></li>
+                                        class="ri-dashboard-line me-2 text-success"></i>Tableau de bord</a></li>
                             <li>
                                 <hr class="dropdown-divider">
                             </li>
                             <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i
-                                        class="ri-logout-box-line me-2"></i>Deconnexion</a></li>
+                                        class="ri-logout-box-line me-2"></i>Déconnexion</a></li>
                         </ul>
                     </li>
                     {% else %}
-                    <li class="nav-item ms-md-2">
-                        <div class="d-flex gap-2">
-                            <a href="{{ url_for('login') }}" class="btn btn-outline-primary">
-                                <i class="ri-login-box-line me-1"></i> Connexion
+                    <li class="nav-item ms-lg-2">
+                        <div class="site-actions">
+                            <a href="{{ url_for('login') }}" class="btn btn-outline-primary site-action-btn">
+                                <i class="ri-login-box-line me-1"></i>
+                                Connexion
                             </a>
-                            <a href="{{ url_for('register') }}" class="btn btn-primary">
-                                <i class="ri-user-add-line me-1"></i> S'inscrire
+                            <a href="{{ url_for('register') }}" class="btn btn-primary site-action-btn">
+                                <i class="ri-user-add-line me-1"></i>
+                                S'inscrire
                             </a>
                         </div>
                     </li>
@@ -102,9 +161,9 @@
         const navbarToggler = document.getElementById('menu-icon');
         if (!navbarCollapse || !navbarToggler) return;
 
-        navbarCollapse.querySelectorAll('.nav-link').forEach(link => {
+        navbarCollapse.querySelectorAll('.nav-link, .dropdown-item, .btn').forEach(link => {
             link.addEventListener('click', () => {
-                if (navbarCollapse.classList.contains('show')) {
+                if (navbarCollapse.classList.contains('show') && link.id !== 'navbarProfile') {
                     navbarToggler.click();
                 }
             });
