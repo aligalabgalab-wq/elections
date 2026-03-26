@@ -1,0 +1,158 @@
+{
+  "archive_type": "purge",
+  "title": "Archive avant suppression totale - 23/03/2026 16:46",
+  "created_at": "2026-03-23T16:46:36.298295",
+  "election": {
+    "id": 3,
+    "name": "Élection Test 2026",
+    "year": 2026,
+    "status": "resultats_proclames",
+    "phase": "resultats_proclames",
+    "registration_start": "2026-03-20T08:00:00",
+    "registration_end": "2026-03-22T18:00:00",
+    "voting_start": "2026-03-22T18:01:00",
+    "voting_end": "2026-03-23T15:13:34",
+    "description": "None",
+    "max_candidates": 10,
+    "is_test_mode": false,
+    "auto_approve_candidates": true
+  },
+  "counts": {
+    "users": 3,
+    "voters": 2,
+    "candidates": 1,
+    "votes": 1,
+    "announcements": 1
+  },
+  "users": [
+    {
+      "id": 7,
+      "email": "chabkarman@gmail.com",
+      "password_hash": "pbkdf2:sha256:600000$FmcU1LG7noQ69ZE4$42551c71b99ddc8d7161366005d891153671df5ced65563c6f478bb0e2d3d39e",
+      "role": "admin",
+      "is_active": true,
+      "display_name": null,
+      "phone_number": null,
+      "avatar_filename": "admin_7_0baa85b9a2bb24c2.webp",
+      "created_at": "2026-03-05T16:41:11",
+      "last_login": "2026-03-23T16:45:59",
+      "email_verified_at": "2026-03-05T16:41:11"
+    },
+    {
+      "id": 19,
+      "email": "shbmoud08@gmail.com",
+      "password_hash": "pbkdf2:sha256:600000$6vnH3lbeXi5Z9AEH$218268341c7371da2209fb9b42b931a2f03f1a564e7306404a8efb1c0c4fb7e0",
+      "role": "candidate",
+      "is_active": true,
+      "display_name": null,
+      "phone_number": null,
+      "avatar_filename": null,
+      "created_at": "2026-03-23T14:54:06",
+      "last_login": "2026-03-23T16:42:18",
+      "email_verified_at": "2026-03-23T14:54:24"
+    },
+    {
+      "id": 20,
+      "email": "gestionbibliotheque70@gmail.com",
+      "password_hash": "pbkdf2:sha256:600000$uXtWg8RhYUzDHnOe$6423866293d245060124c91e447e209b56a7cdca38c241039132e761e96dfa9a",
+      "role": "voter",
+      "is_active": true,
+      "display_name": null,
+      "phone_number": null,
+      "avatar_filename": null,
+      "created_at": "2026-03-23T14:56:06",
+      "last_login": "2026-03-23T15:06:32",
+      "email_verified_at": "2026-03-23T14:56:41"
+    }
+  ],
+  "voters": [
+    {
+      "id": 1,
+      "user_id": 2,
+      "first_name": "choueb",
+      "last_name": "karrieh",
+      "cni_number": "12345678901234",
+      "date_of_birth": "1998-02-03",
+      "place_of_birth": "Hol-Hol",
+      "gender": "M",
+      "has_voted": false,
+      "voted_at": null,
+      "vote_for_id": null,
+      "phone_number": "567356735",
+      "is_eligible": true,
+      "eligibility_reason": null,
+      "created_at": "2026-03-01T20:36:30",
+      "updated_at": "2026-03-01T20:36:30"
+    },
+    {
+      "id": 8,
+      "user_id": 20,
+      "first_name": "Gestion",
+      "last_name": "Bib",
+      "cni_number": "12345678901235",
+      "date_of_birth": "2005-11-30",
+      "place_of_birth": "Arta",
+      "gender": "M",
+      "has_voted": true,
+      "voted_at": "2026-03-23T15:12:57",
+      "vote_for_id": 9,
+      "phone_number": "5363567359",
+      "is_eligible": true,
+      "eligibility_reason": null,
+      "created_at": "2026-03-23T14:56:09",
+      "updated_at": "2026-03-23T15:12:57"
+    }
+  ],
+  "candidates": [
+    {
+      "id": 9,
+      "user_id": 19,
+      "first_name": "Ismaeal",
+      "last_name": "Omar Guelleh",
+      "cni_number": "12345678901234",
+      "date_of_birth": "1971-06-16",
+      "place_of_birth": "Dikhil",
+      "party_name": "Rassemblement National",
+      "party_acronym": "RPP",
+      "campaign_slogan": "Vive le peuple Djiboutien",
+      "political_program": "Je vois votre souffrance face à [l'Ennemi]. Mon projet est celui de la [Valeur]. Dès mon élection, je vais [Action] pour vous donner [Mesure Flash]. Ensemble, changeons de destin.",
+      "biography": null,
+      "profile_image": "cand_9_e93bc62209db6f73.webp",
+      "website_url": null,
+      "facebook_url": null,
+      "twitter_url": null,
+      "campaign_video_url": null,
+      "is_approved": true,
+      "is_rejected": false,
+      "vote_count": 1,
+      "created_at": "2026-03-23T14:54:09",
+      "updated_at": "2026-03-23T15:12:57"
+    }
+  ],
+  "vote_logs": [
+    {
+      "id": 1,
+      "voter_id": 8,
+      "candidate_id": 9,
+      "election_id": 3,
+      "vote_hash": "bd498913d03f08ebb9e7898221d315b25093b8675b574d4564cbb814de4b2c1b",
+      "ip_address": "127.0.0.1",
+      "vote_timestamp": "2026-03-23T15:12:57"
+    }
+  ],
+  "announcements": [
+    {
+      "id": 6,
+      "title": "DIOR",
+      "content": "\n                            <p>Saisissez le contenu de votre annonce ici CECI EST UNE MESSAGE DE MA PART A TOUT LE MONDE</p>\n                        ",
+      "author_id": 19,
+      "audience": "all",
+      "priority": 0,
+      "is_active": true,
+      "is_urgent": false,
+      "expires_at": "2026-03-24T23:59:59",
+      "created_at": "2026-03-23T16:42:55",
+      "updated_at": "2026-03-23T16:43:49"
+    }
+  ]
+}
